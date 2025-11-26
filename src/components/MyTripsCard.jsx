@@ -18,6 +18,7 @@ import {
   ChevronDown,
   CircleCheck,
   Clock,
+  Loader2,
   Mail,
   MapPin,
   MessageCircle,
@@ -53,6 +54,10 @@ function MyTripsCard({ trip }) {
   // const [ratingValue, setRatingValue] = useState(5);
   // const [ratingComment, setRatingComment] = useState("");
   // const [currentPassengerIndex, setCurrentPassengerIndex] = useState(0);
+  const [selectedTime, setSelectedTime] = useState(trip.time || "12:00");
+  const [costInput, setCostInput] = useState(trip.price ? Number(trip.price).toLocaleString() : "");
+  const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     from_city: trip.from_city || "",
     to_city: trip.to_city || "",
@@ -74,17 +79,81 @@ function MyTripsCard({ trip }) {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Функция валидации формы (как в Trips.jsx)
+  const validateForm = (formData) => {
+    const errors = {};
+    
+    if (!form.from_city?.trim()) {
+      errors.from = t("trips.form.validation.fromRequired");
+    }
+    if (!form.to_city?.trim()) {
+      errors.to = t("trips.form.validation.toRequired");
+    }
+    if (!form.date?.trim()) {
+      errors.date = t("trips.form.validation.dateRequired");
+    }
+    if (!selectedTime?.trim()) {
+      errors.time = t("trips.form.validation.timeRequired");
+    }
+    if (!costInput?.trim()) {
+      errors.cost = t("trips.form.validation.costRequired");
+    }
+    if (!form.seats?.trim()) {
+      errors.carSeats = t("trips.form.validation.carSeatsRequired");
+    }
+    if (!form.carModel?.trim()) {
+      errors.carModel = t("trips.form.validation.carModelRequired");
+    }
+    if (!form.carColor?.trim()) {
+      errors.carColor = t("trips.form.validation.carColorRequired");
+    }
+    if (!form.numberCar?.trim()) {
+      errors.carNumber = t("trips.form.validation.carNumberRequired");
+    }
+    
+    // Проверка даты и времени
+    const selectedDate = form.date;
+    const selectedTimeValue = selectedTime;
+    
+    if (selectedDate && selectedTimeValue) {
+      const now = new Date();
+      const selectedDateTime = new Date(`${selectedDate}T${selectedTimeValue}:00`);
+      
+      if (selectedDateTime <= now) {
+        errors.dateTime = t("trips.form.validation.futureDateTime");
+      }
+    }
+    
+    return errors;
+  };
+
   const handleUpdate = async (e) => {
     e.preventDefault();
+    
+    // Защита от множественных нажатий
+    if (isSubmitting) return;
+    
+    // Валидация формы
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      toast.error(t("trips.form.validationError"));
+      return;
+    }
+
+    // Очищаем ошибки если валидация прошла
+    setFormErrors({});
+    setIsSubmitting(true);
+
     try {
       // Очищаем цену от пробелов перед отправкой
-      const cleanPrice = form.price ? String(form.price).replace(/\s/g, "") : "";
+      const cleanPrice = costInput ? String(costInput).replace(/\s/g, "") : "";
       
       await updateMutation.mutateAsync({
         from_city: form.from_city,
         to_city: form.to_city,
         date: form.date,
-        time: form.time,
+        time: selectedTime,
         seats: Number(form.seats),
         price: cleanPrice ? Number(cleanPrice) : null,
         note: form.note || null,
@@ -97,9 +166,45 @@ function MyTripsCard({ trip }) {
       // Обновляем все возможные запросы поездок (включая с фильтрами)
       queryClient.invalidateQueries({ queryKey: ["data"] });
     } catch (err) {
-      toast.error("Yangilashda xatolik.");
+      console.error(err);
+      
+      // Отображаем ошибку от backend
+      if (err.response?.data?.message) {
+        toast.error(err.response.data.message);
+      } else if (err.response?.data?.errors) {
+        // Если есть валидационные ошибки
+        const errorMessages = Object.values(err.response.data.errors).flat();
+        toast.error(errorMessages.join(', '));
+      } else if (err.message) {
+        toast.error(err.message);
+      } else {
+        toast.error("Yangilashda xatolik.");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  // Обновляем selectedTime и costInput при открытии диалога редактирования
+  React.useEffect(() => {
+    if (editOpen) {
+      setSelectedTime(trip.time || "12:00");
+      setCostInput(trip.price ? Number(trip.price).toLocaleString() : "");
+      setForm({
+        from_city: trip.from_city || "",
+        to_city: trip.to_city || "",
+        date: trip.date || "",
+        time: trip.time || "",
+        seats: trip.seats_total || "",
+        price: trip.price ? Number(trip.price).toLocaleString() : "",
+        note: trip.note || "",
+        carModel: trip.carModel || "",
+        carColor: trip.carColor || "",
+        numberCar: trip.numberCar || "",
+      });
+      setFormErrors({});
+    }
+  }, [editOpen, trip]);
 
   const handleDelete = () => {
     setDeleteDialogOpen(true);
@@ -373,73 +478,200 @@ function MyTripsCard({ trip }) {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-sm sm:max-w-md mx-2 sm:mx-4 overflow-hidden rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm overscroll-contain touch-pan-y" style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))", maxHeight: viewportHeight ? Math.min(760, viewportHeight - 8) : '80vh' }} autoFocusScroll>
-          <DialogHeader>
-            <DialogTitle>{t("myTripsCard.edit")}</DialogTitle>
-            <DialogDescription className="sr-only">Trip edit dialog</DialogDescription>
-          </DialogHeader>
-          <div className="overflow-y-auto overflow-x-hidden pr-1 overscroll-contain touch-pan-y" style={{ maxHeight: viewportHeight ? Math.max(240, viewportHeight - (keyboardInset || 0) - 160) : '60vh' }}>
-          <form id="editTripForm" onSubmit={handleUpdate} className="flex flex-col gap-3">
-            <div className="grid w-full items-center gap-2">
-              <Label htmlFor="from_city">{t("trips.form.from")}</Label>
-              <Input id="from_city" name="from_city" value={form.from_city} onChange={handleChange} className="bg-white h-9" />
-            </div>
-            <div className="grid w-full items-center gap-2">
-              <Label htmlFor="to_city">{t("trips.form.to")}</Label>
-              <Input id="to_city" name="to_city" value={form.to_city} onChange={handleChange} className="bg-white h-9" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="date">{t("trips.form.date")}</Label>
-                <Input id="date" name="date" type="date" value={form.date} onChange={handleChange} className="bg-white h-8 text-sm" min={new Date().toISOString().split('T')[0]} />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="time">{t("trips.form.time")}</Label>
-                <TimePicker id="time" value={form.time} onChange={(v) => setForm((prev) => ({ ...prev, time: v }))} size="sm" dropdownMaxHeight={112} className="w-full bg-white" />
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="seats">{t("trips.form.carSeats")}</Label>
-                <Input id="seats" name="seats" value={form.seats} onChange={handleChange} className="bg-white h-9" />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="price">{t("trips.form.cost")}</Label>
-                <Input id="price" name="price" value={form.price}
-                  onChange={(e) => {
-                    const digits = String(e.target.value).replace(/\D/g, "");
-                    const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-                    handleChange({ target: { name: 'price', value: formatted } });
-                  }}
-                  placeholder="100 000" className="pr-16 bg-white h-9" />
-              </div>
-            </div>
-            <div className="grid w-full items-center gap-2">
-              <Label htmlFor="note">{t("trips.form.note")}</Label>
-              <Input id="note" name="note" value={form.note} onChange={handleChange} className="bg-white h-9" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="carModel">{t("trips.form.carModel")}</Label>
-                <Input id="carModel" name="carModel" value={form.carModel} onChange={handleChange} className="bg-white h-9" />
-              </div>
-              <div className="grid w-full items-center gap-2">
-                <Label htmlFor="carColor">{t("trips.form.carColor")}</Label>
-                <Input id="carColor" name="carColor" value={form.carColor} onChange={handleChange} className="bg-white h-9" />
-              </div>
-            </div>
-            <div className="grid w-full items-center gap-2">
-              <Label htmlFor="numberCar">{t("trips.form.carNumber")}</Label>
-              <Input id="numberCar" name="numberCar" className="uppercase bg-white h-9" value={form.numberCar} onChange={handleChange} />
-            </div>
-          </form>
-          </div>
-          <div className="flex gap-2 mt-2 pt-2 border-t">
+        <DialogContent
+          className="w-[95vw] sm:max-w-[760px] p-4 sm:p-6 overflow-hidden overscroll-contain touch-pan-y rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm max-h-[calc(100svh-2rem)]"
+          style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}
+          preventOutsideClose
+          showCloseButton={false}
+          autoFocusScroll
+        >
+          <DialogHeader className="relative">
+            <DialogTitle className="text-center text-primary font-bold pr-8">{t("myTripsCard.edit")}</DialogTitle>
+            <DialogDescription className="sr-only">Edit trip dialog</DialogDescription>
             <DialogClose asChild>
-              <Button type="button" variant="secondary" className="w-1/2 rounded-2xl">{t("trips.form.cancel")}</Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute top-0 right-0 h-6 w-6 p-0 hover:bg-accent/50 rounded-full"
+              >
+                <X className="h-3 w-3" />
+              </Button>
             </DialogClose>
-            <Button type="submit" form="editTripForm" className="w-1/2 bg-primary text-primary-foreground rounded-2xl">{t("profilePage.save")}</Button>
-          </div>
+          </DialogHeader>
+          <form onSubmit={handleUpdate} className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 overflow-y-auto overflow-x-hidden pr-1 touch-pan-y overscroll-contain max-h-[60svh]"
+                 onTouchMove={(e) => e.stopPropagation()}
+            >
+            <div className="col-span-1 sm:col-span-1 grid items-center gap-1.5">
+              <Label htmlFor="from">{t("trips.form.from")} *</Label>
+              <Input 
+                type="text" 
+                id="from" 
+                name="from_city" 
+                placeholder={t("trips.form.fromPlaceholder")} 
+                required
+                value={form.from_city}
+                onChange={handleChange}
+                className={`${formErrors.from ? "border-red-500" : ""} bg-white`}
+              />
+              {formErrors.from && <span className="text-red-500 text-xs">{formErrors.from}</span>}
+            </div>
+            <div className="col-span-1 sm:col-span-1 grid items-center gap-1.5">
+              <Label htmlFor="to">{t("trips.form.to")} *</Label>
+              <Input 
+                type="text" 
+                id="to" 
+                name="to_city" 
+                placeholder={t("trips.form.toPlaceholder")} 
+                required
+                value={form.to_city}
+                onChange={handleChange}
+                className={`${formErrors.to ? "border-red-500" : ""} bg-white`}
+              />
+              {formErrors.to && <span className="text-red-500 text-xs">{formErrors.to}</span>}
+            </div>
+            <div className="col-span-1 sm:col-span-2 grid grid-cols-2 gap-2 sm:gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="date" className="text-sm">{t("trips.form.date")} *</Label>
+                <Input 
+                  type="date" 
+                  id="date" 
+                  name="date" 
+                  required
+                  min={new Date().toISOString().split('T')[0]}
+                  value={form.date}
+                  onChange={handleChange}
+                  className={`${formErrors.date || formErrors.dateTime ? "border-red-500" : ""} bg-white h-8 sm:h-9 text-sm w-full min-w-0`}
+                />
+                {formErrors.date && <span className="text-red-500 text-xs">{formErrors.date}</span>}
+                {formErrors.dateTime && <span className="text-red-500 text-xs">{formErrors.dateTime}</span>}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="time" className="text-sm">{t("trips.form.time")} *</Label>
+                <TimePicker
+                  id="time"
+                  value={selectedTime}
+                  onChange={setSelectedTime}
+                  size="sm"
+                  dropdownMaxHeight={112}
+                  className={`w-full h-8 sm:h-9 ${formErrors.time || formErrors.dateTime ? "border-red-500" : ""} bg-white`}
+                />
+                {formErrors.time && <span className="text-red-500 text-xs">{formErrors.time}</span>}
+                {formErrors.dateTime && <span className="text-red-500 text-xs">{formErrors.dateTime}</span>}
+              </div>
+            </div>
+            <div className="col-span-1 sm:col-span-2 grid grid-cols-2 gap-2 sm:gap-4">
+              <div className="grid items-center gap-1.5">
+                <Label htmlFor="cost">{t("trips.form.cost")} *</Label>
+                <div className="relative">
+                  <Input 
+                    type="text" 
+                    id="cost" 
+                    name="cost" 
+                    inputMode="numeric"
+                    placeholder={t("trips.form.costPlaceholder")} 
+                    required
+                    value={costInput}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "");
+                      const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+                      setCostInput(formatted);
+                    }}
+                    className={`${formErrors.cost ? "border-red-500" : ""} pr-16 bg-white`}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">сум</span>
+                </div>
+                {formErrors.cost && <span className="text-red-500 text-xs">{formErrors.cost}</span>}
+              </div>
+              <div className="grid items-center gap-1.5">
+                <Label htmlFor="carSeats">{t("trips.form.carSeats")} *</Label>
+                <Input 
+                  type="number" 
+                  id="carSeats" 
+                  name="seats" 
+                  placeholder={t("trips.form.carSeatsPlaceholder")} 
+                  required
+                  value={form.seats}
+                  onChange={handleChange}
+                  className={`${formErrors.carSeats ? "border-red-500" : ""} bg-white`}
+                />
+                {formErrors.carSeats && <span className="text-red-500 text-xs">{formErrors.carSeats}</span>}
+              </div>
+            </div>
+            <div className="col-span-1 grid items-center gap-1.5">
+              <Label htmlFor="car">{t("trips.form.carModel")} *</Label>
+              <Input 
+                type="text" 
+                id="car" 
+                name="carModel" 
+                placeholder={t("trips.form.carModelPlaceholder")} 
+                required
+                value={form.carModel}
+                onChange={handleChange}
+                className={`${formErrors.carModel ? "border-red-500" : ""} bg-white`}
+              />
+              {formErrors.carModel && <span className="text-red-500 text-xs">{formErrors.carModel}</span>}
+            </div>
+            <div className="col-span-1 sm:col-span-2 grid grid-cols-2 gap-2 sm:gap-4">
+              <div className="grid items-center gap-1.5">
+                <Label htmlFor="carColor">{t("trips.form.carColor")} *</Label>
+                <Input 
+                  type="text" 
+                  id="carColor" 
+                  name="carColor" 
+                  placeholder={t("trips.form.carColorPlaceholder")} 
+                  required
+                  value={form.carColor}
+                  onChange={handleChange}
+                  className={`${formErrors.carColor ? "border-red-500" : ""} bg-white`}
+                />
+                {formErrors.carColor && <span className="text-red-500 text-xs">{formErrors.carColor}</span>}
+              </div>
+              <div className="grid items-center gap-1.5">
+                <Label htmlFor="carNumber">{t("trips.form.carNumber")} *</Label>
+                <Input
+                  type="text" 
+                  id="carNumber" 
+                  name="numberCar" 
+                  placeholder={t("trips.form.carNumberPlaceholder")} 
+                  className={`uppercase ${formErrors.carNumber ? "border-red-500" : ""} bg-white`}
+                  required
+                  value={form.numberCar}
+                  onChange={(e) => {
+                    e.target.value = e.target.value.toUpperCase();
+                    handleChange(e);
+                  }}
+                />
+                {formErrors.carNumber && <span className="text-red-500 text-xs">{formErrors.carNumber}</span>}
+              </div>
+            </div>
+            <div className="col-span-1 grid items-center gap-1.5">
+              <Label htmlFor="note">{t("trips.form.note")}</Label>
+              <Input type="text" id="note" name="note" placeholder={t("trips.commentPlaceholder")} value={form.note} onChange={handleChange} className="bg-white" />
+            </div>
+            </div>
+            {/* Footer outside of scroll area to avoid iOS sticky-bottom issues */}
+            <div className="flex gap-2 mt-2 w-full bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-white/70 py-1" style={{ paddingBottom: keyboardInset ? keyboardInset : undefined }}>
+              <DialogClose asChild>
+                <Button type="button" className="rounded-2xl w-1/2 h-9 text-xs sm:text-sm">{t("trips.form.cancel")}</Button>
+              </DialogClose>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting}
+                className="bg-primary text-primary-foreground rounded-2xl w-1/2 h-9 text-xs sm:text-sm"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="animate-spin" size={16} />
+                    {t("trips.form.submitting")}
+                  </span>
+                ) : (
+                  t("profilePage.save")
+                )}
+              </Button>
+            </div>
+            
+          </form>
         </DialogContent>
       </Dialog>
 
