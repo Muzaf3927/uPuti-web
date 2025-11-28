@@ -71,12 +71,11 @@ function TripsCard({ trip }) {
     e.stopPropagation();
     setSeats("1");
     setBookingDialogOpen(true);
-    // Отправляем один запрос на бэкенд для проверки telegram_chat_id
+    // Сразу отправляем запрос на бэкенд для проверки telegram_chat_id
     try {
       const result = await refetchUser();
-      // Используем данные из результата или из кэша
       const updatedUser = result?.data || userData || sessionManager.getUserData();
-      // Показываем модальное окно для подключения Telegram только если telegram_chat_id отсутствует
+      // Показываем модальное окно Telegram сразу, если telegram_chat_id отсутствует
       if (updatedUser && !updatedUser.telegram_chat_id) {
         setTelegramModalOpen(true);
       }
@@ -95,12 +94,11 @@ function TripsCard({ trip }) {
     setOfferedPrice("");
     setComment("");
     setOfferDialogOpen(true);
-    // Отправляем один запрос на бэкенд для проверки telegram_chat_id
+    // Сразу отправляем запрос на бэкенд для проверки telegram_chat_id
     try {
       const result = await refetchUser();
-      // Используем данные из результата или из кэша
       const updatedUser = result?.data || userData || sessionManager.getUserData();
-      // Показываем модальное окно для подключения Telegram только если telegram_chat_id отсутствует
+      // Показываем модальное окно Telegram сразу, если telegram_chat_id отсутствует
       if (updatedUser && !updatedUser.telegram_chat_id) {
         setTelegramModalOpen(true);
       }

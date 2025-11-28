@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,21 +17,28 @@ function TelegramConnectModal({ open, onOpenChange, onCloseParent }) {
   const connectMutation = useTelegramConnect();
   const queryClient = useQueryClient();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [telegramUrl, setTelegramUrl] = useState(null);
+  const linkRef = useRef(null);
 
   const handleConnect = async () => {
     try {
       setIsConnecting(true);
       const response = await connectMutation.mutateAsync();
-      const telegramUrl = response.telegram_connect_url;
+      const url = response.telegram_connect_url;
       
-      if (telegramUrl) {
-        // Открываем URL в новой вкладке
-        window.open(telegramUrl, "_blank", "noopener,noreferrer");
-        
-        // Закрываем модальное окно через небольшую задержку
+      if (url) {
+        setTelegramUrl(url);
+        // Используем программный клик по ссылке для работы в WebView на iPhone
+        // Аналогично тому, как это сделано в техподдержке
         setTimeout(() => {
-          onOpenChange(false);
-        }, 500);
+          if (linkRef.current) {
+            linkRef.current.click();
+          }
+          // Закрываем модальное окно через небольшую задержку
+          setTimeout(() => {
+            onOpenChange(false);
+          }, 500);
+        }, 100);
       }
     } catch (error) {
       console.error("Failed to get Telegram connect URL:", error);
@@ -111,6 +118,17 @@ function TelegramConnectModal({ open, onOpenChange, onCloseParent }) {
             </div>
           </div>
           <div className="flex flex-col gap-2">
+            {/* Скрытая ссылка для работы в WebView на iPhone (как в техподдержке) */}
+            {telegramUrl && (
+              <a
+                ref={linkRef}
+                href={telegramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "none" }}
+                aria-hidden="true"
+              />
+            )}
             <Button
               onClick={handleConnect}
               disabled={isConnecting || connectMutation.isPending}
