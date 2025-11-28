@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,10 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Bell, MessageSquare } from "lucide-react";
 import { useI18n } from "@/app/i18n.jsx";
 import { useTelegramConnect } from "@/api/api";
+import { useQueryClient } from "@tanstack/react-query";
 
 function TelegramConnectModal({ open, onOpenChange, onCloseParent }) {
   const { t, lang } = useI18n();
   const connectMutation = useTelegramConnect();
+  const queryClient = useQueryClient();
   const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnect = async () => {
@@ -45,6 +47,20 @@ function TelegramConnectModal({ open, onOpenChange, onCloseParent }) {
       onCloseParent(false);
     }
   };
+
+  // Обновляем данные пользователя при возврате фокуса на окно (когда пользователь возвращается после подключения Telegram)
+  useEffect(() => {
+    const handleFocus = () => {
+      // Отправляем один запрос на бэкенд для проверки telegram_chat_id
+      queryClient.invalidateQueries({ queryKey: ["data", "/user"] });
+      queryClient.invalidateQueries({ queryKey: ["data", "/users/me"] });
+    };
+
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [queryClient]);
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>

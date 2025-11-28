@@ -10,9 +10,10 @@ import { Card, CardContent } from "@/components/ui/card";
 
 import { useParams } from "react-router-dom";
 
-import { useGetData, useBookingsUnreadCount } from "@/api/api";
+import { useGetData, bookingsApi } from "@/api/api";
 import { useI18n } from "@/app/i18n.jsx";
 import RefreshFab from "@/components/RefreshFab.jsx";
+import { useQuery } from "@tanstack/react-query";
 
 
 function Booking() {
@@ -25,8 +26,14 @@ function Booking() {
   // API для подтвержденных броней на мои поездки (где я водитель)
   const { data: confirmedBookingsToMyTripsRes, isPending: confirmedBookingsToMyTripsLoading, error: confirmedBookingsToMyTripsError, refetch: refetchConfirmedToMyTrips } = useGetData("/bookings/to-my-trips/confirmed");
 
-  // Получаем количество непрочитанных сообщений
-  const { data: unreadCounts } = useBookingsUnreadCount();
+  // Получаем количество непрочитанных сообщений (React Query автоматически дедуплицирует запрос с Navbar)
+  const { data: unreadCounts } = useQuery({ 
+    queryKey: ["bookings", "unread-count"], 
+    queryFn: bookingsApi.getUnreadCount, 
+    refetchInterval: 60000,
+    staleTime: 30000,
+    cacheTime: 300000
+  });
 
   // Listen global refresh
   useEffect(() => {

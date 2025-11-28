@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useGetData, usePostData } from "@/api/api";
 import { useKeyboardInsets } from "@/hooks/useKeyboardInsets.jsx";
 import { useI18n } from "@/app/i18n.jsx";
+import { useQueryClient } from "@tanstack/react-query";
 import TripsCardSkeleton from "@/components/TripsCardSkeleton";
 import { toast } from "sonner";
 import MyTripsCard from "@/components/MyTripsCard";
@@ -45,12 +46,13 @@ function Trips() {
   const { t } = useI18n();
   const { keyboardInset, viewportHeight } = useKeyboardInsets();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const [dialog, setDialog] = useState(false);
   const [searchDialog, setSearchDialog] = useState(false);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
   
   // Получаем данные пользователя для проверки telegram_chat_id
-  const { data: userData } = useGetData("/user");
+  const { data: userData, refetch: refetchUser } = useGetData("/user");
   
   const [selectedTime, setSelectedTime] = useState("12:00");
   const [formErrors, setFormErrors] = useState({});
@@ -125,13 +127,23 @@ function Trips() {
   // Только если у пользователя нет telegram_chat_id
   useEffect(() => {
     if (dialog) {
-      const user = userData || sessionManager.getUserData();
-      // Показываем модальное окно только если telegram_chat_id отсутствует
-      if (user && !user.telegram_chat_id) {
-        setTelegramModalOpen(true);
-      }
+      // Отправляем один запрос на бэкенд для проверки telegram_chat_id
+      refetchUser().then((result) => {
+        // Проверяем после обновления данных - используем данные из результата или из кэша
+        const updatedUser = result?.data || queryClient.getQueryData(["data", "/user"]) || sessionManager.getUserData();
+        // Показываем модальное окно только если telegram_chat_id отсутствует
+        if (updatedUser && !updatedUser.telegram_chat_id) {
+          setTelegramModalOpen(true);
+        }
+      }).catch(() => {
+        // В случае ошибки проверяем из кэша
+        const user = userData || sessionManager.getUserData();
+        if (user && !user.telegram_chat_id) {
+          setTelegramModalOpen(true);
+        }
+      });
     }
-  }, [dialog, userData]);
+  }, [dialog, refetchUser, queryClient]);
 
   //
 

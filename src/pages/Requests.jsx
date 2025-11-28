@@ -14,11 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
-import { useGetData, usePostData, postData, useBookingsUnreadCount } from "@/api/api";
+import { useGetData, usePostData, postData, bookingsApi } from "@/api/api";
 import { useI18n } from "@/app/i18n.jsx";
 import EmptyState from "@/components/EmptyState.jsx";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { useSmartRefresh } from "@/hooks/useSmartRefresh.jsx";
 
@@ -37,8 +37,14 @@ function Requests() {
     "/bookings/to-my-trips/pending"
   );
   
-  // Получаем количество непрочитанных сообщений
-  const { data: unreadCounts } = useBookingsUnreadCount();
+  // Получаем количество непрочитанных сообщений (React Query автоматически дедуплицирует запрос с Navbar)
+  const { data: unreadCounts } = useQuery({ 
+    queryKey: ["bookings", "unread-count"], 
+    queryFn: bookingsApi.getUnreadCount, 
+    refetchInterval: 60000,
+    staleTime: 30000,
+    cacheTime: 300000
+  });
 
   // Умное автоматическое обновление
   const { forceRefresh, resetActivityFlags } = useSmartRefresh(
