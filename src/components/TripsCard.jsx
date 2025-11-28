@@ -22,11 +22,13 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { useDeleteData, usePostData, postData } from "@/api/api";
+import { useDeleteData, usePostData, postData, useGetData } from "@/api/api";
 import { useI18n } from "@/app/i18n.jsx";
 import { useKeyboardInsets } from "@/hooks/useKeyboardInsets.jsx";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import TelegramConnectModal from "@/components/TelegramConnectModal.jsx";
+import { sessionManager } from "@/lib/sessionManager.js";
 
 function TripsCard({ trip }) {
   const { t } = useI18n();
@@ -40,6 +42,10 @@ function TripsCard({ trip }) {
   const [seats, setSeats] = useState("1");
   const [offeredPrice, setOfferedPrice] = useState("");
   const [comment, setComment] = useState("");
+  const [telegramModalOpen, setTelegramModalOpen] = useState(false);
+  
+  // Получаем данные пользователя для проверки telegram_chat_id
+  const { data: userData } = useGetData("/user");
   const shouldStackCities = React.useMemo(() => {
     const fromLength = trip?.from_city?.length ?? 0;
     const toLength = trip?.to_city?.length ?? 0;
@@ -65,6 +71,11 @@ function TripsCard({ trip }) {
     e.stopPropagation();
     setSeats("1");
     setBookingDialogOpen(true);
+    // Показываем модальное окно для подключения Telegram только если telegram_chat_id отсутствует
+    const user = userData || sessionManager.getUserData();
+    if (user && !user.telegram_chat_id) {
+      setTelegramModalOpen(true);
+    }
   };
   const openOfferDialog = (e) => {
     e.stopPropagation();
@@ -72,6 +83,11 @@ function TripsCard({ trip }) {
     setOfferedPrice("");
     setComment("");
     setOfferDialogOpen(true);
+    // Показываем модальное окно для подключения Telegram только если telegram_chat_id отсутствует
+    const user = userData || sessionManager.getUserData();
+    if (user && !user.telegram_chat_id) {
+      setTelegramModalOpen(true);
+    }
   };
   const handleSubmitBooking = async (e) => {
     e.preventDefault();
@@ -512,6 +528,19 @@ function TripsCard({ trip }) {
           </div>
         </DialogContent>
       </Dialog>
+      <TelegramConnectModal 
+        open={telegramModalOpen} 
+        onOpenChange={setTelegramModalOpen}
+        onCloseParent={(close) => {
+          // Закрываем тот диалог, который был открыт (бронирование или предложение цены)
+          if (bookingDialogOpen) {
+            setBookingDialogOpen(false);
+          }
+          if (offerDialogOpen) {
+            setOfferDialogOpen(false);
+          }
+        }}
+      />
     </>
   );
 }

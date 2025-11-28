@@ -344,6 +344,17 @@ export const useTrackDownloadCount = () => {
   });
 };
 
+// Telegram connect API
+export const telegramApi = {
+  connect: () => getData("/telegram/connect"),
+};
+
+export const useTelegramConnect = () => {
+  return useMutation({
+    mutationFn: () => telegramApi.connect(),
+  });
+};
+
 // ? HOW TO USE EXAMPLES:
 
 // * 1. GET DATA (useGetData hook)

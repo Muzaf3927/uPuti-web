@@ -37,6 +37,8 @@ import { toast } from "sonner";
 import MyTripsCard from "@/components/MyTripsCard";
 import { useSmartRefresh } from "@/hooks/useSmartRefresh.jsx";
 import EmptyState from "@/components/EmptyState.jsx";
+import TelegramConnectModal from "@/components/TelegramConnectModal.jsx";
+import { sessionManager } from "@/lib/sessionManager.js";
  
 
 function Trips() {
@@ -45,6 +47,10 @@ function Trips() {
   const location = useLocation();
   const [dialog, setDialog] = useState(false);
   const [searchDialog, setSearchDialog] = useState(false);
+  const [telegramModalOpen, setTelegramModalOpen] = useState(false);
+  
+  // Получаем данные пользователя для проверки telegram_chat_id
+  const { data: userData } = useGetData("/user");
   
   const [selectedTime, setSelectedTime] = useState("12:00");
   const [formErrors, setFormErrors] = useState({});
@@ -114,6 +120,18 @@ function Trips() {
       myTripsRefetch();
     }
   }, [location.pathname, refetch, myTripsRefetch]);
+
+  // Показываем модальное окно Telegram при открытии диалога создания поездки
+  // Только если у пользователя нет telegram_chat_id
+  useEffect(() => {
+    if (dialog) {
+      const user = userData || sessionManager.getUserData();
+      // Показываем модальное окно только если telegram_chat_id отсутствует
+      if (user && !user.telegram_chat_id) {
+        setTelegramModalOpen(true);
+      }
+    }
+  }, [dialog, userData]);
 
   //
 
@@ -636,6 +654,11 @@ function Trips() {
       </Card>
       {/* Floating refresh button */}
       {/* RefreshFab рендерится глобально из MainLayout через портал */}
+      <TelegramConnectModal 
+        open={telegramModalOpen} 
+        onOpenChange={setTelegramModalOpen}
+        onCloseParent={setDialog}
+      />
     </div>
   );
 }
