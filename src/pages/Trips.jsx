@@ -91,6 +91,15 @@ function Trips() {
     // Устанавливаем активные фильтры только при нажатии кнопки поиска
     setActiveFilters({ ...searchFilters });
     setSearchDialog(false);
+    
+    // Отслеживание события поиска в Яндекс.Метрике
+    if (typeof window !== "undefined" && window.ym) {
+      window.ym(105604771, "reachGoal", "search_trip", {
+        from: searchFilters.from || "",
+        to: searchFilters.to || "",
+        date: searchFilters.date || "",
+      });
+    }
   };
 
   const handleClearSearch = () => {
@@ -127,6 +136,11 @@ function Trips() {
   // Только если у пользователя нет telegram_chat_id
   useEffect(() => {
     if (dialog) {
+      // Отслеживание открытия диалога создания поездки в Яндекс.Метрике
+      if (typeof window !== "undefined" && window.ym) {
+        window.ym(105604771, "reachGoal", "open_create_trip_dialog");
+      }
+      
       // Отправляем один запрос на бэкенд для проверки telegram_chat_id
       refetchUser().then((result) => {
         // Проверяем после обновления данных - используем данные из результата или из кэша
@@ -144,6 +158,13 @@ function Trips() {
       });
     }
   }, [dialog, refetchUser, queryClient]);
+
+  // Отслеживание открытия диалога поиска в Яндекс.Метрике
+  useEffect(() => {
+    if (searchDialog && typeof window !== "undefined" && window.ym) {
+      window.ym(105604771, "reachGoal", "open_search_dialog");
+    }
+  }, [searchDialog]);
 
   //
 
@@ -265,6 +286,16 @@ function Trips() {
         // Принудительно обновляем данные после создания поездки
         resetActivityFlags();
         forceRefresh();
+        
+        // Отслеживание события создания поездки в Яндекс.Метрике
+        if (typeof window !== "undefined" && window.ym) {
+          window.ym(105604771, "reachGoal", "create_trip", {
+            from: from_city || "",
+            to: to_city || "",
+            date: date || "",
+            price: price || "",
+          });
+        }
       }
     } catch (err) {
       console.error(err);

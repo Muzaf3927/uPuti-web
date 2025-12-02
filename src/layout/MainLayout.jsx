@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { safeLocalStorage } from "@/lib/localStorage";
 import { sessionManager } from "@/lib/sessionManager";
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/app/i18n.jsx";
 import { useDispatch } from "react-redux";
-import { Link, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { logout } from "@/app/userSlice/userSlice";
 import Onboarding from "@/components/Onboarding";
 import { getInitials } from "@/lib/utils";
@@ -50,11 +50,19 @@ function getNthWord(str, n) {
 function MainLayout() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { lang, setLang, t } = useI18n();
   const [profileOpen, setProfileOpen] = React.useState(false);
   const [showOnboarding, setShowOnboarding] = React.useState(false);
   const [supportOpen, setSupportOpen] = React.useState(false);
   const { keyboardInset } = useKeyboardInsets();
+
+  // Отслеживание изменений маршрута в Яндекс.Метрике
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.ym) {
+      window.ym(105604771, "hit", location.pathname + location.search);
+    }
+  }, [location]);
 
   // Проверяем, нужно ли показать онбординг
   React.useEffect(() => {
