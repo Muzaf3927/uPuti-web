@@ -4,8 +4,13 @@ import { safeLocalStorage } from "@/lib/localStorage";
 
 const { VITE_API_BASE } = import.meta.env;
 
+// Локальный API для тестирования
+const LOCAL_API_BASE = "http://localhost:8000/api";
+// const PRODUCTION_API_BASE = "https://api.uputi.net/api";
+
 const api = axios.create({
-  baseURL: VITE_API_BASE || "https://api.uputi.net/api",
+  baseURL: VITE_API_BASE || LOCAL_API_BASE, // Используем локальный API
+  // baseURL: VITE_API_BASE || PRODUCTION_API_BASE, // Основной API (закомментирован)
   headers: {
     "Content-Type": "application/json",
   },
@@ -27,8 +32,12 @@ const refreshAccessToken = async () => {
   const refreshToken = safeLocalStorage.getItem("reFreshToken");
   if (!refreshToken) throw new Error("No refresh token available");
 
+  // Локальный API для тестирования
+  const API_BASE = VITE_API_BASE || LOCAL_API_BASE;
+  // const API_BASE = VITE_API_BASE || PRODUCTION_API_BASE; // Основной API (закомментирован)
+  
   const { data } = await axios.post(
-    `${VITE_API_BASE || "https://api.uputi.net/api"}/refresh-token`,
+    `${API_BASE}/refresh-token`,
     { refresh_token: refreshToken }
   );
 

@@ -11,6 +11,7 @@ import {
   Profile,
   DeleteAccount,
   DownloadAndroid,
+  Orders,
 } from "./pages";
 import MainLayout from "./layout/MainLayout";
 import {
@@ -72,6 +73,11 @@ function App() {
         {
           path: "/history",
           element: <History />,
+          errorElement: <ErrorElement />,
+        },
+        {
+          path: "/orders",
+          element: <Orders />,
           errorElement: <ErrorElement />,
         },
         {

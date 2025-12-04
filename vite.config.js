@@ -14,9 +14,11 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "https://api.uputi.net",
+        // Локальный API для тестирования
+        target: "http://localhost:8000",
+        // target: "https://api.uputi.net", // Основной API (закомментирован)
         changeOrigin: true,
-        secure: true,
+        secure: false, // false для localhost
       },
     },
   },
