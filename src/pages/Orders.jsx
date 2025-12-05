@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 
 // components
 import OrdersMap from "@/components/OrdersMap";
 import RouteSelectorMap from "@/components/RouteSelectorMap";
+import CompletedOrderBottomSheet from "@/components/CompletedOrderBottomSheet";
+import DriverOfferBottomSheet from "@/components/DriverOfferBottomSheet";
 
 // icons
-import { User, Search, Loader2, X } from "lucide-react";
+import { User, Search, Loader2, X, Phone, AlertTriangle } from "lucide-react";
 
 // router
 import { useLocation } from "react-router-dom";
@@ -22,12 +24,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import TimePicker from "@/components/ui/time-picker";
 
-import { useGetData, usePostData } from "@/api/api";
+import { useGetData, usePostData, postData, deleteData } from "@/api/api";
 import { useKeyboardInsets } from "@/hooks/useKeyboardInsets.jsx";
 import { useI18n } from "@/app/i18n.jsx";
 import { useQueryClient } from "@tanstack/react-query";
@@ -44,6 +47,11 @@ function Orders() {
   const [searchDialog, setSearchDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("allOrders");
   const [currentStep, setCurrentStep] = useState(1); // 1 - карта, 2 - форма
+  const [selectedHistoryOrder, setSelectedHistoryOrder] = useState(null);
+  const [selectedHistoryOffer, setSelectedHistoryOffer] = useState(null);
+  const [editingOrder, setEditingOrder] = useState(null); // Заказ для редактирования
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
   
   const [selectedTime, setSelectedTime] = useState("12:00");
   const [formErrors, setFormErrors] = useState({});
@@ -98,6 +106,14 @@ function Orders() {
     refetch: myOrdersRefetch,
   } = useGetData(`/passenger-requests/my`);
 
+  // Получаем офферы водителя для истории в разделе "Все заказы"
+  const {
+    data: driverOffersData,
+    isLoading: driverOffersLoading,
+    error: driverOffersError,
+    refetch: driverOffersRefetch,
+  } = useGetData(`/driver-offers/my`);
+
   // Умное автоматическое обновление
   const { forceRefresh, resetActivityFlags } = useSmartRefresh(
     () => {
@@ -119,18 +135,73 @@ function Orders() {
 
   const orderPostMutation = usePostData("/passenger-requests");
 
-  const filteredOrders = Array.isArray(data?.data)
-    ? data.data.filter((order) => order.status !== "completed" && order.status !== "closed")
-    : data?.passenger_requests?.filter((order) => order.status !== "completed" && order.status !== "closed") || [];
+  // Получаем все заказы (Laravel пагинация возвращает data.data)
+  // Бэкенд уже возвращает только активные заказы для /passenger-requests
+  const allOrdersFromBackend = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data)
+    ? data
+    : Array.isArray(data?.passenger_requests)
+    ? data.passenger_requests
+    : [];
+
+  // Бэкенд уже фильтрует по статусу active, но на всякий случай фильтруем еще раз
+  const filteredOrders = allOrdersFromBackend.filter((order) => order.status === "active" || !order.status);
 
   const hasActiveSearch = Boolean(activeFilters.from || activeFilters.to || activeFilters.date);
   const showSearchEmptyState = hasActiveSearch && !isLoading && filteredOrders.length === 0;
 
   // Определяем, какие заказы показывать в зависимости от активного таба
+  // На карте показываем только активные заказы (status === 'active')
+  const activeMyOrders = myOrdersList.filter((item) => item.status === "active");
   const ordersToDisplay = activeTab === "allOrders" 
     ? filteredOrders 
-    : myOrdersList.filter((item) => item.status !== "completed" && item.status !== "closed");
+    : activeMyOrders;
   const isLoadingOrders = activeTab === "allOrders" ? isLoading : myOrdersLoading;
+
+  // Логирование для отладки
+  useEffect(() => {
+    if (data) {
+      console.log("=== ALL ORDERS DEBUG ===");
+      console.log("Raw data from backend:", data);
+      console.log("All orders array:", allOrdersFromBackend);
+      console.log("Filtered active orders:", filteredOrders);
+    }
+  }, [data]);
+  
+  useEffect(() => {
+    console.log("=== ORDERS TO DISPLAY ===");
+    console.log("Orders to display on map:", ordersToDisplay);
+    console.log("Count:", ordersToDisplay?.length || 0);
+  }, [ordersToDisplay]);
+
+  // История - заказы со статусом completed (только для "Мои заказы")
+  const historyOrders = activeTab === "myOrders"
+    ? myOrdersList.filter((item) => item.status === "completed")
+    : [];
+
+  // Получаем офферы водителя для истории в разделе "Все заказы"
+  const driverOffersList = Array.isArray(driverOffersData?.data)
+    ? driverOffersData.data
+    : Array.isArray(driverOffersData)
+    ? driverOffersData
+    : [];
+
+  // Фильтруем офферы: показываем только accepted и declined (не pending)
+  const historyDriverOffers = activeTab === "allOrders"
+    ? driverOffersList.filter((offer) => offer.status === "accepted" || offer.status === "declined")
+    : [];
+  
+  // Логирование для отладки истории
+  useEffect(() => {
+    if (activeTab === "myOrders") {
+      console.log("=== MY ORDERS DEBUG ===");
+      console.log("Raw myOrders data:", myOrders);
+      console.log("My orders list:", myOrdersList);
+      console.log("Active my orders (for map):", activeMyOrders);
+      console.log("History orders (completed/cancelled):", historyOrders);
+    }
+  }, [activeTab]);
 
   // Функция валидации формы
   const validateForm = (formData) => {
@@ -198,19 +269,111 @@ function Orders() {
       return;
     }
 
+    // Нормализуем координаты (могут быть массивом [lat, lng] или объектом {lat, lng})
+    const fromLat = Array.isArray(fromCoords) ? fromCoords[0] : fromCoords?.lat;
+    const fromLng = Array.isArray(fromCoords) ? fromCoords[1] : fromCoords?.lng;
+    const toLat = Array.isArray(toCoords) ? toCoords[0] : toCoords?.lat;
+    const toLng = Array.isArray(toCoords) ? toCoords[1] : toCoords?.lng;
+
+    // Обязательно получаем адреса по координатам через геокодирование перед отправкой
+    let fromAddressFinal = "";
+    let toAddressFinal = "";
+
+    // Проверяем, что selectedFrom и selectedTo не являются координатами
+    const isCoordinatesString = (str) => {
+      if (!str || typeof str !== 'string') return false;
+      const trimmed = str.trim();
+      // Проверяем формат координат: две числа через запятую (с пробелом или без)
+      const coordsRegex = /^\s*\d+\.\d+\s*,\s*\d+\.\d+\s*$/;
+      return coordsRegex.test(trimmed);
+    };
+    const fromIsCoordinates = selectedFrom && isCoordinatesString(selectedFrom);
+    const toIsCoordinates = selectedTo && isCoordinatesString(selectedTo);
+
+    // Функция обратного геокодирования через Nominatim (OpenStreetMap)
+    const reverseGeocode = async (lat, lng) => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ru&addressdetails=1`
+        );
+        const data = await response.json();
+        if (data && data.display_name) {
+          return data.display_name;
+        }
+      } catch (error) {
+        console.error("Reverse geocoding error:", error);
+      }
+      return null;
+    };
+
+    try {
+      if (fromLat && fromLng) {
+        console.log("Geocoding FROM coordinates:", [fromLat, fromLng]);
+        const address = await reverseGeocode(fromLat, fromLng);
+        if (address && !isCoordinatesString(address)) {
+          fromAddressFinal = address;
+          console.log("Geocoded FROM address:", fromAddressFinal);
+        }
+      }
+
+      if (toLat && toLng) {
+        console.log("Geocoding TO coordinates:", [toLat, toLng]);
+        const address = await reverseGeocode(toLat, toLng);
+        if (address && !isCoordinatesString(address)) {
+          toAddressFinal = address;
+          console.log("Geocoded TO address:", toAddressFinal);
+        }
+      }
+    } catch (geocodeError) {
+      console.error("Geocoding error before submit:", geocodeError);
+      toast.error("Ошибка при определении адреса. Попробуйте еще раз.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Проверяем, что полученные адреса не являются координатами (используем ту же функцию)
+    if (fromAddressFinal && isCoordinatesString(fromAddressFinal)) {
+      console.warn("FROM address is coordinates, clearing it:", fromAddressFinal);
+      fromAddressFinal = "";
+    }
+    if (toAddressFinal && isCoordinatesString(toAddressFinal)) {
+      console.warn("TO address is coordinates, clearing it:", toAddressFinal);
+      toAddressFinal = "";
+    }
+
+    // Если геокодирование не дало результатов, используем сохраненные адреса (если они не координаты)
+    if (!fromAddressFinal && selectedFrom && !fromIsCoordinates && !isCoordinatesString(selectedFrom)) {
+      fromAddressFinal = selectedFrom;
+      console.log("Using saved FROM address:", fromAddressFinal);
+    }
+    if (!toAddressFinal && selectedTo && !toIsCoordinates && !isCoordinatesString(selectedTo)) {
+      toAddressFinal = selectedTo;
+      console.log("Using saved TO address:", toAddressFinal);
+    }
+
+    // Если адреса все еще пустые или являются координатами, показываем ошибку
+    if (!fromAddressFinal || !toAddressFinal || isCoordinatesString(fromAddressFinal) || isCoordinatesString(toAddressFinal)) {
+      toast.error("Не удалось определить адреса. Попробуйте выбрать точки на карте еще раз.");
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Преобразуем координаты в числа и формируем данные для отправки
     const resultData = {
-      from_lat: fromCoords.lat,
-      from_lng: fromCoords.lng,
-      from_address: selectedFrom,
-      to_lat: toCoords.lat,
-      to_lng: toCoords.lng,
-      to_address: selectedTo,
+      from_lat: Number(fromLat),
+      from_lng: Number(fromLng),
+      from_address: fromAddressFinal,
+      to_lat: Number(toLat),
+      to_lng: Number(toLng),
+      to_address: toAddressFinal,
       date,
       time,
-      seats: parseInt(seats),
+      seats: parseInt(seats, 10),
       comment,
-      ...(amount && { amount: parseInt(amount) }),
+      ...(amount && { amount: parseInt(amount, 10) }),
     };
+
+    console.log("Sending order data to backend:", resultData);
 
     try {
       const res = await orderPostMutation.mutateAsync(resultData);
@@ -242,6 +405,169 @@ function Orders() {
     }
   };
 
+  // Обработчик редактирования заказа
+  const handleEditOrder = (order) => {
+    setEditingOrder(order);
+    // Предзаполняем форму данными заказа
+    setRouteData({
+      from: order.from_address || order.from || "",
+      to: order.to_address || order.to || "",
+      fromCoords: order.from_lat && order.from_lng ? { lat: order.from_lat, lng: order.from_lng } : null,
+      toCoords: order.to_lat && order.to_lng ? { lat: order.to_lat, lng: order.to_lng } : null,
+    });
+    setSelectedTime(order.time ? (order.time.includes(":") ? order.time.substring(0, 5) : order.time) : "12:00");
+    setAmountInput(order.amount ? String(order.amount) : "");
+    setCurrentStep(1); // Открываем карту сначала (шаг 1)
+    setDialog(true);
+  };
+
+  // Обработчик удаления заказа
+  const handleDeleteOrder = (order) => {
+    setOrderToDelete(order);
+    setDeleteConfirmOpen(true);
+  };
+
+  // Подтверждение удаления
+  const confirmDeleteOrder = async () => {
+    if (!orderToDelete?.id) return;
+
+    try {
+      const res = await deleteData(`/passenger-requests/${orderToDelete.id}`);
+      if (res.message === "Passenger request deleted!" || res) {
+        toast.success(t("orders.myOrderActions.deleteSuccess") || "Заказ удален");
+        setDeleteConfirmOpen(false);
+        setOrderToDelete(null);
+        queryClient.invalidateQueries({ queryKey: ["data"] });
+        refetch();
+        myOrdersRefetch();
+      }
+    } catch (err) {
+      console.error("Error deleting order:", err);
+      let errorMessage = t("orders.myOrderActions.deleteError") || "Ошибка при удалении заказа";
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.status === 403) {
+        errorMessage = "Нет доступа для удаления этого заказа";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      toast.error(errorMessage);
+    }
+  };
+
+  // Обработчик обновления заказа (при отправке формы редактирования)
+  const handleUpdateOrder = async (e) => {
+    e.preventDefault();
+    
+    if (isSubmitting || !editingOrder?.id) return;
+    
+    const formData = new FormData(e.target);
+
+    const errors = validateForm(formData);
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      toast.error(t("orders.form.validationError"));
+      return;
+    }
+
+    setFormErrors({});
+    setIsSubmitting(true);
+
+    const date = formData.get("date");
+    const time = selectedTime;
+    const seats = formData.get("seats");
+    const comment = formData.get("note") || "";
+    const amount = formData.get("amount") || null;
+
+    // Используем существующие координаты или новые, если были выбраны
+    const fromLat = routeData.fromCoords?.lat || editingOrder.from_lat;
+    const fromLng = routeData.fromCoords?.lng || editingOrder.from_lng;
+    const toLat = routeData.toCoords?.lat || editingOrder.to_lat;
+    const toLng = routeData.toCoords?.lng || editingOrder.to_lng;
+
+    // Получаем адреса
+    let fromAddressFinal = routeData.from || editingOrder.from_address || "";
+    let toAddressFinal = routeData.to || editingOrder.to_address || "";
+
+    // Если координаты были изменены, делаем геокодирование
+    if (routeData.fromCoords || routeData.toCoords) {
+      const reverseGeocode = async (lat, lng) => {
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ru&addressdetails=1`
+          );
+          const data = await response.json();
+          if (data && data.display_name) {
+            return data.display_name;
+          }
+        } catch (error) {
+          console.error("Reverse geocoding error:", error);
+        }
+        return null;
+      };
+
+      if (fromLat && fromLng) {
+        const address = await reverseGeocode(fromLat, fromLng);
+        if (address) fromAddressFinal = address;
+      }
+
+      if (toLat && toLng) {
+        const address = await reverseGeocode(toLat, toLng);
+        if (address) toAddressFinal = address;
+      }
+    }
+
+    // Формируем данные для отправки - все поля nullable на бэкенде
+    const resultData = {
+      // Координаты и адреса (fromLat, fromLng и т.д. уже содержат либо новые, либо существующие значения)
+      ...(fromLat && { from_lat: Number(fromLat) }),
+      ...(fromLng && { from_lng: Number(fromLng) }),
+      ...(fromAddressFinal && { from_address: fromAddressFinal }),
+      ...(toLat && { to_lat: Number(toLat) }),
+      ...(toLng && { to_lng: Number(toLng) }),
+      ...(toAddressFinal && { to_address: toAddressFinal }),
+      // Остальные поля из формы
+      ...(date && { date }),
+      ...(time && { time }),
+      ...(seats && { seats: parseInt(seats, 10) }),
+      ...(comment !== undefined && comment !== "" && { comment }),
+      ...(amount && { amount: parseInt(amount, 10) }),
+    };
+
+    try {
+      const res = await postData(`/passenger-requests/${editingOrder.id}`, resultData);
+      if (res.message === "Passenger request updated!" || res.passenger_request) {
+        toast.success(t("orders.myOrderActions.updateSuccess") || "Заказ обновлен");
+        setDialog(false);
+        setEditingOrder(null);
+        setCurrentStep(1);
+        setRouteData({ from: "", to: "", fromCoords: null, toCoords: null });
+        setFormErrors({});
+        setSelectedTime("12:00");
+        queryClient.invalidateQueries({ queryKey: ["data"] });
+        refetch();
+        myOrdersRefetch();
+      }
+    } catch (err) {
+      console.error(err);
+      
+      if (err.response?.status === 403) {
+        toast.error("Нет доступа для обновления этого заказа");
+      } else if (err.response?.data?.message) {
+        toast.error(err.response.data.message);
+      } else if (err.response?.data?.errors) {
+        const errorMessages = Object.values(err.response.data.errors).flat();
+        toast.error(errorMessages.join(', '));
+      } else if (err.message) {
+        toast.error(err.message);
+      } else {
+        toast.error(t("orders.myOrderActions.updateError") || "Ошибка при обновлении заказа");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div>
       <div className="w-full flex text-primary gap-2.5 mb-5">
@@ -256,6 +582,8 @@ function Orders() {
               setRouteData({ from: "", to: "", fromCoords: null, toCoords: null });
               setFormErrors({});
               setSelectedTime("12:00");
+              setEditingOrder(null);
+              setAmountInput("");
             }
           }}
         >
@@ -266,22 +594,25 @@ function Orders() {
             </div>
           </DialogTrigger>
               <DialogContent
-                className="w-full h-auto sm:w-[95vw] sm:h-auto sm:max-w-[760px] sm:max-h-[calc(100svh-2rem)] p-0 sm:p-3 sm:rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm overflow-hidden"
+                className="w-full h-[calc(100svh-2rem)] max-h-[calc(100svh-2rem)] sm:w-[95vw] sm:max-w-[760px] sm:max-h-[calc(100svh-2rem)] p-0 sm:p-3 sm:rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm overflow-hidden flex flex-col"
                 style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}
                 preventOutsideClose
                 showCloseButton={false}
                 autoFocusScroll
               >
-            <DialogHeader className="relative flex-shrink-0 px-3 sm:px-4 pt-2 sm:pt-4 pb-1 sm:pb-2">
+            <DialogHeader className="relative flex-shrink-0 px-3 sm:px-4 pt-2 sm:pt-3 pb-1">
               <DialogTitle className="text-center text-primary font-bold pr-8 text-xs sm:text-base">
-                {currentStep === 1 ? t("orders.form.step1Title") : t("orders.form.step2Title")}
+                {editingOrder 
+                  ? (currentStep === 1 ? t("orders.form.step1Title") : t("orders.myOrderActions.edit"))
+                  : (currentStep === 1 ? t("orders.form.step1Title") : t("orders.form.step2Title"))
+                }
               </DialogTitle>
-              <DialogDescription className="sr-only">Create order dialog</DialogDescription>
+              <DialogDescription className="sr-only">{editingOrder ? "Edit order dialog" : "Create order dialog"}</DialogDescription>
               <DialogClose asChild>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="absolute top-2 right-2 sm:top-4 sm:right-4 h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-accent/50 rounded-full"
+                  className="absolute top-2 right-2 sm:top-3 sm:right-4 h-6 w-6 sm:h-7 sm:w-7 p-0 hover:bg-accent/50 rounded-full"
                   onClick={() => {
                     setCurrentStep(1);
                     setRouteData({ from: "", to: "", fromCoords: null, toCoords: null });
@@ -295,8 +626,8 @@ function Orders() {
             
             {currentStep === 1 ? (
               // Шаг 1: Выбор маршрута на карте
-              <div className="flex flex-col gap-2 sm:gap-3 h-full flex-1 overflow-hidden px-3 sm:px-4 pb-3 sm:pb-4">
-                <div className="flex-1 min-h-0">
+              <div className="flex flex-col gap-2 sm:gap-3 flex-1 min-h-0 overflow-hidden px-3 sm:px-4 pb-3 sm:pb-4">
+                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                   <RouteSelectorMap
                     isOpen={dialog && currentStep === 1}
                     onRouteSelect={(route) => {
@@ -339,6 +670,8 @@ function Orders() {
                     toCity={selectedTo}
                     setFromCity={(value) => setRouteData(prev => ({ ...prev, from: value }))}
                     setToCity={(value) => setRouteData(prev => ({ ...prev, to: value }))}
+                    initialFromCoords={editingOrder && routeData.fromCoords ? routeData.fromCoords : null}
+                    initialToCoords={editingOrder && routeData.toCoords ? routeData.toCoords : null}
                   />
                 </div>
                 <div className="flex gap-2 w-full bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-white/70 py-1 flex-shrink-0">
@@ -363,7 +696,7 @@ function Orders() {
               </div>
             ) : (
               // Шаг 2: Форма с данными
-              <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:gap-3 px-3 sm:px-4 pb-2 sm:pb-3">
+              <form onSubmit={editingOrder ? handleUpdateOrder : handleSubmit} className="flex flex-col gap-2 sm:gap-3 px-3 sm:px-4 pb-2 sm:pb-3">
                 <input type="hidden" name="from" value={selectedFrom} />
                 <input type="hidden" name="to" value={selectedTo} />
                 
@@ -377,6 +710,7 @@ function Orders() {
                         type="date" 
                         id="date" 
                         name="date" 
+                        defaultValue={editingOrder?.date || ""}
                         required
                         min={new Date().toISOString().split('T')[0]}
                         className={`${formErrors.date || formErrors.dateTime ? "border-red-500" : ""} bg-white h-8 sm:h-9 text-sm w-full min-w-0`}
@@ -404,6 +738,7 @@ function Orders() {
                       type="number" 
                       id="amount" 
                       name="amount" 
+                      defaultValue={editingOrder?.amount || ""}
                       min="0"
                       placeholder={t("orders.form.amountPlaceholder")} 
                       className="bg-white h-8 sm:h-9"
@@ -415,7 +750,7 @@ function Orders() {
                       type="number" 
                       id="seats" 
                       name="seats" 
-                      defaultValue="1"
+                      defaultValue={editingOrder?.seats || "1"}
                       min="1"
                       placeholder={t("orders.form.seatsPlaceholder")} 
                       required
@@ -425,7 +760,7 @@ function Orders() {
                   </div>
                   <div className="col-span-1 sm:col-span-2 grid items-center gap-1">
                     <Label htmlFor="note" className="text-xs sm:text-sm">{t("orders.form.note")}</Label>
-                    <Input type="text" id="note" name="note" placeholder={t("orders.commentPlaceholder")} className="bg-white h-8 sm:h-9" />
+                    <Input type="text" id="note" name="note" defaultValue={editingOrder?.comment || ""} placeholder={t("orders.commentPlaceholder")} className="bg-white h-8 sm:h-9" />
                   </div>
                 </div>
                 <div className="flex gap-2 mt-1 w-full bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-white/70 py-1 flex-shrink-0" style={{ paddingBottom: keyboardInset ? keyboardInset : undefined }}>
@@ -566,13 +901,163 @@ function Orders() {
               </div>
             )}
             
-            {/* Карта всегда отображается */}
-            <div className="px-4 mb-4">
-              <OrdersMap orders={ordersToDisplay} isLoading={isLoadingOrders} />
-            </div>
+            {/* Карта всегда отображается - только активные заказы */}
+                <div className="px-4 mb-4">
+                  <OrdersMap 
+                    orders={ordersToDisplay} 
+                    isLoading={isLoadingOrders} 
+                    mapHeight="h-[50vh]"
+                    onRefresh={() => {
+                      refetch();
+                      if (activeTab === "myOrders") {
+                        myOrdersRefetch();
+                      }
+                      if (activeTab === "allOrders") {
+                        driverOffersRefetch();
+                      }
+                    }}
+                    onEditOrder={handleEditOrder}
+                    onDeleteOrder={handleDeleteOrder}
+                  />
+                </div>
+            
+            {/* История заказов - только для "Мои заказы", показываем только completed */}
+            {activeTab === "myOrders" && (
+              <div className="px-4 pb-4">
+                <h3 className="text-sm sm:text-base font-bold text-primary mb-3">{t("orders.history.title")}</h3>
+                {historyOrders.length === 0 ? (
+                  <div className="text-sm text-gray-500 text-center py-4">{t("orders.history.empty")}</div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {historyOrders.map((order) => {
+                      const time = order.time ? (order.time.includes(":") ? order.time.substring(0, 5) : order.time) : "";
+                      return (
+                        <div
+                          key={order.id}
+                          onClick={() => setSelectedHistoryOrder(order)}
+                          className="border rounded-xl p-2.5 sm:p-3 bg-card/90 backdrop-blur-sm shadow-sm ring-1 ring-blue-200/60 cursor-pointer hover:shadow-md transition-shadow"
+                          style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.10), rgba(79,70,229,0.06))" }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-primary font-medium text-xs sm:text-sm min-w-0 flex-1">
+                              <span className="truncate">{order.from_address || order.from}</span>
+                              <span className="text-primary">→</span>
+                              <span className="truncate">{order.to_address || order.to}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-600 mt-1">
+                            <span>{order.date}</span>
+                            {time && (
+                              <>
+                                <span>•</span>
+                                <span>{time}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* История офферов водителя - только для "Все заказы" */}
+            {activeTab === "allOrders" && (
+              <div className="px-4 pb-4">
+                <h3 className="text-sm sm:text-base font-bold text-primary mb-3">{t("orders.history.title")}</h3>
+                {driverOffersLoading ? (
+                  <div className="text-sm text-gray-500 text-center py-4">{t("orders.loading")}</div>
+                ) : historyDriverOffers.length === 0 ? (
+                  <div className="text-sm text-gray-500 text-center py-4">{t("orders.history.empty")}</div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {historyDriverOffers.map((offer) => {
+                      const request = offer.passengerRequest || offer.passenger_request || {};
+                      const fromAddress = request.from_address || request.from || "";
+                      const toAddress = request.to_address || request.to || "";
+                      const time = request.time ? (request.time.includes(":") ? request.time.substring(0, 5) : request.time) : "";
+                      
+                      return (
+                        <div
+                          key={offer.id}
+                          onClick={() => setSelectedHistoryOffer(offer)}
+                          className="border rounded-xl p-2.5 sm:p-3 bg-card/90 backdrop-blur-sm shadow-sm ring-1 ring-blue-200/60 cursor-pointer hover:shadow-md transition-shadow"
+                          style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.10), rgba(79,70,229,0.06))" }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-primary font-medium text-xs sm:text-sm min-w-0 flex-1">
+                              <span className="truncate">{fromAddress}</span>
+                              <span className="text-primary">→</span>
+                              <span className="truncate">{toAddress}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-600 mt-1">
+                            <span>{request.date}</span>
+                            {time && (
+                              <>
+                                <span>•</span>
+                                <span>{time}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Bottom Sheet для завершенных заказов из истории */}
+      {selectedHistoryOrder && (
+        <CompletedOrderBottomSheet
+          order={selectedHistoryOrder}
+          onClose={() => setSelectedHistoryOrder(null)}
+        />
+      )}
+
+      {/* Bottom Sheet для офферов водителя из истории */}
+      {selectedHistoryOffer && (
+        <DriverOfferBottomSheet
+          offer={selectedHistoryOffer}
+          onClose={() => setSelectedHistoryOffer(null)}
+        />
+      )}
+
+      {/* Диалог подтверждения удаления заказа */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-sm sm:max-w-md mx-2 sm:mx-4 overflow-hidden rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              {t("orders.myOrderActions.confirmDelete")}
+            </DialogTitle>
+            <DialogDescription className="text-left pt-2">
+              {t("orders.myOrderActions.confirmDeleteMessage")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteConfirmOpen(false)}
+              className="flex-1 rounded-2xl"
+            >
+              {t("orders.form.cancel")}
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteOrder}
+              className="flex-1 rounded-2xl"
+            >
+              {t("orders.myOrderActions.delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

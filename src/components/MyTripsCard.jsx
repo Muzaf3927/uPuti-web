@@ -213,8 +213,8 @@ function MyTripsCard({ trip }) {
   const confirmDelete = async () => {
     try {
       // Основной DELETE
-      // Локальный API для тестирования
-      const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000/api";
+      // Принудительно используем локальный API для разработки
+      const API_BASE = "http://localhost:8000/api";
       // const API_BASE = import.meta.env.VITE_API_BASE || "https://api.uputi.net/api"; // Основной API (закомментирован)
       
       const res = await fetch(API_BASE + `/trips/${trip.id}`, {

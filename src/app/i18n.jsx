@@ -288,6 +288,26 @@ const dict = {
       loading: "Yuklanmoqda...",
       emptyDescription: "Bu yerda yo'lovchilar tomonidan qo'shilgan buyurtmalar ko'rsatiladi.",
       error: "Xatolik",
+      history: {
+        title: "Tarix",
+        completed: "Yakunlangan",
+        cancelled: "Bekor qilingan",
+        empty: "Tarix bo'sh",
+        call: "Qo'ng'iroq",
+        callPassenger: "Yo'lovchiga qo'ng'iroq",
+        callDriver: "Haydovchiga qo'ng'iroq",
+        message: "Yozish",
+      },
+      myOrderActions: {
+        edit: "Tahrirlash",
+        delete: "O'chirish",
+        deleteSuccess: "Buyurtma o'chirildi.",
+        deleteError: "Buyurtmani o'chirishda xatolik yuz berdi.",
+        updateSuccess: "Buyurtma yangilandi.",
+        updateError: "Buyurtmani yangilashda xatolik yuz berdi.",
+        confirmDelete: "O'chirishni tasdiqlash",
+        confirmDeleteMessage: "Bu buyurtmani o'chirishni xohlaysizmi? Bu amalni qaytarib bo'lmaydi.",
+      },
       form: {
         from: "Qayerdan",
         to: "Qayerga",
@@ -336,6 +356,47 @@ const dict = {
         selectTo: "Qayerga nuqtani tanlang",
         from: "Qayerdan",
         to: "Qayerga"
+      },
+      popup: {
+        seats: "O'rinlar",
+        price: "Narx",
+        comment: "Izoh",
+        passenger: "Yo'lovchi",
+        statusActive: "Faol",
+        statusCompleted: "Yakunlangan",
+        statusCancelled: "Bekor qilingan",
+        close: "Yopish",
+        phone: "Telefon",
+        rating: "Reyting"
+      },
+      bottomSheet: {
+        sendRequest: "So'rov yuborish",
+        cancelRequest: "So'rovni bekor qilish",
+        cancelSuccess: "So'rov muvaffaqiyatli bekor qilindi.",
+        cancelError: "So'rovni bekor qilishda xatolik yuz berdi.",
+        offers: "Takliflar",
+        noOffers: "Hozircha takliflar yo'q.",
+        acceptOffer: "Qabul qilish",
+        rejectOffer: "Rad etish",
+        acceptSuccess: "Taklif qabul qilindi.",
+        rejectSuccess: "Taklif rad etildi.",
+        acceptError: "Taklifni qabul qilishda xatolik.",
+        rejectError: "Taklifni rad etishda xatolik."
+      },
+      offerForm: {
+        title: "Taklif yuborish",
+        description: "Yo'lovchiga taklifingizni yuboring",
+        price: "Narx",
+        pricePlaceholder: "50000",
+        cancel: "Bekor qilish",
+        submit: "Yuborish",
+        submitting: "Yuborilmoqda...",
+        validationError: "Iltimos, barcha majburiy maydonlarni to'ldiring",
+        successMessage: "Taklif muvaffaqiyatli yuborildi!",
+        errorMessage: "Taklif yuborishda xatolik yuz berdi.",
+        validation: {
+          carNumberFormat: "Mashina raqami formati noto'g'ri. Format: 01A123BA"
+        }
       }
     },
     profilePanel: {
@@ -403,6 +464,8 @@ const dict = {
       skip: "Пропустить",
       next: "Далее",
       finish: "Завершить",
+      callPassenger: "Позвонить пассажиру",
+      callDriver: "Позвонить водителю",
     },
     tripsCard: {
       book: "Забронировать",
@@ -642,6 +705,26 @@ const dict = {
       loading: "Загрузка...",
       emptyDescription: "Здесь будут отображаться заказы, добавленные пассажирами.",
       error: "Ошибка",
+      history: {
+        title: "История",
+        completed: "Завершен",
+        cancelled: "Отменен",
+        empty: "История пуста",
+        call: "Позвонить",
+        callPassenger: "Позвонить пассажиру",
+        callDriver: "Позвонить водителю",
+        message: "Написать",
+      },
+      myOrderActions: {
+        edit: "Изменить",
+        delete: "Удалить",
+        deleteSuccess: "Заказ удален.",
+        deleteError: "Ошибка при удалении заказа.",
+        updateSuccess: "Заказ обновлен.",
+        updateError: "Ошибка при обновлении заказа.",
+        confirmDelete: "Подтвердить удаление",
+        confirmDeleteMessage: "Вы уверены, что хотите удалить этот заказ? Это действие нельзя отменить.",
+      },
       form: {
         from: "Откуда",
         to: "Куда",
@@ -690,6 +773,47 @@ const dict = {
         selectTo: "Выберите точку назначения",
         from: "Откуда",
         to: "Куда"
+      },
+      popup: {
+        seats: "Мест",
+        price: "Цена",
+        comment: "Комментарий",
+        passenger: "Пассажир",
+        statusActive: "Активный",
+        statusCompleted: "Завершен",
+        statusCancelled: "Отменен",
+        close: "Закрыть",
+        phone: "Телефон",
+        rating: "Рейтинг"
+      },
+      bottomSheet: {
+        sendRequest: "Отправить запрос",
+        cancelRequest: "Отменить запрос",
+        cancelSuccess: "Запрос успешно отменен.",
+        cancelError: "Ошибка при отмене запроса.",
+        offers: "Предложения",
+        noOffers: "Пока нет предложений.",
+        acceptOffer: "Принять",
+        rejectOffer: "Отклонить",
+        acceptSuccess: "Предложение принято.",
+        rejectSuccess: "Предложение отклонено.",
+        acceptError: "Ошибка при принятии предложения.",
+        rejectError: "Ошибка при отклонении предложения."
+      },
+      offerForm: {
+        title: "Отправить предложение",
+        description: "Отправьте ваше предложение пассажиру",
+        price: "Цена",
+        pricePlaceholder: "50000",
+        cancel: "Отмена",
+        submit: "Отправить",
+        submitting: "Отправляется...",
+        validationError: "Пожалуйста, заполните все обязательные поля",
+        successMessage: "Предложение успешно отправлено!",
+        errorMessage: "Ошибка при отправке предложения.",
+        validation: {
+          carNumberFormat: "Неверный формат номера машины. Формат: 01А123БЦ"
+        }
       }
     },
     profilePanel: {

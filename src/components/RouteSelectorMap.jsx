@@ -1,8 +1,39 @@
 import React, { useEffect, useRef, useState } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/app/i18n.jsx";
+import { Navigation } from "lucide-react";
+import { toast } from "sonner";
 
-function RouteSelectorMap({ onRouteSelect, fromCity, toCity, setFromCity, setToCity, isOpen = true }) {
+// Исправляем иконки маркеров для Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+});
+
+// Создаем кастомные иконки для маркеров
+const fromIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const toIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, initialFromCoords = null, initialToCoords = null }) {
   const { t } = useI18n();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -11,99 +42,53 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, setFromCity, setToC
   const routeLineRef = useRef(null);
   const [selectingFrom, setSelectingFrom] = useState(true);
   const [mapReady, setMapReady] = useState(false);
-  const scriptLoadedRef = useRef(false);
-  const selectingFromRef = useRef(true); // Ref для актуального значения
-  
-  // Обновляем ref при изменении состояния
+  const [isLocating, setIsLocating] = useState(false);
+  const selectingFromRef = useRef(true);
+
   useEffect(() => {
     selectingFromRef.current = selectingFrom;
   }, [selectingFrom]);
 
   useEffect(() => {
-    // Если диалог не открыт, не инициализируем карту
-    if (!isOpen) return;
-    
-    let isMounted = true;
-    
-    const loadMap = () => {
-      if (!isMounted) return;
-      
-      // Если карта уже инициализирована, ничего не делаем
+    if (!isOpen) {
       if (mapInstanceRef.current) {
-        console.log("Map already initialized");
-        return;
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        setMapReady(false);
       }
-      
-      // Проверяем, есть ли уже загруженный скрипт Яндекс.Карт
-      const existingScript = document.getElementById("yandex-maps-script") || document.getElementById("yandex-maps-route-script");
-      
-      if (window.ymaps) {
-        // Скрипт уже загружен
-        window.ymaps.ready(() => {
-          if (isMounted && !mapInstanceRef.current) {
-            setTimeout(() => {
-              initMap();
-            }, 200);
-          }
-        });
-      } else if (!scriptLoadedRef.current && !existingScript) {
-        // Загружаем скрипт
-        scriptLoadedRef.current = true;
-        const script = document.createElement("script");
-        script.src = "https://api-maps.yandex.ru/2.1/?lang=ru_RU";
-        script.async = true;
-        script.id = "yandex-maps-route-script";
-        
-        script.onload = () => {
-          console.log("Yandex Maps script loaded");
-          if (window.ymaps && isMounted) {
-            window.ymaps.ready(() => {
-              console.log("Yandex Maps ready");
-              if (isMounted && !mapInstanceRef.current) {
-                setTimeout(() => {
-                  initMap();
-                }, 200);
-              }
-            });
-          }
-        };
-        
-        script.onerror = () => {
-          console.error("Failed to load Yandex Maps script");
-          scriptLoadedRef.current = false;
-        };
-        
-        document.head.appendChild(script);
-      } else if (existingScript && !window.ymaps) {
-        // Скрипт загружается, ждем
-        const checkYmaps = setInterval(() => {
-          if (window.ymaps && isMounted) {
-            clearInterval(checkYmaps);
-            window.ymaps.ready(() => {
-              if (isMounted && !mapInstanceRef.current) {
-                setTimeout(() => {
-                  initMap();
-                }, 200);
-              }
-            });
-          }
-        }, 100);
-        
-        // Таймаут на случай, если скрипт не загрузится
-        setTimeout(() => {
-          clearInterval(checkYmaps);
-        }, 10000);
-      }
-    };
-    
-    // Небольшая задержка, чтобы убедиться, что DOM готов
-    const timer = setTimeout(() => {
-      loadMap();
-    }, 100);
-    
+      return;
+    }
+
+    if (!mapRef.current || mapInstanceRef.current) return;
+
+    // Инициализируем карту
+    const map = L.map(mapRef.current, {
+      center: [41.3111, 69.2797], // Ташкент
+      zoom: 10,
+      zoomControl: true,
+    });
+
+    // Добавляем тайлы OpenStreetMap
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    mapInstanceRef.current = map;
+    setMapReady(true);
+
+    // Обработка клика на карте
+    map.on("click", (e) => {
+      const coords = [e.latlng.lat, e.latlng.lng];
+      handleMapClick(coords);
+    });
+
     return () => {
-      isMounted = false;
-      clearTimeout(timer);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        setMapReady(false);
+      }
     };
   }, [isOpen]);
 
@@ -113,241 +98,213 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, setFromCity, setToC
     }
   }, [fromCity, toCity]);
 
-  const initMap = () => {
-    if (!mapRef.current) {
-      console.log("mapRef.current is null");
-      return;
-    }
-    
-    if (mapInstanceRef.current) {
-      console.log("Map already initialized");
-      return;
-    }
-    
-    if (!window.ymaps) {
-      console.log("window.ymaps is not available");
-      return;
+  // Отображаем начальные маркеры, если координаты уже заданы (для режима редактирования)
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current) return;
+
+    // Отображаем маркер "Откуда", если координаты заданы
+    if (initialFromCoords && (initialFromCoords.lat || initialFromCoords[0])) {
+      const lat = initialFromCoords.lat || initialFromCoords[0];
+      const lng = initialFromCoords.lng || initialFromCoords[1];
+      const coords = [lat, lng];
+
+      // Удаляем старый маркер, если есть
+      if (fromMarkerRef.current) {
+        mapInstanceRef.current.removeLayer(fromMarkerRef.current);
+      }
+
+      // Создаем маркер с адресом
+      const address = fromCity || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      fromMarkerRef.current = L.marker(coords, { icon: fromIcon })
+        .bindPopup(`${t("orders.map.from")}: ${address}`)
+        .addTo(mapInstanceRef.current);
+
+      // Обновляем состояние выбора
+      setSelectingFrom(false);
+      selectingFromRef.current = false;
     }
 
+    // Отображаем маркер "Куда", если координаты заданы
+    if (initialToCoords && (initialToCoords.lat || initialToCoords[0])) {
+      const lat = initialToCoords.lat || initialToCoords[0];
+      const lng = initialToCoords.lng || initialToCoords[1];
+      const coords = [lat, lng];
+
+      // Удаляем старый маркер, если есть
+      if (toMarkerRef.current) {
+        mapInstanceRef.current.removeLayer(toMarkerRef.current);
+      }
+
+      // Создаем маркер с адресом
+      const address = toCity || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      toMarkerRef.current = L.marker(coords, { icon: toIcon })
+        .bindPopup(`${t("orders.map.to")}: ${address}`)
+        .addTo(mapInstanceRef.current);
+    }
+
+    // Рисуем линию маршрута, если обе точки заданы
+    if (initialFromCoords && initialToCoords && mapInstanceRef.current) {
+      const fromLat = initialFromCoords.lat || initialFromCoords[0];
+      const fromLng = initialFromCoords.lng || initialFromCoords[1];
+      const toLat = initialToCoords.lat || initialToCoords[0];
+      const toLng = initialToCoords.lng || initialToCoords[1];
+
+      // Удаляем старую линию, если есть
+      if (routeLineRef.current) {
+        mapInstanceRef.current.removeLayer(routeLineRef.current);
+      }
+
+      // Рисуем линию маршрута
+      const routeLine = L.polyline([[fromLat, fromLng], [toLat, toLng]], {
+        color: "#3b82f6",
+        weight: 4,
+        opacity: 0.7,
+      }).addTo(mapInstanceRef.current);
+
+      routeLineRef.current = routeLine;
+
+      // Подстраиваем карту под маршрут
+      const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
+      mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+    }
+  }, [mapReady, initialFromCoords, initialToCoords, fromCity, toCity, t]);
+
+  const reverseGeocode = async (lat, lng) => {
     try {
-      console.log("Initializing map...");
-      const map = new window.ymaps.Map(mapRef.current, {
-        center: [41.3111, 69.2797], // Ташкент (широта, долгота)
-        zoom: 10,
-        controls: ['zoomControl', 'fullscreenControl']
-      });
-
-      mapInstanceRef.current = map;
-      setMapReady(true);
-      console.log("Map initialized successfully");
-
-      // Обработка клика на карте - работает везде
-      map.events.add('click', (e) => {
-        console.log("=== MAP CLICKED ===");
-        try {
-          const coords = e.get('coords');
-          console.log("Coordinates from click:", coords);
-          if (coords && Array.isArray(coords) && coords.length === 2) {
-            console.log("Calling handleMapClick with:", coords);
-            handleMapClick(coords);
-          } else {
-            console.error("Invalid coords format:", coords);
-          }
-        } catch (err) {
-          console.error("Error handling click:", err);
-        }
-      });
-      
-      console.log("Click handler added to map");
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ru&addressdetails=1`
+      );
+      const data = await response.json();
+      if (data && data.display_name) {
+        return data.display_name;
+      }
     } catch (error) {
-      console.error("Error initializing map:", error);
+      console.error("Reverse geocoding error:", error);
     }
+    return null;
   };
 
   const handleMapClick = async (coords) => {
-    // Используем ref для получения актуального значения
     const isSelectingFrom = selectingFromRef.current;
-    console.log("=== handleMapClick START ===", { coords, selectingFrom: isSelectingFrom, stateSelectingFrom: selectingFrom });
-    
-    if (!window.ymaps || !mapInstanceRef.current) {
+    console.log("=== handleMapClick START ===", { coords, selectingFrom: isSelectingFrom });
+
+    if (!mapInstanceRef.current) {
       console.error("Map not ready!");
       return;
     }
 
-    // Сразу сохраняем координаты и ставим маркер
-    let address = `Координаты: ${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}`;
-    
-    console.log("Coordinates saved:", coords, "Mode:", isSelectingFrom ? "FROM" : "TO");
+    let address = `${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}`;
 
     try {
-      // Пытаемся получить адрес
-      console.log("Trying to geocode...");
-      const geocodeResult = await window.ymaps.geocode(coords);
-      const firstGeoObject = geocodeResult.geoObjects.get(0);
-      
-      if (firstGeoObject) {
-        const geocodedAddress = firstGeoObject.getAddressLine();
-        if (geocodedAddress) {
-          address = geocodedAddress;
-          console.log("Got address:", address);
-        } else {
-          console.log("No address from geocode, using coordinates");
-        }
-      } else {
-        console.log("No geocode result, using coordinates");
-      }
-
-      if (isSelectingFrom) {
-        // Удаляем старый маркер отправления
-        if (fromMarkerRef.current && mapInstanceRef.current) {
-          mapInstanceRef.current.geoObjects.remove(fromMarkerRef.current);
-        }
-
-        // Создаем новый маркер отправления
-        fromMarkerRef.current = new window.ymaps.Placemark(
-          coords,
-          {
-            balloonContent: `${t("orders.map.from")}: ${address}`,
-            iconCaption: t("orders.map.from")
-          },
-          {
-            preset: 'islands#blueCircleDotIcon'
-          }
-        );
-
-        mapInstanceRef.current.geoObjects.add(fromMarkerRef.current);
-        
-        // Вызываем callback для обновления родителя - передаем только "from"
-        console.log("Calling onRouteSelect with:", { from: address, fromCoords: coords });
-        if (onRouteSelect) {
-          onRouteSelect({
-            from: address,
-            fromCoords: coords,
-            // НЕ передаем to и toCoords - они сохранятся из предыдущего состояния
-          });
-          console.log("onRouteSelect called successfully");
-        }
-        
-        // Обновляем маршрут если обе точки выбраны
-        setTimeout(() => {
-          if (toCity) {
-            updateRoute();
-          }
-        }, 100);
-      } else {
-        // Удаляем старый маркер назначения
-        if (toMarkerRef.current && mapInstanceRef.current) {
-          mapInstanceRef.current.geoObjects.remove(toMarkerRef.current);
-        }
-
-        // Создаем новый маркер назначения
-        toMarkerRef.current = new window.ymaps.Placemark(
-          coords,
-          {
-            balloonContent: `${t("orders.map.to")}: ${address}`,
-            iconCaption: t("orders.map.to")
-          },
-          {
-            preset: 'islands#redCircleDotIcon'
-          }
-        );
-
-        mapInstanceRef.current.geoObjects.add(toMarkerRef.current);
-        
-        // Вызываем callback для обновления родителя - передаем только "to"
-        console.log("Calling onRouteSelect with:", { to: address, toCoords: coords });
-        if (onRouteSelect) {
-          onRouteSelect({
-            to: address,
-            toCoords: coords,
-            // НЕ передаем from и fromCoords - они сохранятся из предыдущего состояния
-          });
-          console.log("onRouteSelect called successfully");
-        }
-        
-        // Обновляем маршрут если обе точки выбраны
-        setTimeout(() => {
-          if (fromCity) {
-            updateRoute();
-          }
-        }, 100);
+      const geocodedAddress = await reverseGeocode(coords[0], coords[1]);
+      if (geocodedAddress && !geocodedAddress.match(/^\d+\.\d+,\s*\d+\.\d+$/)) {
+        address = geocodedAddress;
+        console.log("Got address:", address);
       }
     } catch (error) {
-      console.error("Error in handleMapClick:", error);
-      // Даже если ошибка, сохраняем координаты
-      const fallbackAddress = `${coords[0].toFixed(6)}, ${coords[1].toFixed(6)}`;
-      
-      if (isSelectingFrom) {
-        if (fromMarkerRef.current && mapInstanceRef.current) {
-          mapInstanceRef.current.geoObjects.remove(fromMarkerRef.current);
-        }
-        
-        fromMarkerRef.current = new window.ymaps.Placemark(
-          coords,
-          { iconCaption: t("orders.map.from") },
-          { preset: 'islands#blueCircleDotIcon' }
-        );
-        
-        mapInstanceRef.current.geoObjects.add(fromMarkerRef.current);
-        
-        if (onRouteSelect) {
-          onRouteSelect({
-            from: fallbackAddress,
-            fromCoords: coords,
-            // НЕ передаем to и toCoords - они сохранятся
-          });
-        }
+      console.error("Geocoding error:", error);
+    }
+
+    if (isSelectingFrom) {
+      // Удаляем старый маркер отправления
+      if (fromMarkerRef.current) {
+        mapInstanceRef.current.removeLayer(fromMarkerRef.current);
+      }
+
+      // Создаем новый маркер отправления
+      fromMarkerRef.current = L.marker(coords, { icon: fromIcon })
+        .bindPopup(`${t("orders.map.from")}: ${address}`)
+        .addTo(mapInstanceRef.current);
+
+      if (onRouteSelect) {
+        onRouteSelect({
+          from: address,
+          fromCoords: coords,
+        });
+      }
+
+      // Автоматически переключаемся на выбор "Куда" после выбора "Откуда"
+      if (!toCity) {
+        // Переключаемся на выбор "Куда" сразу после выбора "Откуда"
+        setTimeout(() => {
+          selectingFromRef.current = false;
+          setSelectingFrom(false);
+        }, 100);
       } else {
-        if (toMarkerRef.current && mapInstanceRef.current) {
-          mapInstanceRef.current.geoObjects.remove(toMarkerRef.current);
-        }
-        
-        toMarkerRef.current = new window.ymaps.Placemark(
-          coords,
-          { iconCaption: t("orders.map.to") },
-          { preset: 'islands#redCircleDotIcon' }
-        );
-        
-        mapInstanceRef.current.geoObjects.add(toMarkerRef.current);
-        
-        if (onRouteSelect) {
-          onRouteSelect({
-            to: fallbackAddress,
-            toCoords: coords,
-            // НЕ передаем from и fromCoords - они сохранятся
-          });
-        }
+        // Обновляем маршрут если обе точки выбраны
+        setTimeout(() => {
+          updateRoute();
+        }, 100);
+      }
+    } else {
+      // Удаляем старый маркер назначения
+      if (toMarkerRef.current) {
+        mapInstanceRef.current.removeLayer(toMarkerRef.current);
+      }
+
+      // Создаем новый маркер назначения
+      toMarkerRef.current = L.marker(coords, { icon: toIcon })
+        .bindPopup(`${t("orders.map.to")}: ${address}`)
+        .addTo(mapInstanceRef.current);
+
+      if (onRouteSelect) {
+        onRouteSelect({
+          to: address,
+          toCoords: coords,
+        });
+      }
+
+      // Обновляем маршрут если обе точки выбраны
+      if (fromCity) {
+        setTimeout(() => {
+          updateRoute();
+        }, 100);
       }
     }
   };
 
+  const geocodeAddress = async (address) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&accept-language=ru`
+      );
+      const data = await response.json();
+      if (data && data.length > 0) {
+        return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+      }
+    } catch (error) {
+      console.error("Geocoding error:", error);
+    }
+    return null;
+  };
+
   const updateRoute = async () => {
-    if (!window.ymaps || !mapInstanceRef.current || !fromCity || !toCity) return;
+    if (!mapInstanceRef.current || !fromCity || !toCity) return;
 
     try {
       // Удаляем старую линию маршрута
       if (routeLineRef.current) {
-        mapInstanceRef.current.geoObjects.remove(routeLineRef.current);
+        mapInstanceRef.current.removeLayer(routeLineRef.current);
       }
 
-      // Создаем маршрут
-      const multiRoute = new window.ymaps.multiRouter.MultiRoute({
-        referencePoints: [fromCity, toCity],
-        params: {
-          routingMode: 'auto'
-        }
-      }, {
-        boundsAutoApply: true
-      });
+      // Геокодируем адреса для получения координат
+      const fromCoords = await geocodeAddress(fromCity);
+      const toCoords = await geocodeAddress(toCity);
 
-      mapInstanceRef.current.geoObjects.add(multiRoute);
-      routeLineRef.current = multiRoute;
+      if (fromCoords && toCoords) {
+        // Рисуем прямую линию между точками
+        const routeLine = L.polyline([fromCoords, toCoords], {
+          color: "#3b82f6",
+          weight: 4,
+          opacity: 0.7,
+        }).addTo(mapInstanceRef.current);
 
-      // Подстраиваем карту под маршрут
-      mapInstanceRef.current.setBounds(
-        multiRoute.getBounds(),
-        { checkZoomRange: true, duration: 300 }
-      );
+        routeLineRef.current = routeLine;
+
+        // Подстраиваем карту под маршрут
+        const bounds = L.latLngBounds([fromCoords, toCoords]);
+        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+      }
     } catch (error) {
       console.error("Route calculation error:", error);
     }
@@ -355,45 +312,92 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, setFromCity, setToC
 
   const clearFrom = () => {
     if (fromMarkerRef.current) {
-      mapInstanceRef.current.geoObjects.remove(fromMarkerRef.current);
+      mapInstanceRef.current.removeLayer(fromMarkerRef.current);
       fromMarkerRef.current = null;
     }
     if (routeLineRef.current) {
-      mapInstanceRef.current.geoObjects.remove(routeLineRef.current);
+      mapInstanceRef.current.removeLayer(routeLineRef.current);
       routeLineRef.current = null;
     }
-    // Уведомляем родителя об очистке - передаем только очищенное значение
     if (onRouteSelect) {
       onRouteSelect({
         from: "",
         fromCoords: null,
-        // НЕ передаем to и toCoords - они сохранятся
       });
     }
   };
 
   const clearTo = () => {
     if (toMarkerRef.current) {
-      mapInstanceRef.current.geoObjects.remove(toMarkerRef.current);
+      mapInstanceRef.current.removeLayer(toMarkerRef.current);
       toMarkerRef.current = null;
     }
     if (routeLineRef.current) {
-      mapInstanceRef.current.geoObjects.remove(routeLineRef.current);
+      mapInstanceRef.current.removeLayer(routeLineRef.current);
       routeLineRef.current = null;
     }
-    // Уведомляем родителя об очистке - передаем только очищенное значение
     if (onRouteSelect) {
       onRouteSelect({
         to: "",
         toCoords: null,
-        // НЕ передаем from и fromCoords - они сохранятся
       });
     }
   };
 
+  const locateUser = () => {
+    if (!mapInstanceRef.current) return;
+
+    setIsLocating(true);
+
+    if (!navigator.geolocation) {
+      toast.error("Геолокация не поддерживается вашим браузером");
+      setIsLocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        const userLocation = [latitude, longitude];
+
+        // Перемещаем карту к местоположению пользователя
+        mapInstanceRef.current.setView(userLocation, 15, {
+          animate: true,
+          duration: 0.5,
+        });
+
+        // Автоматически выбираем эту точку как "откуда" или "куда"
+        await handleMapClick(userLocation);
+
+        setIsLocating(false);
+      },
+      (error) => {
+        setIsLocating(false);
+        let errorMessage = "Не удалось определить ваше местоположение";
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = "Доступ к геолокации запрещен. Разрешите доступ в настройках браузера";
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = "Информация о местоположении недоступна";
+            break;
+          case error.TIMEOUT:
+            errorMessage = "Превышено время ожидания определения местоположения";
+            break;
+        }
+        toast.error(errorMessage);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
   return (
-      <div className="w-full flex flex-col gap-2 sm:gap-3">
-      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between">
+    <div className="w-full h-full flex flex-col gap-2 sm:gap-3">
+      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between flex-shrink-0">
         <div className="flex gap-1 sm:gap-2 items-center flex-1">
           <Button
             type="button"
@@ -405,9 +409,7 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, setFromCity, setToC
             }}
             className="text-[10px] sm:text-xs flex-1 sm:flex-initial"
           >
-            <span className="truncate">
-              {fromCity ? fromCity : t("orders.map.from")}
-            </span>
+            <span className="truncate">{fromCity ? fromCity : t("orders.map.from")}</span>
           </Button>
           {fromCity && (
             <Button
@@ -429,12 +431,11 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, setFromCity, setToC
             onClick={() => {
               selectingFromRef.current = false;
               setSelectingFrom(false);
+              // Если адрес уже выбран, можно переопределить его
             }}
             className="text-[10px] sm:text-xs flex-1 sm:flex-initial"
           >
-            <span className="truncate">
-              {toCity ? toCity : t("orders.map.to")}
-            </span>
+            <span className="truncate">{toCity ? toCity : t("orders.map.to")}</span>
           </Button>
           {toCity && (
             <Button
@@ -449,8 +450,23 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, setFromCity, setToC
           )}
         </div>
       </div>
-      <div className="w-full h-[250px] sm:h-[300px] md:h-[400px] rounded-2xl overflow-hidden border shadow-lg relative">
-        <div ref={mapRef} className="w-full h-full" style={{ minHeight: "250px" }} />
+      <div className="w-full flex-1 min-h-[65vh] sm:min-h-[500px] md:min-h-[550px] rounded-2xl overflow-hidden border shadow-lg relative">
+        <div ref={mapRef} className="w-full h-full" />
+        {/* Кнопка определения местоположения */}
+        {mapReady && (
+          <button
+            onClick={locateUser}
+            disabled={isLocating}
+            className="absolute bottom-4 right-4 z-[1000] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-full p-2.5 sm:p-3 shadow-lg border border-gray-200 flex items-center justify-center transition-colors"
+            aria-label="Определить моё местоположение"
+            title="Определить моё местоположение"
+          >
+            <Navigation 
+              size={18} 
+              className={`text-blue-600 ${isLocating ? "animate-spin" : ""}`}
+            />
+          </button>
+        )}
         {!mapReady && (
           <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-50 pointer-events-none">
             <div className="text-sm text-gray-500">{t("orders.loading")}</div>
@@ -472,4 +488,3 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, setFromCity, setToC
 }
 
 export default RouteSelectorMap;
-
