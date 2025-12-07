@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 // shad ui
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,11 +13,13 @@ import { useGetData, bookingsApi } from "@/api/api";
 import { useI18n } from "@/app/i18n.jsx";
 import RefreshFab from "@/components/RefreshFab.jsx";
 import { useQuery } from "@tanstack/react-query";
+import { useActiveTab } from "@/layout/MainLayout";
 
 
 function Booking() {
   const { t } = useI18n();
   const location = useLocation();
+  const { activeTab } = useActiveTab();
 
   // API для моих подтвержденных броней (где я пассажир)
   const { data: myConfirmedBookingsRes, isPending: myConfirmedBookingsLoading, error: myConfirmedBookingsError, refetch: refetchMyConfirmed } = useGetData("/bookings/my/confirmed");
@@ -69,28 +70,13 @@ function Booking() {
     return grouped;
   }, [confirmedBookingsToMyTrips]);
 
+  // Показываем только нужный контент в зависимости от activeTab
+  const showPassengerContent = activeTab === "passenger";
+  const showDriverContent = activeTab === "driver";
+
   return (
       <>
-        <Tabs defaultValue="fromMe" className="">
-          <TabsList className="px-1 sm:px-2 w-full mb-4 sm:mb-6">
-            <TabsTrigger value="fromMe" className="relative text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center">
-              {t("booking.myBookings")}
-              {unreadCounts?.my_confirmed_unread > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-destructive text-white text-[9px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold">
-                {unreadCounts.my_confirmed_unread > 9 ? '9+' : unreadCounts.my_confirmed_unread}
-              </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="toMe" className="relative text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center">
-              {t("booking.toMe")}
-              {unreadCounts?.to_my_trips_confirmed_unread > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-destructive text-white text-[9px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold">
-                {unreadCounts.to_my_trips_confirmed_unread > 9 ? '9+' : unreadCounts.to_my_trips_confirmed_unread}
-              </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="fromMe">
+        {showPassengerContent && (
             <Card className="rounded-3xl shadow-lg border bg-card/90 backdrop-blur-sm">
               <CardContent className="flex flex-col gap-4 py-6 rounded-3xl">
                 {myConfirmedBookingsLoading ? (
@@ -169,8 +155,8 @@ function Booking() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-          <TabsContent value="toMe">
+        )}
+        {showDriverContent && (
             <Card className="rounded-3xl shadow-lg border bg-card/90 backdrop-blur-sm">
               <CardContent className="flex flex-col gap-4 py-6 rounded-3xl">
                 {confirmedBookingsToMyTripsLoading ? (
@@ -258,8 +244,7 @@ function Booking() {
                 )}
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+        )}
         {/* RefreshFab рендерится глобально из MainLayout через портал */}
       </>
   );

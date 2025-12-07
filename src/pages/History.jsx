@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
 import { useGetData, getData, postData } from "@/api/api";
@@ -13,10 +12,12 @@ import { History as HistoryIcon, Star, ChevronLeft, ChevronRight } from "lucide-
 import { useI18n } from "@/app/i18n.jsx";
 import EmptyState from "@/components/EmptyState.jsx";
 import { useLocation } from "react-router-dom";
+import { useActiveTab } from "@/layout/MainLayout";
 
 function History() {
   const { t } = useI18n();
   const location = useLocation();
+  const { activeTab } = useActiveTab();
   
   // Состояние пагинации
   const [driverPage, setDriverPage] = useState(1);
@@ -216,22 +217,15 @@ function History() {
     </div>
   );
 
+  // Показываем только нужный контент в зависимости от activeTab
+  const showPassengerContent = activeTab === "passenger";
+  const showDriverContent = activeTab === "driver";
+
   return (
     <Card className="shadow-lg border">
       <CardContent className="py-6 rounded-3xl bg-card/90 backdrop-blur-sm">
-        <Tabs defaultValue="asDriver" onValueChange={(value) => {
-          // Сбрасываем страницы при переключении вкладок
-          if (value === "asDriver") {
-            setDriverPage(1);
-          } else if (value === "asPassenger") {
-            setPassengerPage(1);
-          }
-        }}>
-          <TabsList className="px-1 sm:px-2 w-full mb-4 sm:mb-6">
-            <TabsTrigger value="asDriver" className="text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center">{t("history.driverTab")}</TabsTrigger>
-            <TabsTrigger value="asPassenger" className="text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center">{t("history.passengerTab")}</TabsTrigger>
-          </TabsList>
-          <TabsContent value="asDriver">
+        {showDriverContent && (
+          <>
             {asDriver && asDriver.length > 0 ? (
               <div className="mb-4 p-4 rounded-2xl border bg-white/80 backdrop-blur-sm text-primary shadow-sm">
                 <div className="text-sm">{t("history.totalEarn")}</div>
@@ -275,8 +269,10 @@ function History() {
                 </div>
               </>
             )}
-          </TabsContent>
-          <TabsContent value="asPassenger">
+          </>
+        )}
+        {showPassengerContent && (
+          <>
             {asPassengerLoading ? (
               <div>Yuklanmoqda...</div>
             ) : asPassengerError ? (
@@ -314,8 +310,8 @@ function History() {
                 </div>
               </>
             )}
-          </TabsContent>
-        </Tabs>
+          </>
+        )}
       </CardContent>
 
       {/* Временно закомментирован диалог оценки */}

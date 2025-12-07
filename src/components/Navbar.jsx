@@ -24,8 +24,7 @@ function Navbar() {
       unreadCount: (unreadCounts?.my_confirmed_unread || 0) + (unreadCounts?.to_my_trips_confirmed_unread || 0)
     },
     { path: "/history", name: t("nav.history"), icon: <History size={20} /> },
-    { path: "/", name: t("nav.trips"), icon: <Car size={20} /> },
-    { path: "/orders", name: t("nav.orders"), icon: <User size={20} /> },
+    { path: "/trips-orders", name: t("nav.tripsOrders"), icon: <Car size={20} /> },
     { 
       path: "/chats", 
       name: t("nav.chats"), 
@@ -50,7 +49,7 @@ function Navbar() {
   return (
     <div className="flex justify-between p-1 sm:p-2 rounded-3xl bg-gradient-to-tr from-white/70 to-cyan-50/70 dark:from-white/5 dark:to-white/10 backdrop-blur-md border shadow-md">
       {links.map((link) => {
-        const isActive = location.pathname === link.path;
+        const isActive = location.pathname === link.path || (link.path === "/trips-orders" && (location.pathname === "/" || location.pathname === "/orders"));
         return (
           <Link
             key={link.path}

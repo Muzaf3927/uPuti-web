@@ -1,16 +1,10 @@
 import React, { useEffect } from "react";
-// shad cn
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowRight,
-  Car,
   Check,
-  Link,
   MapPin,
-  MessageCircle,
   X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
@@ -21,11 +15,13 @@ import { toast } from "sonner";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { useSmartRefresh } from "@/hooks/useSmartRefresh.jsx";
+import { useActiveTab } from "@/layout/MainLayout";
 
 function Requests() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const location = useLocation();
+  const { activeTab } = useActiveTab();
   
   // API для моих pending запросов (где я пассажир)
   const { data: mineRes, isPending: mineLoading, error: mineError, refetch: refetchMine } = useGetData(
@@ -98,27 +94,13 @@ function Requests() {
   const mine = mineRes?.bookings || [];
   const toMe = toMeRes?.bookings || [];
 
+  // Показываем только нужный контент в зависимости от activeTab
+  const showPassengerContent = activeTab === "passenger";
+  const showDriverContent = activeTab === "driver";
+
   return (
-    <Tabs defaultValue="allTrips" className="w-full">
-      <TabsList className="px-1 sm:px-2 w-full mb-4 sm:mb-6">
-        <TabsTrigger value="allTrips" className="relative text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center">
-          {t("requests.mineTab")}
-          {unreadCounts?.my_pending_unread > 0 && (
-            <span className="absolute -top-1 -right-1 bg-destructive text-white text-[9px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold">
-              {unreadCounts.my_pending_unread > 9 ? '9+' : unreadCounts.my_pending_unread}
-            </span>
-          )}
-        </TabsTrigger>
-        <TabsTrigger value="myTrips" className="relative text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center">
-          {t("requests.toMeTab")}
-          {unreadCounts?.to_my_trips_pending_unread > 0 && (
-            <span className="absolute -top-1 -right-1 bg-destructive text-white text-[9px] sm:text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold">
-              {unreadCounts.to_my_trips_pending_unread > 9 ? '9+' : unreadCounts.to_my_trips_pending_unread}
-            </span>
-          )}
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="allTrips">
+    <div className="w-full">
+      {showPassengerContent && (
         <Card className="bg-card/90 backdrop-blur-sm border shadow-lg">
           <CardContent className="flex flex-col gap-3 sm:gap-5 py-4 sm:py-6">
             {mineLoading ? (
@@ -170,8 +152,8 @@ function Requests() {
             )}
           </CardContent>
         </Card>
-      </TabsContent>
-      <TabsContent value="myTrips">
+      )}
+      {showDriverContent && (
         <Card className="bg-card/90 backdrop-blur-sm border shadow-lg">
           <CardContent className="flex flex-col gap-3 sm:gap-5 py-4 sm:py-6">
             {toMeLoading ? (
@@ -242,8 +224,8 @@ function Requests() {
             )}
           </CardContent>
         </Card>
-      </TabsContent>
-    </Tabs>
+      )}
+    </div>
   );
 }
 

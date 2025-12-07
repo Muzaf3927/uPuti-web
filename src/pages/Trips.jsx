@@ -4,13 +4,12 @@ import React, { useEffect, useState } from "react";
 import TripsCard from "@/components/TripsCard";
 
 // icons
-import { Car, MapPin, Route, Search, ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
+import { Car, MapPin, Search, ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 
 // router
 import { useLocation } from "react-router-dom";
 
 // shad cn
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +39,8 @@ import { useSmartRefresh } from "@/hooks/useSmartRefresh.jsx";
 import EmptyState from "@/components/EmptyState.jsx";
 import TelegramConnectModal from "@/components/TelegramConnectModal.jsx";
 import { sessionManager } from "@/lib/sessionManager.js";
+import { useActiveTab } from "@/layout/MainLayout";
+import { Plus } from "lucide-react";
  
 
 function Trips() {
@@ -47,6 +48,7 @@ function Trips() {
   const { keyboardInset, viewportHeight } = useKeyboardInsets();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { activeTab } = useActiveTab();
   const [dialog, setDialog] = useState(false);
   const [searchDialog, setSearchDialog] = useState(false);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
@@ -321,16 +323,122 @@ function Trips() {
   //   return;
   // }
 
+  // Показываем только нужный контент в зависимости от activeTab
+  const showPassengerContent = activeTab === "passenger";
+  const showDriverContent = activeTab === "driver";
+
   return (
     <div>
-      <div className="w-full flex text-primary gap-2.5 mb-5">
-        <Dialog className="w-full" open={dialog} onOpenChange={setDialog}>
-          <DialogTrigger className="w-full cursor-pointer">
-            <div className="border w-full py-2 sm:px-10 sm:py-4 rounded-3xl flex flex-col items-center ring-1 ring-blue-300/70 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm" style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}>
-              <Route className="md:size-6 size-4" />
-              <h4 className="text-sm md:text-md font-bold">{t("trips.create")}</h4>
-            </div>
-          </DialogTrigger>
+      {/* Кнопка поиска для пассажира */}
+      {showPassengerContent && (
+        <div className="px-4 mb-3">
+          <Dialog
+            className="w-full"
+            open={searchDialog}
+            onOpenChange={setSearchDialog}
+          >
+            <DialogTrigger asChild>
+              <Button
+                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-9 text-sm font-medium hover:brightness-110 transition-all"
+              >
+                <Search size={18} />
+                {t("trips.searchForm.search")}
+              </Button>
+            </DialogTrigger>
+            <DialogContent 
+              className="overflow-hidden rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm max-h-none"
+              style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}
+              autoFocusScroll
+              showCloseButton={false}
+            >
+              <DialogHeader className="relative">
+                <DialogTitle className="text-center text-primary font-bold pr-8">
+                  {t("trips.searchForm.search")}
+                </DialogTitle>
+            <DialogDescription className="sr-only">Search trip dialog</DialogDescription>
+                <DialogClose asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute top-0 right-0 h-6 w-6 p-0 hover:bg-gray-100 rounded-full"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </DialogClose>
+              </DialogHeader>
+              <form onSubmit={handleSearch} className="flex flex-col gap-3">
+                <div className="grid w-full items-center gap-3 overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain pr-1 max-h-[45svh]">
+                  <Label htmlFor="from">{t("trips.searchForm.from")}</Label>
+                  <Input
+                    type="text"
+                    id="from"
+                    name="from"
+                    value={searchFilters.from}
+                    onChange={(e) => setSearchFilters(prev => ({ ...prev, from: e.target.value }))}
+                    placeholder={t("trips.searchForm.fromPlaceholder")}
+                    className="bg-white"
+                  />
+                  <div className="grid w-full items-center gap-3">
+                  <Label htmlFor="to">{t("trips.searchForm.to")}</Label>
+                  <Input
+                    type="text"
+                    id="to"
+                    name="to"
+                    value={searchFilters.to}
+                    onChange={(e) => setSearchFilters(prev => ({ ...prev, to: e.target.value }))}
+                    placeholder={t("trips.searchForm.toPlaceholder")}
+                    className="bg-white"
+                  />
+                  </div>
+                  <div className="grid w-full items-center gap-3">
+                  <Label htmlFor="search-date">{t("trips.searchForm.date")}</Label>
+                  <Input
+                    type="date"
+                    id="search-date"
+                    name="date"
+                    value={searchFilters.date}
+                    onChange={(e) => setSearchFilters(prev => ({ ...prev, date: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                    placeholder={t("trips.searchForm.datePlaceholder")}
+                    className="bg-white h-9 w-full min-w-0"
+                  />
+                  </div>
+                </div>
+                {/* Footer outside of scroll area to avoid iOS sticky issues */}
+                <div className="w-full bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-white/70 flex gap-2 mt-2 py-1" style={{ paddingBottom: keyboardInset ? keyboardInset : undefined }}>
+                  <DialogClose className="w-1/2" asChild>
+                    <Button className="rounded-2xl h-9 text-xs sm:text-sm">
+                      {t("trips.searchForm.cancel")}
+                    </Button>
+                  </DialogClose>
+                  <Button className="bg-primary text-primary-foreground rounded-2xl w-1/2 h-9 text-xs sm:text-sm" type="submit">
+                    {t("trips.searchForm.search")}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+      
+      {/* Кнопка создания поездки для водителя */}
+      {showDriverContent && (
+        <div className="px-4 mb-3">
+          <Dialog className="w-full" open={dialog} onOpenChange={setDialog}>
+            <DialogTrigger asChild>
+              <Button
+                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-9 text-sm font-medium hover:brightness-110 transition-all"
+              >
+                <Plus size={18} />
+                {t("trips.create")}
+              </Button>
+            </DialogTrigger>
+          </Dialog>
+        </div>
+      )}
+      
+      {/* Диалог создания поездки (используется только для водителя через кнопку +) */}
+      <Dialog className="w-full" open={dialog} onOpenChange={setDialog}>
           <DialogContent
             className="w-[95vw] sm:max-w-[760px] p-4 sm:p-6 overflow-hidden overscroll-contain touch-pan-y rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm max-h-[calc(100svh-2rem)]"
             style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}
@@ -514,117 +622,32 @@ function Trips() {
             </form>
           </DialogContent>
         </Dialog>
-        <Dialog
-          className="w-full"
-          open={searchDialog}
-          onOpenChange={setSearchDialog}
-        >
-          <DialogTrigger className="w-full cursor-pointer">
-            <div className="border w-full py-2 sm:px-10 sm:py-4 rounded-3xl flex flex-col items-center ring-1 ring-blue-300/70 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm" style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}>
-              <Search className="md:size-6 size-4" />
-              <h4 className="text-sm md:text-md font-bold">{t("trips.searchForm.search")}</h4>
-            </div>
-          </DialogTrigger>
-          <DialogContent 
-            className="overflow-hidden rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm max-h-none"
-            style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}
-            autoFocusScroll
-            showCloseButton={false}
-          >
-            <DialogHeader className="relative">
-              <DialogTitle className="text-center text-primary font-bold pr-8">
-                {t("trips.searchForm.search")}
-              </DialogTitle>
-            <DialogDescription className="sr-only">Search trip dialog</DialogDescription>
-              <DialogClose asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute top-0 right-0 h-6 w-6 p-0 hover:bg-gray-100 rounded-full"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </DialogClose>
-            </DialogHeader>
-            <form onSubmit={handleSearch} className="flex flex-col gap-3">
-              <div className="grid w-full items-center gap-3 overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain pr-1 max-h-[45svh]">
-                <Label htmlFor="from">{t("trips.searchForm.from")}</Label>
-                <Input
-                  type="text"
-                  id="from"
-                  name="from"
-                  value={searchFilters.from}
-                  onChange={(e) => setSearchFilters(prev => ({ ...prev, from: e.target.value }))}
-                  placeholder={t("trips.searchForm.fromPlaceholder")}
-                  className="bg-white"
-                />
-                <div className="grid w-full items-center gap-3">
-                <Label htmlFor="to">{t("trips.searchForm.to")}</Label>
-                <Input
-                  type="text"
-                  id="to"
-                  name="to"
-                  value={searchFilters.to}
-                  onChange={(e) => setSearchFilters(prev => ({ ...prev, to: e.target.value }))}
-                  placeholder={t("trips.searchForm.toPlaceholder")}
-                  className="bg-white"
-                />
-                </div>
-                <div className="grid w-full items-center gap-3">
-                <Label htmlFor="search-date">{t("trips.searchForm.date")}</Label>
-                <Input
-                  type="date"
-                  id="search-date"
-                  name="date"
-                  value={searchFilters.date}
-                  onChange={(e) => setSearchFilters(prev => ({ ...prev, date: e.target.value }))}
-                  min={new Date().toISOString().split('T')[0]}
-                  placeholder={t("trips.searchForm.datePlaceholder")}
-                  className="bg-white h-9 w-full min-w-0"
-                />
-                </div>
-              </div>
-              {/* Footer outside of scroll area to avoid iOS sticky issues */}
-              <div className="w-full bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-white/70 flex gap-2 mt-2 py-1" style={{ paddingBottom: keyboardInset ? keyboardInset : undefined }}>
-                <DialogClose className="w-1/2" asChild>
-                  <Button className="rounded-2xl h-9 text-xs sm:text-sm">
-                    {t("trips.searchForm.cancel")}
-                  </Button>
-                </DialogClose>
-                <Button className="bg-primary text-primary-foreground rounded-2xl w-1/2 h-9 text-xs sm:text-sm" type="submit">
-                  {t("trips.searchForm.search")}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+      
       <Card className="px-0 rounded-3xl shadow-lg border">
         <CardContent className="px-0 rounded-3xl bg-card/90 backdrop-blur-sm">
-          <Tabs defaultValue="allTrips" className="w-full">
-            <TabsList className="px-1 sm:px-2 w-full mb-4 sm:mb-6">
-              <TabsTrigger value="allTrips" className="text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center">{t("trips.all")}</TabsTrigger>
-              <TabsTrigger value="myTrips" className="text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center">{t("trips.mine")}</TabsTrigger>
-            </TabsList>
-            {activeFilters.from && (
-              <div className="px-4 mb-2">
-                <div className="flex items-center justify-between bg-accent rounded-lg p-2">
-                  <div className="text-sm text-accent-foreground">
-                    <span className="font-medium">Поиск:</span> {activeFilters.from} → {activeFilters.to}
-                    {activeFilters.date && ` • ${activeFilters.date}`}
+          {showPassengerContent && (
+            <>
+              {activeFilters.from && (
+                <div className="px-4 mb-2">
+                  <div className="flex items-center justify-between bg-accent rounded-lg p-2">
+                    <div className="text-sm text-accent-foreground">
+                      <span className="font-medium">Поиск:</span> {activeFilters.from} → {activeFilters.to}
+                      {activeFilters.date && ` • ${activeFilters.date}`}
+                    </div>
+                    <Button
+                      onClick={handleClearSearch}
+                      variant="outline"
+                      size="sm"
+                      className="text-xs h-6 px-2"
+                    >
+                      {t("trips.searchForm.clear")}
+                    </Button>
                   </div>
-                  <Button
-                    onClick={handleClearSearch}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-6 px-2"
-                  >
-                    {t("trips.searchForm.clear")}
-                  </Button>
                 </div>
+              )}
+              <div className="px-4 pt-3 pb-2">
+                <h3 className="text-sm sm:text-base font-bold text-primary">{t("trips.all")}</h3>
               </div>
-            )}
-            <TabsContent value="allTrips">
               <div className="p-3 space-y-3">
                 {isLoading ? (
                   Array(4)
@@ -652,28 +675,39 @@ function Trips() {
                   <ChevronRight />
                 </Button>
               </div>
-            </TabsContent>
-            <TabsContent value="myTrips">
+            </>
+          )}
+          
+          {showDriverContent && (
+            <>
               {myTripsLoading ? (
-                Array(2)
-                  .fill(1)
-                  .map((_, index) => <TripsCardSkeleton key={index} />)
+                <div className="p-3">
+                  {Array(2)
+                    .fill(1)
+                    .map((_, index) => <TripsCardSkeleton key={index} />)}
+                </div>
               ) : (
                 <>
-              {myTrips && myTripsList.length === 0 ? (
-                <EmptyState
-                  title={t("trips.empty")}
-                  action={<Button onClick={() => setDialog(true)} className="text-primary-foreground bg-primary rounded-2xl cursor-pointer shadow">{t("trips.create")}</Button>}
-                />
-              ) : (
-                    <div className="p-3 space-y-3">
-                      {myTrips &&
-                        myTripsList
-                          .filter((item) => item.status !== "completed")
-                          .map((item) => (
-                            <MyTripsCard trip={item} key={item.id} />
-                          ))}
+                  {myTrips && myTripsList.length === 0 ? (
+                    <div className="p-3">
+                      <EmptyState
+                        title={t("trips.empty")}
+                      />
                     </div>
+                  ) : (
+                    <>
+                      <div className="px-4 pt-3 pb-2">
+                        <h3 className="text-sm sm:text-base font-bold text-primary">{t("trips.mine")}</h3>
+                      </div>
+                      <div className="p-3 space-y-3">
+                        {myTrips &&
+                          myTripsList
+                            .filter((item) => item.status !== "completed")
+                            .map((item) => (
+                              <MyTripsCard trip={item} key={item.id} />
+                            ))}
+                      </div>
+                    </>
                   )}
                   <div className="flex items-center justify-center gap-3 px-4 py-2">
                     <Button variant="outline" disabled={myPage === 1} onClick={() => setMyPage((p) => Math.max(1, p - 1))} aria-label="Prev page">
@@ -691,8 +725,8 @@ function Trips() {
                   </div>
                 </>
               )}
-            </TabsContent>
-          </Tabs>
+            </>
+          )}
         </CardContent>
       </Card>
       {/* Floating refresh button */}

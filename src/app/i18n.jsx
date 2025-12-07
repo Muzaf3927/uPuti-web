@@ -11,7 +11,22 @@ const dict = {
       history: "Tarix",
       trips: "Safarlar",
       orders: "Buyurtmalar",
+      tripsOrders: "Safarlar-Buyurtmalar",
       chats: "Chatlar",
+      passengerTab: "Yo'lovchi",
+      driverTab: "Haydovchi",
+    },
+    roleSelection: {
+      title: "Rolingizni tanlang",
+      description: "Iltimos, ilovadan qanday foydalanishingizni tanlang",
+      canChangeLater: "Keyinroq kerak bo'lsa, sozlamalarda rolni o'zgartirishingiz mumkin",
+      success: "Rol muvaffaqiyatli tanlandi",
+      error: "Rolni tanlashda xatolik yuz berdi",
+      saving: "Saqlanmoqda...",
+    },
+    tripsOrders: {
+      trips: "Safarlar",
+      orders: "Buyurtmalar",
     },
     chats: {
       selectChat: "Chatni tanlang",
@@ -109,7 +124,12 @@ const dict = {
       confirm: "Ha, o'chirish",
       close: "Yopish",
       errorLoading: "Profilni yuklashda xatolik",
-      none: "—"
+      none: "—",
+      roleSection: "Rol",
+      changeRole: "Rolni o'zgartirish",
+      currentRole: "Joriy rol",
+      roleChanged: "Rol muvaffaqiyatli o'zgartirildi",
+      roleChangeError: "Rolni o'zgartirishda xatolik yuz berdi",
     },
     trips: {
       all: "Barcha safarlar",
@@ -301,6 +321,10 @@ const dict = {
       myOrderActions: {
         edit: "Tahrirlash",
         delete: "O'chirish",
+        complete: "Yakunlash",
+        callDriver: "Haydovchiga qo'ng'iroq qilish",
+        completeSuccess: "Buyurtma yakunlandi.",
+        completeError: "Buyurtmani yakunlashda xatolik yuz berdi.",
         deleteSuccess: "Buyurtma o'chirildi.",
         deleteError: "Buyurtmani o'chirishda xatolik yuz berdi.",
         updateSuccess: "Buyurtma yangilandi.",
@@ -370,6 +394,7 @@ const dict = {
         rating: "Reyting"
       },
       bottomSheet: {
+        driver: "Haydovchi",
         sendRequest: "So'rov yuborish",
         cancelRequest: "So'rovni bekor qilish",
         cancelSuccess: "So'rov muvaffaqiyatli bekor qilindi.",
@@ -381,13 +406,15 @@ const dict = {
         acceptSuccess: "Taklif qabul qilindi.",
         rejectSuccess: "Taklif rad etildi.",
         acceptError: "Taklifni qabul qilishda xatolik.",
-        rejectError: "Taklifni rad etishda xatolik."
+        rejectError: "Taklifni rad etishda xatolik.",
+        yourDriver: "Sizning haydovchingiz"
       },
       offerForm: {
         title: "Taklif yuborish",
         description: "Yo'lovchiga taklifingizni yuboring",
         price: "Narx",
         pricePlaceholder: "50000",
+        priceFromOrder: "Narx avtomatik ravishda buyurtmadan olinadi",
         cancel: "Bekor qilish",
         submit: "Yuborish",
         submitting: "Yuborilmoqda...",
@@ -426,7 +453,22 @@ const dict = {
       history: "История",
       trips: "Поездки",
       orders: "Заказы",
+      tripsOrders: "Поездки-Заказы",
       chats: "Чаты",
+      passengerTab: "Пассажир",
+      driverTab: "Водитель",
+    },
+    roleSelection: {
+      title: "Выберите вашу роль",
+      description: "Пожалуйста, выберите, как вы будете использовать приложение",
+      canChangeLater: "Вы сможете изменить роль позже в настройках, если понадобится",
+      success: "Роль успешно выбрана",
+      error: "Ошибка при выборе роли",
+      saving: "Сохранение...",
+    },
+    tripsOrders: {
+      trips: "Поездки",
+      orders: "Заказы",
     },
     chats: {
       selectChat: "Выберите чат",
@@ -526,7 +568,12 @@ const dict = {
       confirm: "Да, удалить",
       close: "Закрыть",
       errorLoading: "Ошибка при загрузке профиля",
-      none: "—"
+      none: "—",
+      roleSection: "Роль",
+      changeRole: "Изменить роль",
+      currentRole: "Текущая роль",
+      roleChanged: "Роль успешно изменена",
+      roleChangeError: "Ошибка при изменении роли",
     },
     trips: {
       all: "Все поездки",
@@ -718,6 +765,10 @@ const dict = {
       myOrderActions: {
         edit: "Изменить",
         delete: "Удалить",
+        complete: "Завершить",
+        callDriver: "Позвонить водителю",
+        completeSuccess: "Заказ завершен.",
+        completeError: "Ошибка при завершении заказа.",
         deleteSuccess: "Заказ удален.",
         deleteError: "Ошибка при удалении заказа.",
         updateSuccess: "Заказ обновлен.",
@@ -787,6 +838,7 @@ const dict = {
         rating: "Рейтинг"
       },
       bottomSheet: {
+        driver: "Водитель",
         sendRequest: "Отправить запрос",
         cancelRequest: "Отменить запрос",
         cancelSuccess: "Запрос успешно отменен.",
@@ -798,13 +850,15 @@ const dict = {
         acceptSuccess: "Предложение принято.",
         rejectSuccess: "Предложение отклонено.",
         acceptError: "Ошибка при принятии предложения.",
-        rejectError: "Ошибка при отклонении предложения."
+        rejectError: "Ошибка при отклонении предложения.",
+        yourDriver: "Ваш водитель"
       },
       offerForm: {
         title: "Отправить предложение",
         description: "Отправьте ваше предложение пассажиру",
         price: "Цена",
         pricePlaceholder: "50000",
+        priceFromOrder: "Цена автоматически берется из заказа",
         cancel: "Отмена",
         submit: "Отправить",
         submitting: "Отправляется...",

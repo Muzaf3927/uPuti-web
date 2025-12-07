@@ -5,6 +5,7 @@ export { default as Trips } from "./Trips";
 export { default as Requests } from "./Requests";
 export { default as Booking } from "./Booking";
 export { default as Orders } from "./Orders";
+export { default as TripsOrders } from "./TripsOrders";
 export { default as Profile } from "./Profile";
 export { default as DeleteAccount } from "./DeleteAccount";
 export { default as DownloadAndroid } from "./DownloadAndroid";

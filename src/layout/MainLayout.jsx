@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Headphones,
   User,
+  X,
 } from "lucide-react";
 import { useI18n } from "@/app/i18n.jsx";
 import { useDispatch } from "react-redux";
@@ -19,6 +20,7 @@ import { logout } from "@/app/userSlice/userSlice";
 import Onboarding from "@/components/Onboarding";
 import { getInitials } from "@/lib/utils";
 import { useKeyboardInsets } from "@/hooks/useKeyboardInsets.jsx";
+import RoleSelection from "@/components/RoleSelection";
 
 // shadcn
 import {
@@ -38,8 +40,17 @@ import {
   useNotificationsUnread,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
+  useUpdateRole,
 } from "@/api/api";
 import { toast } from "sonner";
+
+// Context for activeTab
+const ActiveTabContext = React.createContext({
+  activeTab: "passenger",
+  setActiveTab: () => {},
+});
+
+export const useActiveTab = () => React.useContext(ActiveTabContext);
 
 // get firstName
 function getNthWord(str, n) {
@@ -55,7 +66,10 @@ function MainLayout() {
   const [profileOpen, setProfileOpen] = React.useState(false);
   const [showOnboarding, setShowOnboarding] = React.useState(false);
   const [supportOpen, setSupportOpen] = React.useState(false);
+  const [showRoleSelection, setShowRoleSelection] = React.useState(false);
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = React.useState(false);
   const { keyboardInset } = useKeyboardInsets();
+  const updateRoleMutation = useUpdateRole();
 
   // Отслеживание изменений маршрута в Яндекс.Метрике
   useEffect(() => {
@@ -82,6 +96,54 @@ function MainLayout() {
     error: userError,
     refetch: userRefetch,
   } = useGetData("/user");
+
+  // Проверяем, есть ли у пользователя роль (обязательная проверка при каждой загрузке)
+  React.useEffect(() => {
+    if (userData && !userLoading) {
+      // Если у пользователя роль пустая (null, undefined, или не passenger/driver), показываем выбор роли
+      const hasValidRole = userData.role === "passenger" || userData.role === "driver";
+      if (!hasValidRole) {
+        setShowRoleSelection(true);
+      } else {
+        setShowRoleSelection(false);
+      }
+    }
+  }, [userData, userLoading]);
+
+  // Получаем роль из профиля пользователя
+  const userRole = userData?.role || "passenger";
+  
+  // Обработчик выбора роли
+  const handleRoleSelected = () => {
+    setShowRoleSelection(false);
+    userRefetch(); // Обновляем данные пользователя
+  };
+
+  // Обработчик изменения роли из профиля
+  const handleRoleChange = async (role) => {
+    try {
+      await updateRoleMutation.mutateAsync({ role });
+      toast.success(t("profilePage.roleChanged"));
+      setIsRoleDialogOpen(false);
+      userRefetch(); // Обновляем данные пользователя
+      // Обновляем страницу для применения изменений
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast.error(
+        error.response?.data?.message || 
+        t("profilePage.roleChangeError")
+      );
+    }
+  };
+
+  const getRoleLabel = (role) => {
+    if (role === "passenger") return t("nav.passengerTab");
+    if (role === "driver") return t("nav.driverTab");
+    return t("profilePage.none");
+  };
 
   const handleLogout = async () => {
     try {
@@ -239,12 +301,19 @@ function MainLayout() {
           </div>
         </div>
       </header>
-      <div className="custom-container mb-3 sm:mb-5 sticky top-16 sm:top-20 z-40">
+      <div className="custom-container mb-2 sm:mb-3 sticky top-16 sm:top-20 z-40">
         <Navbar />
       </div>
       <main className="grow custom-container mb-6 sm:mb-10 overflow-auto">
-        <Outlet />
+        <ActiveTabContext.Provider value={{ activeTab: userRole, setActiveTab: () => {} }}>
+          <Outlet />
+        </ActiveTabContext.Provider>
       </main>
+      
+      {/* Role Selection Modal */}
+      {showRoleSelection && (
+        <RoleSelection onRoleSelected={handleRoleSelected} />
+      )}
       {/* Right Panel Profile */}
       {profileOpen && (
         <div className="fixed inset-0 z-50">
@@ -301,6 +370,28 @@ function MainLayout() {
                       </span>
                     </div>
                   )}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="flex items-center gap-2">
+                      {userData?.role === "driver" ? (
+                        <Car className="w-3.5 h-3.5 text-primary" />
+                      ) : (
+                        <User className="w-3.5 h-3.5 text-primary" />
+                      )}
+                      <span className="text-gray-500">
+                        {t("profilePage.roleSection")}:
+                      </span>
+                      <span className="font-medium">
+                        {getRoleLabel(userData?.role)}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setIsRoleDialogOpen(true)}
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                      disabled={updateRoleMutation.isPending}
+                    >
+                      {t("profilePage.changeRole")}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="border rounded-2xl p-3 sm:p-4 bg-white/70 w-full">
@@ -338,6 +429,85 @@ function MainLayout() {
       )}
 
       {/* Onboarding disabled */}
+
+      {/* Role Change Dialog */}
+      {isRoleDialogOpen && (
+        <div className="fixed inset-0 z-50">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setIsRoleDialogOpen(false)}
+          />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="relative bg-card/95 backdrop-blur-sm rounded-xl shadow-lg w-full max-w-[320px] p-4 border">
+              <button
+                onClick={() => setIsRoleDialogOpen(false)}
+                className="absolute top-2 right-2 h-6 w-6 p-0 rounded-full hover:bg-accent/60 flex items-center justify-center"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="mb-4">
+                <h3 className="text-base font-semibold text-gray-900 mb-1">
+                  {t("profilePage.changeRole")}
+                </h3>
+                <p className="text-xs text-gray-600">
+                  {t("roleSelection.description")}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                {/* Пассажир */}
+                <button
+                  onClick={() => handleRoleChange("passenger")}
+                  disabled={updateRoleMutation.isPending || userData?.role === "passenger"}
+                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
+                    userData?.role === "passenger"
+                      ? "border-green-500 bg-green-50"
+                      : "border-gray-200 bg-white hover:border-green-300 hover:bg-green-50/50"
+                  } ${updateRoleMutation.isPending || userData?.role === "passenger" ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                >
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    userData?.role === "passenger"
+                      ? "bg-green-500 text-white"
+                      : "bg-gray-100 text-gray-600"
+                  }`}>
+                    <User className="w-6 h-6" />
+                  </div>
+                  <span className="font-semibold text-sm text-gray-900">
+                    {t("nav.passengerTab")}
+                  </span>
+                </button>
+
+                {/* Водитель */}
+                <button
+                  onClick={() => handleRoleChange("driver")}
+                  disabled={updateRoleMutation.isPending || userData?.role === "driver"}
+                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
+                    userData?.role === "driver"
+                      ? "border-green-500 bg-green-50"
+                      : "border-gray-200 bg-white hover:border-green-300 hover:bg-green-50/50"
+                  } ${updateRoleMutation.isPending || userData?.role === "driver" ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                >
+                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                    userData?.role === "driver"
+                      ? "bg-green-500 text-white"
+                      : "bg-gray-100 text-gray-600"
+                  }`}>
+                    <Car className="w-6 h-6" />
+                  </div>
+                  <span className="font-semibold text-sm text-gray-900">
+                    {t("nav.driverTab")}
+                  </span>
+                </button>
+              </div>
+              {updateRoleMutation.isPending && (
+                <div className="flex items-center justify-center gap-2 text-xs text-gray-600">
+                  <span>{t("roleSelection.saving")}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Support Modal */}
       {supportOpen && (

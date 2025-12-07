@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useI18n } from "@/app/i18n.jsx";
-import { Navigation } from "lucide-react";
+import { Navigation, Search, MapPin, X } from "lucide-react";
 import { toast } from "sonner";
 
 // Исправляем иконки маркеров для Leaflet
@@ -44,6 +45,13 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
   const [mapReady, setMapReady] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const selectingFromRef = useRef(true);
+  const [fromSearchQuery, setFromSearchQuery] = useState("");
+  const [toSearchQuery, setToSearchQuery] = useState("");
+  const [fromSuggestions, setFromSuggestions] = useState([]);
+  const [toSuggestions, setToSuggestions] = useState([]);
+  const [showFromSuggestions, setShowFromSuggestions] = useState(false);
+  const [showToSuggestions, setShowToSuggestions] = useState(false);
+  const searchTimeoutRef = useRef(null);
 
   useEffect(() => {
     selectingFromRef.current = selectingFrom;
@@ -97,6 +105,19 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
       updateRoute();
     }
   }, [fromCity, toCity]);
+
+  // Синхронизируем поля поиска с начальными значениями
+  useEffect(() => {
+    if (fromCity && !fromSearchQuery) {
+      setFromSearchQuery(fromCity);
+    }
+  }, [fromCity]);
+
+  useEffect(() => {
+    if (toCity && !toSearchQuery) {
+      setToSearchQuery(toCity);
+    }
+  }, [toCity]);
 
   // Отображаем начальные маркеры, если координаты уже заданы (для режима редактирования)
   useEffect(() => {
@@ -216,6 +237,9 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         .bindPopup(`${t("orders.map.from")}: ${address}`)
         .addTo(mapInstanceRef.current);
 
+      // Обновляем поле поиска
+      setFromSearchQuery(address);
+
       if (onRouteSelect) {
         onRouteSelect({
           from: address,
@@ -247,6 +271,9 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         .bindPopup(`${t("orders.map.to")}: ${address}`)
         .addTo(mapInstanceRef.current);
 
+      // Обновляем поле поиска
+      setToSearchQuery(address);
+
       if (onRouteSelect) {
         onRouteSelect({
           to: address,
@@ -276,6 +303,151 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
       console.error("Geocoding error:", error);
     }
     return null;
+  };
+
+  // Функция для поиска адресов с автодополнением
+  const searchAddresses = async (query) => {
+    if (!query || query.length < 3) {
+      return [];
+    }
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ", Узбекистан")}&limit=5&accept-language=ru&addressdetails=1`
+      );
+      const data = await response.json();
+      return data || [];
+    } catch (error) {
+      console.error("Address search error:", error);
+      return [];
+    }
+  };
+
+  // Обработка поиска адреса "Откуда"
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (fromSearchQuery.length >= 3) {
+      searchTimeoutRef.current = setTimeout(async () => {
+        const results = await searchAddresses(fromSearchQuery);
+        setFromSuggestions(results);
+        setShowFromSuggestions(true);
+      }, 300);
+    } else {
+      setFromSuggestions([]);
+      setShowFromSuggestions(false);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [fromSearchQuery]);
+
+  // Обработка поиска адреса "Куда"
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (toSearchQuery.length >= 3) {
+      searchTimeoutRef.current = setTimeout(async () => {
+        const results = await searchAddresses(toSearchQuery);
+        setToSuggestions(results);
+        setShowToSuggestions(true);
+      }, 300);
+    } else {
+      setToSuggestions([]);
+      setShowToSuggestions(false);
+    }
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [toSearchQuery]);
+
+  // Обработка выбора адреса "Откуда"
+  const handleFromAddressSelect = async (suggestion) => {
+    const address = suggestion.display_name;
+    const coords = [parseFloat(suggestion.lat), parseFloat(suggestion.lon)];
+    
+    setFromSearchQuery(address);
+    setShowFromSuggestions(false);
+    setFromSuggestions([]);
+    
+    // Устанавливаем маркер на карте
+    if (mapInstanceRef.current) {
+      if (fromMarkerRef.current) {
+        mapInstanceRef.current.removeLayer(fromMarkerRef.current);
+      }
+      
+      fromMarkerRef.current = L.marker(coords, { icon: fromIcon })
+        .bindPopup(`${t("orders.map.from")}: ${address}`)
+        .addTo(mapInstanceRef.current);
+      
+      // Если есть точка назначения, обновляем маршрут
+      if (toCity && toMarkerRef.current) {
+        setTimeout(() => {
+          updateRoute();
+        }, 100);
+      } else {
+        mapInstanceRef.current.setView(coords, 15, { animate: true });
+      }
+    }
+    
+    // Обновляем состояние
+    if (onRouteSelect) {
+      onRouteSelect({
+        from: address,
+        fromCoords: coords,
+      });
+    }
+    
+    // Переключаемся на выбор "Куда"
+    setSelectingFrom(false);
+    selectingFromRef.current = false;
+  };
+
+  // Обработка выбора адреса "Куда"
+  const handleToAddressSelect = async (suggestion) => {
+    const address = suggestion.display_name;
+    const coords = [parseFloat(suggestion.lat), parseFloat(suggestion.lon)];
+    
+    setToSearchQuery(address);
+    setShowToSuggestions(false);
+    setToSuggestions([]);
+    
+    // Устанавливаем маркер на карте
+    if (mapInstanceRef.current) {
+      if (toMarkerRef.current) {
+        mapInstanceRef.current.removeLayer(toMarkerRef.current);
+      }
+      
+      toMarkerRef.current = L.marker(coords, { icon: toIcon })
+        .bindPopup(`${t("orders.map.to")}: ${address}`)
+        .addTo(mapInstanceRef.current);
+      
+      // Обновляем маршрут если обе точки выбраны
+      if (fromCity) {
+        setTimeout(() => {
+          updateRoute();
+        }, 100);
+      } else {
+        mapInstanceRef.current.setView(coords, 15, { animate: true });
+      }
+    }
+    
+    // Обновляем состояние
+    if (onRouteSelect) {
+      onRouteSelect({
+        to: address,
+        toCoords: coords,
+      });
+    }
   };
 
   const updateRoute = async () => {
@@ -311,14 +483,17 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
   };
 
   const clearFrom = () => {
-    if (fromMarkerRef.current) {
+    if (fromMarkerRef.current && mapInstanceRef.current) {
       mapInstanceRef.current.removeLayer(fromMarkerRef.current);
       fromMarkerRef.current = null;
     }
-    if (routeLineRef.current) {
+    if (routeLineRef.current && mapInstanceRef.current) {
       mapInstanceRef.current.removeLayer(routeLineRef.current);
       routeLineRef.current = null;
     }
+    setFromSearchQuery("");
+    setFromSuggestions([]);
+    setShowFromSuggestions(false);
     if (onRouteSelect) {
       onRouteSelect({
         from: "",
@@ -328,14 +503,17 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
   };
 
   const clearTo = () => {
-    if (toMarkerRef.current) {
+    if (toMarkerRef.current && mapInstanceRef.current) {
       mapInstanceRef.current.removeLayer(toMarkerRef.current);
       toMarkerRef.current = null;
     }
-    if (routeLineRef.current) {
+    if (routeLineRef.current && mapInstanceRef.current) {
       mapInstanceRef.current.removeLayer(routeLineRef.current);
       routeLineRef.current = null;
     }
+    setToSearchQuery("");
+    setToSuggestions([]);
+    setShowToSuggestions(false);
     if (onRouteSelect) {
       onRouteSelect({
         to: "",
@@ -395,58 +573,164 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
     );
   };
 
+  // Закрываем выпадающие списки при клике вне их
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.address-search-container')) {
+        setShowFromSuggestions(false);
+        setShowToSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="w-full h-full flex flex-col gap-2 sm:gap-3">
-      <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center justify-between flex-shrink-0">
-        <div className="flex gap-1 sm:gap-2 items-center flex-1">
-          <Button
-            type="button"
-            variant={selectingFrom ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              selectingFromRef.current = true;
-              setSelectingFrom(true);
-            }}
-            className="text-[10px] sm:text-xs flex-1 sm:flex-initial"
-          >
-            <span className="truncate">{fromCity ? fromCity : t("orders.map.from")}</span>
-          </Button>
-          {fromCity && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={clearFrom}
-              className="text-xs h-8 w-8 p-0 flex-shrink-0"
-            >
-              ✕
-            </Button>
+      {/* Поля поиска адресов */}
+      <div className="flex flex-col gap-2 flex-shrink-0 relative z-[9999]">
+        {/* Поле "Откуда" */}
+        <div className="relative address-search-container z-[9999]">
+          <div className="flex items-center gap-2">
+            <MapPin className="text-blue-600 flex-shrink-0" size={16} />
+            <Input
+              type="text"
+              placeholder={t("orders.form.from")}
+              value={fromSearchQuery || fromCity || ""}
+              onChange={(e) => {
+                setFromSearchQuery(e.target.value);
+                if (e.target.value.length >= 3) {
+                  setShowFromSuggestions(true);
+                } else {
+                  setShowFromSuggestions(false);
+                }
+                selectingFromRef.current = true;
+                setSelectingFrom(true);
+              }}
+              onFocus={() => {
+                if (fromSearchQuery.length >= 3) {
+                  setShowFromSuggestions(true);
+                }
+                selectingFromRef.current = true;
+                setSelectingFrom(true);
+              }}
+              className="flex-1"
+            />
+            {fromCity && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  clearFrom();
+                  setFromSearchQuery("");
+                }}
+                className="h-8 w-8 p-0 flex-shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          {/* Выпадающий список предложений для "Откуда" */}
+          {showFromSuggestions && fromSuggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] max-h-48 overflow-y-auto" style={{ position: 'absolute', zIndex: 9999 }}>
+              {fromSuggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => handleFromAddressSelect(suggestion)}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
+                >
+                  <div className="flex items-start gap-2">
+                    <MapPin className="text-blue-600 flex-shrink-0 mt-0.5" size={14} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {suggestion.display_name}
+                      </div>
+                      {suggestion.address && (
+                        <div className="text-xs text-gray-500 truncate">
+                          {suggestion.address.city || suggestion.address.town || ""}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
           )}
         </div>
-        <div className="flex gap-1 sm:gap-2 items-center flex-1">
-          <Button
-            type="button"
-            variant={!selectingFrom ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              selectingFromRef.current = false;
-              setSelectingFrom(false);
-              // Если адрес уже выбран, можно переопределить его
-            }}
-            className="text-[10px] sm:text-xs flex-1 sm:flex-initial"
-          >
-            <span className="truncate">{toCity ? toCity : t("orders.map.to")}</span>
-          </Button>
-          {toCity && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={clearTo}
-              className="text-xs h-8 w-8 p-0 flex-shrink-0"
-            >
-              ✕
-            </Button>
+
+        {/* Поле "Куда" */}
+        <div className="relative address-search-container z-[9999]">
+          <div className="flex items-center gap-2">
+            <MapPin className="text-red-600 flex-shrink-0" size={16} />
+            <Input
+              type="text"
+              placeholder={t("orders.form.to")}
+              value={toSearchQuery || toCity || ""}
+              onChange={(e) => {
+                setToSearchQuery(e.target.value);
+                if (e.target.value.length >= 3) {
+                  setShowToSuggestions(true);
+                } else {
+                  setShowToSuggestions(false);
+                }
+                selectingFromRef.current = false;
+                setSelectingFrom(false);
+              }}
+              onFocus={() => {
+                if (toSearchQuery.length >= 3) {
+                  setShowToSuggestions(true);
+                }
+                selectingFromRef.current = false;
+                setSelectingFrom(false);
+              }}
+              className="flex-1"
+            />
+            {toCity && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  clearTo();
+                  setToSearchQuery("");
+                }}
+                className="h-8 w-8 p-0 flex-shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          {/* Выпадающий список предложений для "Куда" */}
+          {showToSuggestions && toSuggestions.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] max-h-48 overflow-y-auto" style={{ position: 'absolute', zIndex: 9999 }}>
+              {toSuggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => handleToAddressSelect(suggestion)}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
+                >
+                  <div className="flex items-start gap-2">
+                    <MapPin className="text-red-600 flex-shrink-0 mt-0.5" size={14} />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {suggestion.display_name}
+                      </div>
+                      {suggestion.address && (
+                        <div className="text-xs text-gray-500 truncate">
+                          {suggestion.address.city || suggestion.address.town || ""}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>

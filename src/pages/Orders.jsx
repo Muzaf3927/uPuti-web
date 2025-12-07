@@ -7,13 +7,12 @@ import CompletedOrderBottomSheet from "@/components/CompletedOrderBottomSheet";
 import DriverOfferBottomSheet from "@/components/DriverOfferBottomSheet";
 
 // icons
-import { User, Search, Loader2, X, Phone, AlertTriangle } from "lucide-react";
+import { Search, Loader2, X, Phone, AlertTriangle } from "lucide-react";
 
 // router
 import { useLocation } from "react-router-dom";
 
 // shad cn
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,15 +36,125 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useSmartRefresh } from "@/hooks/useSmartRefresh.jsx";
 import EmptyState from "@/components/EmptyState.jsx";
+import { useActiveTab } from "@/layout/MainLayout";
+import { Plus } from "lucide-react";
+
+// Компонент для элемента истории оффера водителя
+function HistoryOfferItem({ offer, onSelect, t }) {
+  const request = offer.passengerRequest || offer.passenger_request || {};
+  const passengerUserId = request.user_id;
+  
+  // Получаем данные пассажира по user_id
+  const { data: passengerData } = useGetData(
+    passengerUserId ? `/users/${passengerUserId}` : null
+  );
+  
+  // Используем данные из API или из offer (если они там есть)
+  const passenger = passengerData || offer.passenger || {};
+  
+  const fromAddress = request.from_address || request.from || "";
+  const toAddress = request.to_address || request.to || "";
+  const time = request.time ? (request.time.includes(":") ? request.time.substring(0, 5) : request.time) : "";
+  const orderStatus = request.status || "";
+  const offerStatus = offer.status || "";
+  
+  // Форматируем телефон пассажира
+  const passengerPhone = passenger.phone 
+    ? (String(passenger.phone).startsWith("+") 
+        ? String(passenger.phone) 
+        : String(passenger.phone).startsWith("998") 
+          ? `+${String(passenger.phone)}` 
+          : `+998${String(passenger.phone)}`)
+    : null;
+  
+  // Определяем статус для отображения
+  let statusText = "";
+  let statusClass = "";
+  
+  // Сначала проверяем статус заказа
+  if (orderStatus === "completed") {
+    statusText = t("orders.history.completed");
+    statusClass = "bg-red-100 text-red-800 border-red-200";
+  } else if (orderStatus === "in_progress") {
+    statusText = "В процессе";
+    statusClass = "bg-green-100 text-green-800 border-green-200";
+  } else if (offerStatus === "declined") {
+    statusText = t("orders.history.cancelled");
+    statusClass = "bg-red-100 text-red-800 border-red-200";
+  } else if (offerStatus === "accepted") {
+    statusText = "Принят";
+    statusClass = "bg-blue-100 text-blue-800 border-blue-200";
+  }
+  
+  const handleCall = (e) => {
+    e.stopPropagation(); // Предотвращаем открытие bottom sheet при клике на кнопку
+    if (passengerPhone) {
+      window.open(`tel:${passengerPhone}`, '_self');
+    }
+  };
+  
+  return (
+    <div
+      onClick={() => onSelect(offer)}
+      className="border rounded-xl p-2.5 sm:p-3 bg-card/90 backdrop-blur-sm shadow-sm ring-1 ring-blue-200/60 cursor-pointer hover:shadow-md transition-shadow"
+      style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.10), rgba(79,70,229,0.06))" }}
+    >
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-1.5 text-primary font-medium text-xs sm:text-sm min-w-0 flex-1">
+          <span className="truncate">{fromAddress}</span>
+          <span className="text-primary">→</span>
+          <span className="truncate">{toAddress}</span>
+        </div>
+        {statusText && (
+          <span className={`text-[10px] sm:text-xs py-0.5 px-2 rounded-full whitespace-nowrap border ${statusClass}`}>
+            {statusText}
+          </span>
+        )}
+      </div>
+      
+      {/* Информация о пассажире */}
+      {passenger.name && (
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="text-[11px] sm:text-xs text-gray-700">
+              <span className="font-medium">{t("orders.popup.passenger")}:</span>{" "}
+              <span className="text-gray-900">{passenger.name}</span>
+            </div>
+          </div>
+          {passengerPhone && (
+            <Button
+              type="button"
+              onClick={handleCall}
+              className="h-7 px-2.5 rounded-lg bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-1 text-xs flex-shrink-0"
+            >
+              <Phone size={12} />
+              {t("orders.history.callPassenger")}
+            </Button>
+          )}
+        </div>
+      )}
+      
+      <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-600">
+        <span>{request.date}</span>
+        {time && (
+          <>
+            <span>•</span>
+            <span>{time}</span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function Orders() {
   const { t } = useI18n();
   const { keyboardInset } = useKeyboardInsets();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { activeTab: activeRoleTab } = useActiveTab();
   const [dialog, setDialog] = useState(false);
   const [searchDialog, setSearchDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState("allOrders");
   const [currentStep, setCurrentStep] = useState(1); // 1 - карта, 2 - форма
   const [selectedHistoryOrder, setSelectedHistoryOrder] = useState(null);
   const [selectedHistoryOffer, setSelectedHistoryOffer] = useState(null);
@@ -74,18 +183,55 @@ function Orders() {
     from: "",
     to: "",
     date: "",
+    time: "",
+    from_lat: null,
+    from_lng: null,
+    to_lat: null,
+    to_lng: null,
   });
 
   const [activeFilters, setActiveFilters] = useState({
     from: "",
     to: "",
     date: "",
+    time: "",
+    from_lat: null,
+    from_lng: null,
+    to_lat: null,
+    to_lng: null,
   });
 
-  const baseQuery = activeFilters.from
-    ? `?from_address=${activeFilters.from}&to_address=${activeFilters.to}${activeFilters.date ? `&date=${activeFilters.date}` : ""}`
-    : "";
-  const allOrdersUrl = `/passenger-requests${baseQuery}`;
+  // Формируем URL для поиска заказов
+  const buildSearchUrl = () => {
+    const params = new URLSearchParams();
+    
+    if (activeFilters.from_lat && activeFilters.from_lng) {
+      params.append('from_lat', activeFilters.from_lat);
+      params.append('from_lng', activeFilters.from_lng);
+    } else if (activeFilters.from) {
+      params.append('from_address', activeFilters.from);
+    }
+    
+    if (activeFilters.to_lat && activeFilters.to_lng) {
+      params.append('to_lat', activeFilters.to_lat);
+      params.append('to_lng', activeFilters.to_lng);
+    } else if (activeFilters.to) {
+      params.append('to_address', activeFilters.to);
+    }
+    
+    if (activeFilters.date) {
+      params.append('date', activeFilters.date);
+    }
+    
+    if (activeFilters.time) {
+      params.append('time', activeFilters.time);
+    }
+    
+    const queryString = params.toString();
+    return queryString ? `/passenger-requests/search?${queryString}` : `/passenger-requests`;
+  };
+
+  const allOrdersUrl = buildSearchUrl();
   const { data, isLoading, error, refetch } = useGetData(allOrdersUrl);
 
   const handleSearch = (e) => {
@@ -95,8 +241,8 @@ function Orders() {
   };
 
   const handleClearSearch = () => {
-    setActiveFilters({ from: "", to: "", date: "" });
-    setSearchFilters({ from: "", to: "", date: "" });
+    setActiveFilters({ from: "", to: "", date: "", time: "", from_lat: null, from_lng: null, to_lat: null, to_lng: null });
+    setSearchFilters({ from: "", to: "", date: "", time: "", from_lat: null, from_lng: null, to_lat: null, to_lng: null });
   };
 
   const {
@@ -148,16 +294,18 @@ function Orders() {
   // Бэкенд уже фильтрует по статусу active, но на всякий случай фильтруем еще раз
   const filteredOrders = allOrdersFromBackend.filter((order) => order.status === "active" || !order.status);
 
-  const hasActiveSearch = Boolean(activeFilters.from || activeFilters.to || activeFilters.date);
+  const hasActiveSearch = Boolean(activeFilters.from || activeFilters.to || activeFilters.date || activeFilters.time || activeFilters.from_lat || activeFilters.to_lat);
   const showSearchEmptyState = hasActiveSearch && !isLoading && filteredOrders.length === 0;
 
-  // Определяем, какие заказы показывать в зависимости от активного таба
-  // На карте показываем только активные заказы (status === 'active')
-  const activeMyOrders = myOrdersList.filter((item) => item.status === "active");
-  const ordersToDisplay = activeTab === "allOrders" 
-    ? filteredOrders 
-    : activeMyOrders;
-  const isLoadingOrders = activeTab === "allOrders" ? isLoading : myOrdersLoading;
+  // Определяем, какие заказы показывать в зависимости от роли
+  // На карте для пассажиров показываем активные (active) и в процессе (in_progress) заказы
+  const activeMyOrders = myOrdersList.filter((item) => item.status === "active" || item.status === "in_progress");
+  const showPassengerContent = activeRoleTab === "passenger";
+  const showDriverContent = activeRoleTab === "driver";
+  
+  // Для пассажира показываем только мои заказы (active и in_progress), для водителя - все заказы
+  const ordersToDisplay = showPassengerContent ? activeMyOrders : filteredOrders;
+  const isLoadingOrders = showPassengerContent ? myOrdersLoading : isLoading;
 
   // Логирование для отладки
   useEffect(() => {
@@ -168,6 +316,17 @@ function Orders() {
       console.log("Filtered active orders:", filteredOrders);
     }
   }, [data]);
+
+  // Логирование для отладки моих заказов
+  useEffect(() => {
+    if (myOrders) {
+      console.log("=== MY ORDERS DEBUG ===");
+      console.log("Raw myOrders data:", myOrders);
+      console.log("My orders list:", myOrdersList);
+      console.log("Active my orders (active + in_progress):", activeMyOrders);
+      console.log("Orders with in_progress status:", myOrdersList.filter((item) => item.status === "in_progress"));
+    }
+  }, [myOrders, myOrdersList, activeMyOrders]);
   
   useEffect(() => {
     console.log("=== ORDERS TO DISPLAY ===");
@@ -175,33 +334,33 @@ function Orders() {
     console.log("Count:", ordersToDisplay?.length || 0);
   }, [ordersToDisplay]);
 
-  // История - заказы со статусом completed (только для "Мои заказы")
-  const historyOrders = activeTab === "myOrders"
+  // История - заказы со статусом completed (только для пассажира)
+  const historyOrders = showPassengerContent
     ? myOrdersList.filter((item) => item.status === "completed")
     : [];
 
-  // Получаем офферы водителя для истории в разделе "Все заказы"
+  // Получаем офферы водителя для истории
   const driverOffersList = Array.isArray(driverOffersData?.data)
     ? driverOffersData.data
     : Array.isArray(driverOffersData)
     ? driverOffersData
     : [];
 
-  // Фильтруем офферы: показываем только accepted и declined (не pending)
-  const historyDriverOffers = activeTab === "allOrders"
+  // Фильтруем офферы: показываем только accepted и declined (не pending) - только для водителя
+  const historyDriverOffers = showDriverContent
     ? driverOffersList.filter((offer) => offer.status === "accepted" || offer.status === "declined")
     : [];
   
   // Логирование для отладки истории
   useEffect(() => {
-    if (activeTab === "myOrders") {
+    if (showPassengerContent) {
       console.log("=== MY ORDERS DEBUG ===");
       console.log("Raw myOrders data:", myOrders);
       console.log("My orders list:", myOrdersList);
       console.log("Active my orders (for map):", activeMyOrders);
       console.log("History orders (completed/cancelled):", historyOrders);
     }
-  }, [activeTab]);
+  }, [showPassengerContent]);
 
   // Функция валидации формы
   const validateForm = (formData) => {
@@ -455,6 +614,32 @@ function Orders() {
     }
   };
 
+  // Обработчик завершения заказа
+  const handleCompleteOrder = async (order) => {
+    if (!order?.id) return;
+
+    try {
+      const res = await postData(`/passenger-requests/${order.id}`, { status: "completed" });
+      if (res.message === "Passenger request updated!" || res) {
+        toast.success(t("orders.myOrderActions.completeSuccess"));
+        queryClient.invalidateQueries({ queryKey: ["data"] });
+        refetch();
+        myOrdersRefetch();
+      }
+    } catch (err) {
+      console.error("Error completing order:", err);
+      let errorMessage = t("orders.myOrderActions.completeError");
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.status === 403) {
+        errorMessage = "Нет доступа для завершения этого заказа";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      toast.error(errorMessage);
+    }
+  };
+
   // Обработчик обновления заказа (при отправке формы редактирования)
   const handleUpdateOrder = async (e) => {
     e.preventDefault();
@@ -570,29 +755,33 @@ function Orders() {
 
   return (
     <div>
-      <div className="w-full flex text-primary gap-2.5 mb-5">
-        <Dialog 
-          className="w-full" 
-          open={dialog} 
-          onOpenChange={(open) => {
-            setDialog(open);
-            if (!open) {
-              // Сброс при закрытии
-              setCurrentStep(1);
-              setRouteData({ from: "", to: "", fromCoords: null, toCoords: null });
-              setFormErrors({});
-              setSelectedTime("12:00");
-              setEditingOrder(null);
-              setAmountInput("");
-            }
-          }}
-        >
-          <DialogTrigger className="w-full cursor-pointer">
-            <div className="border w-full py-2 sm:px-10 sm:py-4 rounded-3xl flex flex-col items-center ring-1 ring-blue-300/70 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm" style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}>
-              <User className="md:size-6 size-4" />
-              <h4 className="text-sm md:text-md font-bold">{t("orders.create")}</h4>
-            </div>
-          </DialogTrigger>
+      {/* Кнопка создания заказа для пассажира */}
+      {showPassengerContent && (
+        <div className="px-4 mb-3">
+          <Dialog 
+            className="w-full" 
+            open={dialog} 
+            onOpenChange={(open) => {
+              setDialog(open);
+              if (!open) {
+                // Сброс при закрытии
+                setCurrentStep(1);
+                setRouteData({ from: "", to: "", fromCoords: null, toCoords: null });
+                setFormErrors({});
+                setSelectedTime("12:00");
+                setEditingOrder(null);
+                setAmountInput("");
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button
+                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-9 text-sm font-medium hover:brightness-110 transition-all"
+              >
+                <Plus size={18} />
+                {t("orders.create")}
+              </Button>
+            </DialogTrigger>
               <DialogContent
                 className="w-full h-[calc(100svh-2rem)] max-h-[calc(100svh-2rem)] sm:w-[95vw] sm:max-w-[760px] sm:max-h-[calc(100svh-2rem)] p-0 sm:p-3 sm:rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm overflow-hidden flex flex-col"
                 style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}
@@ -790,17 +979,25 @@ function Orders() {
             )}
           </DialogContent>
         </Dialog>
-        <Dialog
-          className="w-full"
-          open={searchDialog}
-          onOpenChange={setSearchDialog}
-        >
-          <DialogTrigger className="w-full cursor-pointer">
-            <div className="border w-full py-2 sm:px-10 sm:py-4 rounded-3xl flex flex-col items-center ring-1 ring-blue-300/70 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm" style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}>
-              <Search className="md:size-6 size-4" />
-              <h4 className="text-sm md:text-md font-bold">{t("orders.search")}</h4>
-            </div>
-          </DialogTrigger>
+      </div>
+      )}
+      
+      {/* Кнопка поиска заказа для водителя */}
+      {showDriverContent && (
+        <div className="px-4 mb-3">
+          <Dialog
+            className="w-full"
+            open={searchDialog}
+            onOpenChange={setSearchDialog}
+          >
+            <DialogTrigger asChild>
+              <Button
+                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-9 text-sm font-medium hover:brightness-110 transition-all"
+              >
+                <Search size={18} />
+                {t("orders.search")}
+              </Button>
+            </DialogTrigger>
           <DialogContent 
             className="overflow-hidden rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm max-h-none"
             style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}
@@ -874,141 +1071,114 @@ function Orders() {
           </DialogContent>
         </Dialog>
       </div>
+      )}
       
       <Card className="px-0 rounded-3xl shadow-lg border">
         <CardContent className="px-0 rounded-3xl bg-card/90 backdrop-blur-sm">
-          <Tabs defaultValue="allOrders" className="w-full" onValueChange={setActiveTab}>
-            <TabsList className="px-1 sm:px-2 w-full mb-4 sm:mb-6">
-              <TabsTrigger value="allOrders" className="text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center">{t("orders.all")}</TabsTrigger>
-              <TabsTrigger value="myOrders" className="text-xs sm:text-sm px-2 sm:px-4 py-2 sm:py-3 whitespace-nowrap text-center">{t("orders.mine")}</TabsTrigger>
-            </TabsList>
-            {activeFilters.from && (
-              <div className="px-4 mb-2">
-                <div className="flex items-center justify-between bg-accent rounded-lg p-2">
-                  <div className="text-sm text-accent-foreground">
-                    <span className="font-medium">Поиск:</span> {activeFilters.from} → {activeFilters.to}
-                    {activeFilters.date && ` • ${activeFilters.date}`}
-                  </div>
-                  <Button
-                    onClick={handleClearSearch}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs h-6 px-2"
-                  >
-                    {t("orders.searchForm.clear")}
-                  </Button>
+          {activeFilters.from && (
+            <div className="px-4 mb-2">
+              <div className="flex items-center justify-between bg-accent rounded-lg p-2">
+                <div className="text-sm text-accent-foreground">
+                  <span className="font-medium">Поиск:</span> {activeFilters.from} → {activeFilters.to}
+                  {activeFilters.date && ` • ${activeFilters.date}`}
                 </div>
+                <Button
+                  onClick={handleClearSearch}
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-6 px-2"
+                >
+                  {t("orders.searchForm.clear")}
+                </Button>
               </div>
-            )}
-            
-            {/* Карта всегда отображается - только активные заказы */}
-                <div className="px-4 mb-4">
-                  <OrdersMap 
-                    orders={ordersToDisplay} 
-                    isLoading={isLoadingOrders} 
-                    mapHeight="h-[50vh]"
-                    onRefresh={() => {
-                      refetch();
-                      if (activeTab === "myOrders") {
-                        myOrdersRefetch();
-                      }
-                      if (activeTab === "allOrders") {
-                        driverOffersRefetch();
-                      }
-                    }}
-                    onEditOrder={handleEditOrder}
-                    onDeleteOrder={handleDeleteOrder}
-                  />
-                </div>
-            
-            {/* История заказов - только для "Мои заказы", показываем только completed */}
-            {activeTab === "myOrders" && (
-              <div className="px-4 pb-4">
-                <h3 className="text-sm sm:text-base font-bold text-primary mb-3">{t("orders.history.title")}</h3>
-                {historyOrders.length === 0 ? (
-                  <div className="text-sm text-gray-500 text-center py-4">{t("orders.history.empty")}</div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {historyOrders.map((order) => {
-                      const time = order.time ? (order.time.includes(":") ? order.time.substring(0, 5) : order.time) : "";
-                      return (
-                        <div
-                          key={order.id}
-                          onClick={() => setSelectedHistoryOrder(order)}
-                          className="border rounded-xl p-2.5 sm:p-3 bg-card/90 backdrop-blur-sm shadow-sm ring-1 ring-blue-200/60 cursor-pointer hover:shadow-md transition-shadow"
-                          style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.10), rgba(79,70,229,0.06))" }}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 text-primary font-medium text-xs sm:text-sm min-w-0 flex-1">
-                              <span className="truncate">{order.from_address || order.from}</span>
-                              <span className="text-primary">→</span>
-                              <span className="truncate">{order.to_address || order.to}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-600 mt-1">
-                            <span>{order.date}</span>
-                            {time && (
-                              <>
-                                <span>•</span>
-                                <span>{time}</span>
-                              </>
-                            )}
+            </div>
+          )}
+          
+          {/* Карта - для пассажира показываем мои заказы, для водителя - все заказы */}
+          <div className="px-4 mb-4">
+            <OrdersMap 
+              orders={ordersToDisplay} 
+              isLoading={isLoadingOrders} 
+              mapHeight="h-[50vh]"
+              showRoute={showPassengerContent}
+              onRefresh={() => {
+                refetch();
+                if (showPassengerContent) {
+                  myOrdersRefetch();
+                }
+                if (showDriverContent) {
+                  driverOffersRefetch();
+                }
+              }}
+              onEditOrder={handleEditOrder}
+              onDeleteOrder={handleDeleteOrder}
+              onCompleteOrder={handleCompleteOrder}
+            />
+          </div>
+          
+          {/* История заказов - только для пассажира */}
+          {showPassengerContent && (
+            <div className="px-4 pb-4">
+              <h3 className="text-sm sm:text-base font-bold text-primary mb-3">{t("orders.history.title")}</h3>
+              {historyOrders.length === 0 ? (
+                <div className="text-sm text-gray-500 text-center py-4">{t("orders.history.empty")}</div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {historyOrders.map((order) => {
+                    const time = order.time ? (order.time.includes(":") ? order.time.substring(0, 5) : order.time) : "";
+                    return (
+                      <div
+                        key={order.id}
+                        onClick={() => setSelectedHistoryOrder(order)}
+                        className="border rounded-xl p-2.5 sm:p-3 bg-card/90 backdrop-blur-sm shadow-sm ring-1 ring-blue-200/60 cursor-pointer hover:shadow-md transition-shadow"
+                        style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.10), rgba(79,70,229,0.06))" }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-primary font-medium text-xs sm:text-sm min-w-0 flex-1">
+                            <span className="truncate">{order.from_address || order.from}</span>
+                            <span className="text-primary">→</span>
+                            <span className="truncate">{order.to_address || order.to}</span>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
+                        <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-600 mt-1">
+                          <span>{order.date}</span>
+                          {time && (
+                            <>
+                              <span>•</span>
+                              <span>{time}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
-            {/* История офферов водителя - только для "Все заказы" */}
-            {activeTab === "allOrders" && (
-              <div className="px-4 pb-4">
-                <h3 className="text-sm sm:text-base font-bold text-primary mb-3">{t("orders.history.title")}</h3>
-                {driverOffersLoading ? (
-                  <div className="text-sm text-gray-500 text-center py-4">{t("orders.loading")}</div>
-                ) : historyDriverOffers.length === 0 ? (
-                  <div className="text-sm text-gray-500 text-center py-4">{t("orders.history.empty")}</div>
-                ) : (
-                  <div className="flex flex-col gap-2">
-                    {historyDriverOffers.map((offer) => {
-                      const request = offer.passengerRequest || offer.passenger_request || {};
-                      const fromAddress = request.from_address || request.from || "";
-                      const toAddress = request.to_address || request.to || "";
-                      const time = request.time ? (request.time.includes(":") ? request.time.substring(0, 5) : request.time) : "";
-                      
-                      return (
-                        <div
-                          key={offer.id}
-                          onClick={() => setSelectedHistoryOffer(offer)}
-                          className="border rounded-xl p-2.5 sm:p-3 bg-card/90 backdrop-blur-sm shadow-sm ring-1 ring-blue-200/60 cursor-pointer hover:shadow-md transition-shadow"
-                          style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.10), rgba(79,70,229,0.06))" }}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 text-primary font-medium text-xs sm:text-sm min-w-0 flex-1">
-                              <span className="truncate">{fromAddress}</span>
-                              <span className="text-primary">→</span>
-                              <span className="truncate">{toAddress}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-600 mt-1">
-                            <span>{request.date}</span>
-                            {time && (
-                              <>
-                                <span>•</span>
-                                <span>{time}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-          </Tabs>
+          {/* История офферов водителя - только для водителя */}
+          {showDriverContent && (
+            <div className="px-4 pb-4">
+              <h3 className="text-sm sm:text-base font-bold text-primary mb-3">{t("orders.history.title")}</h3>
+              {driverOffersLoading ? (
+                <div className="text-sm text-gray-500 text-center py-4">{t("orders.loading")}</div>
+              ) : historyDriverOffers.length === 0 ? (
+                <div className="text-sm text-gray-500 text-center py-4">{t("orders.history.empty")}</div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {historyDriverOffers.map((offer) => (
+                    <HistoryOfferItem
+                      key={offer.id}
+                      offer={offer}
+                      onSelect={setSelectedHistoryOffer}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -12,6 +12,7 @@ import {
   DeleteAccount,
   DownloadAndroid,
   Orders,
+  TripsOrders,
 } from "./pages";
 import MainLayout from "./layout/MainLayout";
 import {
@@ -57,7 +58,7 @@ function App() {
       children: [
         {
           index: true,
-          element: <Trips />,
+          element: <Navigate to="/trips-orders" replace />,
           errorElement: <ErrorElement />,
         },
         {
@@ -76,8 +77,13 @@ function App() {
           errorElement: <ErrorElement />,
         },
         {
+          path: "/trips-orders",
+          element: <TripsOrders />,
+          errorElement: <ErrorElement />,
+        },
+        {
           path: "/orders",
-          element: <Orders />,
+          element: <Navigate to="/trips-orders" replace />,
           errorElement: <ErrorElement />,
         },
         {

@@ -172,6 +172,7 @@ export const userApi = {
   sendDeleteOtp: (phone) => postData("/account/delete/send-otp", { phone }),
   verifyDeleteOtp: (data) => postData("/account/delete/verify", data),
   updateProfile: (data) => postData("/user", data),
+  updateRole: (data) => postData("/role/update", data),
 };
 
 export const useDeleteAccount = () => {
@@ -234,6 +235,29 @@ export const useUpdateProfile = () => {
       // Invalidate user data queries to refresh the profile
       queryClient.invalidateQueries({ queryKey: ["data", "/users/me"] });
       queryClient.invalidateQueries({ queryKey: ["data", "/user"] });
+    },
+  });
+};
+
+export const useUpdateRole = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data) => userApi.updateRole(data),
+    onSuccess: () => {
+      // Invalidate user data queries to refresh the profile with new role
+      queryClient.invalidateQueries({ queryKey: ["data", "/users/me"] });
+      queryClient.invalidateQueries({ queryKey: ["data", "/user"] });
+      // Also update user in localStorage
+      const userData = safeLocalStorage.getItem("user");
+      if (userData) {
+        try {
+          const user = JSON.parse(userData);
+          user.role = data.role;
+          safeLocalStorage.setItem("user", JSON.stringify(user));
+        } catch (error) {
+          console.error("Error updating user role in localStorage:", error);
+        }
+      }
     },
   });
 };

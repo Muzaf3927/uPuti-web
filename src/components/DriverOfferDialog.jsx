@@ -66,12 +66,13 @@ function DriverOfferDialog({ order, open, onOpenChange, onSuccess }) {
     setFormErrors({});
 
     try {
-      const priceDigits = price.replace(/\D/g, "");
+      // Всегда используем цену из заказа, а не из поля
+      const orderPrice = order?.amount ? Number(order.amount) : null;
       const offerData = {
         carModel: carModel.trim(),
         carColor: carColor.trim(),
         numberCar: numberCar.toUpperCase().trim(),
-        price: priceDigits ? parseInt(priceDigits, 10) : null,
+        price: orderPrice && orderPrice > 0 ? orderPrice : null,
       };
 
       const res = await offerMutation.mutateAsync(offerData);
@@ -117,11 +118,12 @@ function DriverOfferDialog({ order, open, onOpenChange, onSuccess }) {
     }
   };
 
-  const handlePriceChange = (e) => {
-    const digits = e.target.value.replace(/\D/g, "");
-    const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-    setPrice(formatted);
-  };
+  // Убираем обработчик изменения цены, так как цена теперь только из заказа
+  // const handlePriceChange = (e) => {
+  //   const digits = e.target.value.replace(/\D/g, "");
+  //   const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  //   setPrice(formatted);
+  // };
 
   // Автоматически заполняем цену заказа при открытии диалога
   useEffect(() => {
@@ -140,6 +142,19 @@ function DriverOfferDialog({ order, open, onOpenChange, onSuccess }) {
       setFormErrors({});
     }
   }, [open, order?.amount]);
+
+  // Всегда используем цену из заказа, даже если пользователь пытается изменить
+  useEffect(() => {
+    if (order?.amount) {
+      const orderPrice = Number(order.amount);
+      if (orderPrice && orderPrice > 0) {
+        const formatted = orderPrice.toLocaleString().replace(/,/g, " ");
+        if (price !== formatted) {
+          setPrice(formatted);
+        }
+      }
+    }
+  }, [order?.amount]);
 
   if (!order) return null;
 
@@ -230,7 +245,7 @@ function DriverOfferDialog({ order, open, onOpenChange, onSuccess }) {
             </div>
           </div>
 
-          {/* Цена (опционально) */}
+          {/* Цена (автоматически из заказа, недоступна для редактирования) */}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="price" className="text-sm">
               {t("orders.offerForm.price")}
@@ -241,14 +256,18 @@ function DriverOfferDialog({ order, open, onOpenChange, onSuccess }) {
                 type="text"
                 inputMode="numeric"
                 value={price}
-                onChange={handlePriceChange}
+                readOnly
+                disabled
                 placeholder={t("orders.offerForm.pricePlaceholder")}
-                className="pr-16 bg-white h-9 text-sm"
+                className="pr-16 bg-transparent border-transparent text-gray-400 cursor-not-allowed h-9 text-sm opacity-60"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 opacity-60">
                 сум
               </span>
             </div>
+            <p className="text-xs text-gray-400 mt-0.5 opacity-70">
+              {t("orders.offerForm.priceFromOrder") || "Цена автоматически берется из заказа"}
+            </p>
           </div>
 
           {/* Кнопки */}
