@@ -242,8 +242,13 @@ export const useUpdateProfile = () => {
 export const useUpdateRole = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data) => userApi.updateRole(data),
-    onSuccess: () => {
+    mutationFn: (data) => {
+      console.log("useUpdateRole: Calling API with data:", data);
+      return userApi.updateRole(data);
+    },
+    onSuccess: (response, variables) => {
+      console.log("useUpdateRole: Success response:", response);
+      console.log("useUpdateRole: Variables (role):", variables);
       // Invalidate user data queries to refresh the profile with new role
       queryClient.invalidateQueries({ queryKey: ["data", "/users/me"] });
       queryClient.invalidateQueries({ queryKey: ["data", "/user"] });
@@ -252,12 +257,17 @@ export const useUpdateRole = () => {
       if (userData) {
         try {
           const user = JSON.parse(userData);
-          user.role = data.role;
+          user.role = variables.role;
           safeLocalStorage.setItem("user", JSON.stringify(user));
+          console.log("useUpdateRole: Updated localStorage with role:", variables.role);
         } catch (error) {
           console.error("Error updating user role in localStorage:", error);
         }
       }
+    },
+    onError: (error) => {
+      console.error("useUpdateRole: Error updating role:", error);
+      console.error("useUpdateRole: Error response:", error.response);
     },
   });
 };

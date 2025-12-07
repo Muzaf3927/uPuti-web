@@ -12,20 +12,37 @@ function RoleSelection({ onRoleSelected }) {
   const updateRoleMutation = useUpdateRole();
 
   const handleSelectRole = async (role) => {
-    if (!role) return;
+    if (!role) {
+      console.log("RoleSelection: No role provided");
+      return;
+    }
     
+    if (updateRoleMutation.isPending) {
+      console.log("RoleSelection: Already updating role, ignoring click");
+      return;
+    }
+    
+    console.log("RoleSelection: handleSelectRole called with role:", role);
     setSelectedRole(role);
     
     try {
-      await updateRoleMutation.mutateAsync({ role });
+      console.log("RoleSelection: Attempting to update role to:", role);
+      const result = await updateRoleMutation.mutateAsync({ role });
+      console.log("RoleSelection: Role updated successfully:", result);
       toast.success(
         t("roleSelection.success") || "Роль успешно выбрана"
       );
-      if (onRoleSelected) {
-        onRoleSelected(role);
-      }
+      // Обновляем страницу для применения изменений
+      setTimeout(() => {
+        if (onRoleSelected) {
+          onRoleSelected(role);
+        }
+        // Перезагружаем страницу, чтобы применить изменения роли
+        window.location.reload();
+      }, 500);
     } catch (error) {
-      console.error("Error updating role:", error);
+      console.error("RoleSelection: Error updating role:", error);
+      console.error("RoleSelection: Error response:", error.response);
       toast.error(
         error.response?.data?.message || 
         t("roleSelection.error") || 
@@ -36,9 +53,24 @@ function RoleSelection({ onRoleSelected }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div 
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      onClick={(e) => {
+        // Предотвращаем закрытие при клике на backdrop
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      style={{ pointerEvents: 'auto' }}
+    >
       {/* Backdrop не закрывает модальное окно - выбор роли обязателен */}
-      <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-4 border border-gray-200">
+      <div 
+        className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-4 border border-gray-200 relative z-[10000]"
+        onClick={(e) => {
+          // Предотвращаем всплытие клика
+          e.stopPropagation();
+        }}
+        style={{ pointerEvents: 'auto' }}
+      >
         <div className="text-center mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
             {t("roleSelection.title") || "Выберите вашу роль"}
@@ -54,13 +86,20 @@ function RoleSelection({ onRoleSelected }) {
         <div className="grid grid-cols-2 gap-4 mb-6">
           {/* Пассажир */}
           <button
-            onClick={() => handleSelectRole("passenger")}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log("RoleSelection: Passenger button clicked");
+              handleSelectRole("passenger");
+            }}
             disabled={updateRoleMutation.isPending}
             className={`flex flex-col items-center justify-center gap-3 p-4 sm:p-6 rounded-xl border-2 transition-all duration-200 ${
               selectedRole === "passenger"
                 ? "border-green-500 bg-green-50"
                 : "border-gray-200 bg-white hover:border-green-300 hover:bg-green-50/50"
             } ${updateRoleMutation.isPending ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            style={{ pointerEvents: updateRoleMutation.isPending ? 'none' : 'auto' }}
           >
             <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center ${
               selectedRole === "passenger"
@@ -76,13 +115,20 @@ function RoleSelection({ onRoleSelected }) {
 
           {/* Водитель */}
           <button
-            onClick={() => handleSelectRole("driver")}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log("RoleSelection: Driver button clicked");
+              handleSelectRole("driver");
+            }}
             disabled={updateRoleMutation.isPending}
             className={`flex flex-col items-center justify-center gap-3 p-4 sm:p-6 rounded-xl border-2 transition-all duration-200 ${
               selectedRole === "driver"
                 ? "border-green-500 bg-green-50"
                 : "border-gray-200 bg-white hover:border-green-300 hover:bg-green-50/50"
             } ${updateRoleMutation.isPending ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            style={{ pointerEvents: updateRoleMutation.isPending ? 'none' : 'auto' }}
           >
             <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center ${
               selectedRole === "driver"

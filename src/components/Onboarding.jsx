@@ -7,39 +7,6 @@ import { Car, Users, MapPin, CheckCircle } from "lucide-react";
 function Onboarding({ onComplete, setLang }) {
   const { t, lang } = useI18n();
 
-  const isUzbek = lang === "uz";
-
-  const content = {
-    uz: {
-      title: "UPuti ga xush kelibsiz!",
-      subtitle: "Bu yerda yo'lovchilar va haydovchilar bir-birini topadilar.",
-      description:
-        "Siz tezda safar yaratishingiz yoki poputka topishingiz mumkin.",
-      passengerTitle: "Yo'lovchilar uchun:",
-      passengerDesc:
-        "kerakli yo'nalish bo'yicha safarni toping — taksidan arzonroq va qulayroq.",
-      driverTitle: "Haydovchilar uchun:",
-      driverDesc:
-        "kim bilan ketishingizni oldindan biling va benzin xarajatini qoplang.",
-      cta: "👉 Ortiqcha tashvishlarsiz: bron qiling va yo'lga chiqing!",
-      button: "Boshlash",
-    },
-    ru: {
-      title: "Добро пожаловать в UPuti!",
-      subtitle: "Здесь пассажиры и водители находят друг друга.",
-      description: "Вы можете быстро создать поездку или найти попутку.",
-      passengerTitle: "Для пассажиров:",
-      passengerDesc:
-        "найдёшь поездку по нужному маршруту дешевле и удобнее, чем такси или автобус.",
-      driverTitle: "Для водителей:",
-      driverDesc: "заранее знаешь, кто поедет с тобой, и экономишь на бензине.",
-      cta: "👉 Без лишних хлопот: бронируй и езжай!",
-      button: "Начать",
-    },
-  };
-
-  const currentContent = content[isUzbek ? "uz" : "ru"];
-
   return (
     <div className="fixed inset-0 bg-[radial-gradient(700px_350px_at_-10%_-20%,_oklch(0.94_0.07_220)_0%,_transparent_60%),radial-gradient(900px_450px_at_110%_0%,_oklch(0.92_0.06_220)_0%,_transparent_60%)] z-50 flex items-center justify-center p-2 sm:p-4">
       <Card className="w-full max-w-2xl shadow-xl border bg-card/95 backdrop-blur-sm relative max-h-[95vh] overflow-y-auto rounded-2xl">
@@ -72,13 +39,13 @@ function Onboarding({ onComplete, setLang }) {
               />
             </div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary mb-2 sm:mb-3">
-              {currentContent.title}
+              {t("onboarding.title")}
             </h1>
             <p className="text-base sm:text-lg text-gray-700 mb-1 sm:mb-2">
-              {currentContent.subtitle}
+              {t("onboarding.subtitle")}
             </p>
             <p className="text-sm sm:text-base text-gray-500">
-              {currentContent.description}
+              {t("onboarding.description")}
             </p>
           </div>
 
@@ -90,10 +57,10 @@ function Onboarding({ onComplete, setLang }) {
               </div>
               <div>
                 <h3 className="font-semibold text-gray-800 mb-1 text-sm sm:text-base">
-                  {currentContent.passengerTitle}
+                  {t("onboarding.passengerTitle")}
                 </h3>
                 <p className="text-gray-700 text-xs sm:text-sm">
-                  {currentContent.passengerDesc}
+                  {t("onboarding.passengerDesc")}
                 </p>
               </div>
             </div>
@@ -105,10 +72,10 @@ function Onboarding({ onComplete, setLang }) {
               </div>
               <div>
                 <h3 className="font-semibold text-gray-800 mb-1 text-sm sm:text-base">
-                  {currentContent.driverTitle}
+                  {t("onboarding.driverTitle")}
                 </h3>
                 <p className="text-gray-700 text-xs sm:text-sm">
-                  {currentContent.driverDesc}
+                  {t("onboarding.driverDesc")}
                 </p>
               </div>
             </div>
@@ -116,7 +83,7 @@ function Onboarding({ onComplete, setLang }) {
 
           <div className="text-center mb-4 sm:mb-6 lg:mb-8">
             <p className="text-sm sm:text-base lg:text-lg font-medium text-gray-700">
-              {currentContent.cta}
+              {t("onboarding.cta")}
             </p>
           </div>
 
@@ -125,7 +92,7 @@ function Onboarding({ onComplete, setLang }) {
               onClick={onComplete}
               className="bg-primary hover:brightness-110 text-primary-foreground px-6 py-2 sm:px-8 sm:py-3 rounded-full text-sm sm:text-base lg:text-lg font-semibold shadow-lg w-full sm:w-auto"
             >
-              {currentContent.button}
+              {t("onboarding.button")}
             </Button>
           </div>
         </CardContent>

@@ -181,7 +181,7 @@ function Chats() {
               </Avatar>
               <div className="flex flex-col min-w-0">
                 <span className="font-semibold text-gray-900 truncate text-xs">
-                  {selectedChat.partner?.name || "Пользователь"}
+                  {selectedChat.partner?.name || t("common.user")}
                 </span>
                 <span className="text-[10px] text-gray-500 truncate">
                   {selectedChat.trip?.from_city} → {selectedChat.trip?.to_city}
@@ -259,7 +259,7 @@ function Chats() {
                 type="text"
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Сообщение..."
+                placeholder={t("chats.placeholder")}
                 className="flex-1 rounded-full border-gray-200 focus:border-primary focus:ring-primary/50 text-xs h-8"
                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                 ref={inputRef}
@@ -290,7 +290,7 @@ function Chats() {
         <div className="px-4 py-4 border-b bg-card/95 backdrop-blur-sm">
           <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
             <MessageCircle className="w-6 h-6 text-primary" />
-            Чаты
+            {t("chats.title")}
           </h1>
         </div>
 
@@ -300,8 +300,8 @@ function Chats() {
             <div className="p-4">
               <EmptyState
                 icon={<MessageCircle className="w-8 h-8 text-primary" />}
-                title="Пока нет чатов"
-                description="Начните общение с водителями или пассажирами"
+                title={t("chats.noChats")}
+                description={t("chats.noChatsDescription")}
               />
             </div>
           ) : (
@@ -328,7 +328,7 @@ function Chats() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="font-semibold text-gray-900 truncate group-hover:text-primary transition-colors">
-                        {chat.partner?.name || "Пользователь"}
+                        {chat.partner?.name || t("common.user")}
                       </h3>
                       <span className="text-xs text-gray-500 flex items-center gap-1">
                         {chat.last_message_at && (

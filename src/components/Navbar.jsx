@@ -11,6 +11,7 @@ function Navbar() {
   const { data: chatUnread } = useGetUnreadCount();
   
   const links = useMemo(() => [
+    { path: "/trips-orders", name: t("nav.tripsOrders"), icon: <Car size={20} /> },
     { 
       path: "/requests", 
       name: t("nav.requests"), 
@@ -24,7 +25,6 @@ function Navbar() {
       unreadCount: (unreadCounts?.my_confirmed_unread || 0) + (unreadCounts?.to_my_trips_confirmed_unread || 0)
     },
     { path: "/history", name: t("nav.history"), icon: <History size={20} /> },
-    { path: "/trips-orders", name: t("nav.tripsOrders"), icon: <Car size={20} /> },
     { 
       path: "/chats", 
       name: t("nav.chats"), 

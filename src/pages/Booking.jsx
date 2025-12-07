@@ -51,6 +51,7 @@ function Booking() {
     }
   }, [location.pathname, refetchMyConfirmed, refetchConfirmedToMyTrips]);
 
+
   const myConfirmedBookings = myConfirmedBookingsRes?.bookings || [];
   const confirmedBookingsToMyTrips = confirmedBookingsToMyTripsRes?.bookings || [];
 
@@ -119,7 +120,7 @@ function Booking() {
                                 </div>
                                 <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
                                   <Phone size={12} />
-                                  <span>{b.trip?.driver?.phone ? `+998${b.trip.driver.phone}` : 'Номер не указан'}</span>
+                                  <span>{b.trip?.driver?.phone ? `+998${b.trip.driver.phone}` : t("common.phoneNotAvailable")}</span>
                                 </div>
                                 {b.comment && (
                                     <div className="text-xs sm:text-sm text-gray-600 bg-gray-50 rounded-lg p-2 mt-1">
@@ -184,19 +185,19 @@ function Booking() {
                                 <span className="font-semibold text-gray-900 text-sm sm:text-base">
                                   {trip.from_city} <ArrowRight size={14} className="inline" /> {trip.to_city}
                                 </span>
-                                        <span className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded-full w-fit">Подтверждено</span>
+                                        <span className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded-full w-fit">{t("common.confirmed")}</span>
                                       </div>
                                       <div className="text-xs sm:text-sm text-gray-600">
                                         {trip.date} • {trip.time}
                                       </div>
                                       <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600">
-                                        <span>{b.seats} мест</span>
+                                        <span>{b.seats} {t("common.seats")}</span>
                                         {b.offered_price ? (
                                             <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                                    Предложение: {b.offered_price} сум
+                                    {t("common.offer")}: {b.offered_price} сум
                                   </span>
                                         ) : (
-                                            <span>Цена: {trip.price} сум</span>
+                                            <span>{t("common.price")}: {trip.price} сум</span>
                                         )}
                                       </div>
                                       <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-600">

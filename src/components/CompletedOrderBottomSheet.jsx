@@ -158,7 +158,7 @@ function CompletedOrderBottomSheet({ order, onClose }) {
               <div className="flex items-center gap-2 mb-1.5">
                 <div className="flex-1 min-w-0">
                   <div className="text-[11px] font-medium text-gray-900 truncate">
-                    {driver?.name || acceptedOffer?.driver?.name || "Водитель"}
+                    {driver?.name || acceptedOffer?.driver?.name || t("common.driver")}
                   </div>
                   {driver?.rating && (
                     <div className="flex items-center gap-1 mt-0.5">
@@ -191,7 +191,7 @@ function CompletedOrderBottomSheet({ order, onClose }) {
                   {acceptedOffer.numberCar && (
                     <div className="flex items-center gap-1 px-1.5 py-1 rounded-md bg-white/50">
                       <div className="flex flex-col min-w-0">
-                        <span className="text-[8px] text-gray-400 leading-tight">Номер</span>
+                        <span className="text-[8px] text-gray-400 leading-tight">{t("common.number")}</span>
                         <span className="text-[10px] font-medium text-gray-900 truncate leading-tight">
                           {acceptedOffer.numberCar}
                         </span>

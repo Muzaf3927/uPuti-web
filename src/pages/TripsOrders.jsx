@@ -4,12 +4,18 @@ import { useActiveTab } from "@/layout/MainLayout";
 import { useI18n } from "@/app/i18n.jsx";
 import Trips from "./Trips";
 import Orders from "./Orders";
+import TelegramConnectModal from "@/components/TelegramConnectModal.jsx";
+import { useGetData } from "@/api/api";
 
 function TripsOrders() {
   const { t } = useI18n();
   const { activeTab } = useActiveTab();
   const showPassengerContent = activeTab === "passenger";
   const showDriverContent = activeTab === "driver";
+  const [telegramModalOpen, setTelegramModalOpen] = useState(false);
+  
+  // Получаем данные пользователя для проверки telegram_chat_id
+  const { data: userData, refetch: refetchUser } = useGetData("/user");
   
   // Дефолтное значение в зависимости от роли
   const defaultTab = showPassengerContent ? "createOrder" : "searchOrder";
@@ -20,6 +26,51 @@ function TripsOrders() {
     const newDefaultTab = showPassengerContent ? "createOrder" : "searchOrder";
     setActiveSubTab(newDefaultTab);
   }, [showPassengerContent, showDriverContent]);
+
+  // Проверка telegram_chat_id для всех пользователей при загрузке страницы
+  // НО ТОЛЬКО ЕСЛИ У ПОЛЬЗОВАТЕЛЯ УЖЕ ЕСТЬ РОЛЬ
+  // Сначала должна быть выбрана роль, потом Telegram
+  useEffect(() => {
+    if (!userData) return;
+    
+    // Проверяем, есть ли у пользователя роль
+    const hasValidRole = userData.role === "passenger" || userData.role === "driver";
+    
+    // Если роли нет, не показываем модальное окно Telegram (сначала должна быть выбрана роль)
+    if (!hasValidRole) {
+      return;
+    }
+    
+    // Проверяем на null, undefined и пустую строку
+    const telegramChatId = userData.telegram_chat_id;
+    // Правильная проверка: если telegram_chat_id пустой (null, undefined, или пустая строка), то hasTelegram = false
+    const hasTelegram = Boolean(telegramChatId && String(telegramChatId).trim() !== "");
+    
+    console.log("TripsOrders: Checking telegram_chat_id", {
+      role: userData.role,
+      hasValidRole,
+      telegram_chat_id: telegramChatId,
+      type: typeof telegramChatId,
+      hasTelegram,
+      shouldShowModal: !hasTelegram
+    });
+    
+    if (!hasTelegram) {
+      console.log("TripsOrders: Opening Telegram modal - telegram_chat_id is empty");
+      setTelegramModalOpen(true);
+    }
+  }, [userData]);
+
+  // Обновляем данные пользователя при закрытии модального окна Telegram
+  useEffect(() => {
+    const handleFocus = () => {
+      if (!telegramModalOpen) {
+        refetchUser();
+      }
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
+  }, [telegramModalOpen, refetchUser]);
 
   // Для пассажира: "Заказы" (первый) и "Поездки"
   // Для водителя: "Заказы" (первый) и "Поездки"
@@ -37,6 +88,10 @@ function TripsOrders() {
 
   return (
     <div>
+      <TelegramConnectModal
+        open={telegramModalOpen}
+        onOpenChange={setTelegramModalOpen}
+      />
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="w-full">
         <TabsList className="px-1 sm:px-2 w-full mb-4 sm:mb-6">
           {tabs.map((tab) => (

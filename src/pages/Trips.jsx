@@ -134,6 +134,7 @@ function Trips() {
     }
   }, [location.pathname, refetch, myTripsRefetch]);
 
+
   // Показываем модальное окно Telegram при открытии диалога создания поездки
   // Только если у пользователя нет telegram_chat_id
   useEffect(() => {
@@ -147,14 +148,16 @@ function Trips() {
       refetchUser().then((result) => {
         // Проверяем после обновления данных - используем данные из результата или из кэша
         const updatedUser = result?.data || queryClient.getQueryData(["data", "/user"]) || sessionManager.getUserData();
-        // Показываем модальное окно только если telegram_chat_id отсутствует
-        if (updatedUser && !updatedUser.telegram_chat_id) {
+        // Показываем модальное окно только если telegram_chat_id отсутствует или пустая строка
+        const hasTelegram = updatedUser?.telegram_chat_id && updatedUser.telegram_chat_id.trim() !== "";
+        if (updatedUser && !hasTelegram) {
           setTelegramModalOpen(true);
         }
       }).catch(() => {
         // В случае ошибки проверяем из кэша
         const user = userData || sessionManager.getUserData();
-        if (user && !user.telegram_chat_id) {
+        const hasTelegram = user?.telegram_chat_id && user.telegram_chat_id.trim() !== "";
+        if (user && !hasTelegram) {
           setTelegramModalOpen(true);
         }
       });

@@ -158,7 +158,7 @@ function MainLayout() {
       // Полная очистка всех данных сессии
       sessionManager.clearSession();
 
-      toast.success("Muvaffaqiyatli tizimdan chiqdingiz!");
+      toast.success(t("logout.success"));
     }
   };
 
@@ -239,21 +239,21 @@ function MainLayout() {
                 <DropdownMenuContent className="w-64 sm:w-72 max-h-96 overflow-auto">
                   <div className="flex items-center justify-between px-2 py-1">
                     <DropdownMenuLabel className="text-xs sm:text-sm">
-                      Уведомления
+                      {t("notifications.title")}
                     </DropdownMenuLabel>
                     <button
                       disabled={markAll.isPending}
                       onClick={() => markAll.mutate()}
                       className="text-xs text-primary hover:underline"
                     >
-                      Прочитать все
+                      {t("notifications.markAllRead")}
                     </button>
                   </div>
                   <DropdownMenuSeparator />
                   {!notifications?.notifications?.filter((n) => !n.is_read)
                     ?.length && (
                     <DropdownMenuLabel className="text-center text-xs py-6 text-gray-500">
-                      Уведомлений нет
+                      {t("notifications.noNotifications")}
                     </DropdownMenuLabel>
                   )}
                   {notifications?.notifications

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,53 +7,36 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, Bell, MessageSquare } from "lucide-react";
+import { Bell, MessageSquare } from "lucide-react";
 import { useI18n } from "@/app/i18n.jsx";
-import { useTelegramConnect } from "@/api/api";
 import { useQueryClient } from "@tanstack/react-query";
+import { useGetData } from "@/api/api";
 
 function TelegramConnectModal({ open, onOpenChange, onCloseParent }) {
   const { t, lang } = useI18n();
-  const connectMutation = useTelegramConnect();
   const queryClient = useQueryClient();
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [telegramUrl, setTelegramUrl] = useState(null);
-  const linkRef = useRef(null);
+  // Получаем данные пользователя для формирования ссылки с user_id
+  const { data: userData } = useGetData("/user");
 
-  const handleConnect = async () => {
-    try {
-      setIsConnecting(true);
-      const response = await connectMutation.mutateAsync();
-      const url = response.telegram_connect_url;
-      
-      if (url) {
-        setTelegramUrl(url);
-        // Используем программный клик по ссылке для работы в WebView на iPhone
-        // Аналогично тому, как это сделано в техподдержке
-        setTimeout(() => {
-          if (linkRef.current) {
-            linkRef.current.click();
-          }
-          // Закрываем модальное окно через небольшую задержку
-          setTimeout(() => {
-            onOpenChange(false);
-          }, 500);
-        }, 100);
-      }
-    } catch (error) {
-      console.error("Failed to get Telegram connect URL:", error);
-    } finally {
-      setIsConnecting(false);
+  const handleConnect = () => {
+    if (!userData?.id) {
+      console.error("User ID not found");
+      return;
     }
+    
+    // Формируем ссылку на Telegram бота с командой /start user_{userId}
+    // Бот обработает эту команду и сохранит telegram_chat_id в базу
+    const botUrl = `https://t.me/uputi_xabarnoma_bot?start=user_${userData.id}`;
+    
+    // Открываем бота напрямую
+    window.open(botUrl, '_blank');
+    
+    // Закрываем модальное окно через небольшую задержку
+    setTimeout(() => {
+      onOpenChange(false);
+    }, 500);
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
-    // Закрываем родительский диалог (создание поездки/бронирования)
-    if (onCloseParent) {
-      onCloseParent(false);
-    }
-  };
 
   // Обновляем данные пользователя при возврате фокуса на окно (когда пользователь возвращается после подключения Telegram)
   useEffect(() => {
@@ -71,7 +54,7 @@ function TelegramConnectModal({ open, onOpenChange, onCloseParent }) {
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent preventOutsideClose={true}>
+      <DialogContent preventOutsideClose={true} showCloseButton={false}>
         <DialogHeader>
           <div className="flex justify-center mb-4">
             <div className="relative">
@@ -118,43 +101,16 @@ function TelegramConnectModal({ open, onOpenChange, onCloseParent }) {
             </div>
           </div>
           <div className="flex flex-col gap-2">
-            {/* Скрытая ссылка для работы в WebView на iPhone (как в техподдержке) */}
-            {telegramUrl && (
-              <a
-                ref={linkRef}
-                href={telegramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: "none" }}
-                aria-hidden="true"
-              />
-            )}
             <Button
               onClick={handleConnect}
-              disabled={isConnecting || connectMutation.isPending}
               className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600 h-10"
             >
-              {isConnecting || connectMutation.isPending ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="animate-spin" size={16} />
-                  {lang === "ru" ? "Подключение..." : "Ulanmoqda..."}
-                </span>
-              ) : (
-                <span className="flex items-center justify-center gap-2">
-                  <MessageSquare className="w-4 h-4" />
-                  {lang === "ru"
-                    ? "Подключить Telegram"
-                    : "Telegramga ulash"}
-                </span>
-              )}
-            </Button>
-            <Button
-              onClick={handleClose}
-              variant="outline"
-              className="w-full h-10"
-              disabled={isConnecting || connectMutation.isPending}
-            >
-              {lang === "ru" ? "Закрыть" : "Yopish"}
+              <span className="flex items-center justify-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                {lang === "ru"
+                  ? "Подключить Telegram"
+                  : "Telegramga ulash"}
+              </span>
             </Button>
           </div>
         </div>

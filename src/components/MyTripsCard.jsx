@@ -954,7 +954,7 @@ function MyTripsCard({ trip }) {
                   id="ratingComment"
                   value={ratingComment}
                   onChange={(e) => setRatingComment(e.target.value)}
-                  placeholder="Оставьте комментарий (необязательно)"
+                  placeholder={t("history.ratingComment")}
                   rows={3}
                 />
               </div>
