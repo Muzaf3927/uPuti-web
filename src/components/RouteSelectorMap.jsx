@@ -591,9 +591,9 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
   return (
     <div className="w-full h-full flex flex-col gap-2 sm:gap-3">
       {/* Поля поиска адресов */}
-      <div className="flex flex-col gap-2 flex-shrink-0 relative z-[9999]">
+      <div className="flex flex-col gap-2 flex-shrink-0 relative">
         {/* Поле "Откуда" */}
-        <div className="relative address-search-container z-[9999]">
+        <div className="relative address-search-container" style={{ zIndex: showFromSuggestions ? 10000 : 'auto' }}>
           <div className="flex items-center gap-2">
             <MapPin className="text-blue-600 flex-shrink-0" size={16} />
             <Input
@@ -636,13 +636,13 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
           </div>
           {/* Выпадающий список предложений для "Откуда" */}
           {showFromSuggestions && fromSuggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] max-h-48 overflow-y-auto" style={{ position: 'absolute', zIndex: 9999 }}>
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto" style={{ position: 'absolute', zIndex: 10001, boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)' }}>
               {fromSuggestions.map((suggestion, index) => (
                 <button
                   key={index}
                   type="button"
                   onClick={() => handleFromAddressSelect(suggestion)}
-                  className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 bg-white"
                 >
                   <div className="flex items-start gap-2">
                     <MapPin className="text-blue-600 flex-shrink-0 mt-0.5" size={14} />
@@ -664,7 +664,7 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         </div>
 
         {/* Поле "Куда" */}
-        <div className="relative address-search-container z-[9999]">
+        <div className="relative address-search-container" style={{ zIndex: showToSuggestions ? 10000 : 'auto' }}>
           <div className="flex items-center gap-2">
             <MapPin className="text-red-600 flex-shrink-0" size={16} />
             <Input
@@ -707,13 +707,13 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
           </div>
           {/* Выпадающий список предложений для "Куда" */}
           {showToSuggestions && toSuggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-[9999] max-h-48 overflow-y-auto" style={{ position: 'absolute', zIndex: 9999 }}>
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-48 overflow-y-auto" style={{ position: 'absolute', zIndex: 10001, boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)' }}>
               {toSuggestions.map((suggestion, index) => (
                 <button
                   key={index}
                   type="button"
                   onClick={() => handleToAddressSelect(suggestion)}
-                  className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 bg-white"
                 >
                   <div className="flex items-start gap-2">
                     <MapPin className="text-red-600 flex-shrink-0 mt-0.5" size={14} />
