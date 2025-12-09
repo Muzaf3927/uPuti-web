@@ -340,14 +340,28 @@ function Trips() {
             open={searchDialog}
             onOpenChange={setSearchDialog}
           >
-            <DialogTrigger asChild>
-              <Button
-                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-9 text-sm font-medium hover:brightness-110 transition-all"
-              >
-                <Search size={18} />
-                {t("trips.searchForm.search")}
-              </Button>
-            </DialogTrigger>
+            <Button
+              onClick={() => {
+                if (hasActiveSearch) {
+                  handleClearSearch();
+                } else {
+                  setSearchDialog(true);
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-9 text-sm font-medium hover:brightness-110 transition-all"
+            >
+              {hasActiveSearch ? (
+                <>
+                  <X size={18} />
+                  {t("trips.searchForm.clear")}
+                </>
+              ) : (
+                <>
+                  <Search size={18} />
+                  {t("trips.searchForm.search")}
+                </>
+              )}
+            </Button>
             <DialogContent 
               className="overflow-hidden rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm max-h-none"
               style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}
@@ -630,24 +644,6 @@ function Trips() {
         <CardContent className="px-0 rounded-3xl bg-card/90 backdrop-blur-sm">
           {showPassengerContent && (
             <>
-              {activeFilters.from && (
-                <div className="px-4 mb-2">
-                  <div className="flex items-center justify-between bg-accent rounded-lg p-2">
-                    <div className="text-sm text-accent-foreground">
-                      <span className="font-medium">Поиск:</span> {activeFilters.from} → {activeFilters.to}
-                      {activeFilters.date && ` • ${activeFilters.date}`}
-                    </div>
-                    <Button
-                      onClick={handleClearSearch}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-6 px-2"
-                    >
-                      {t("trips.searchForm.clear")}
-                    </Button>
-                  </div>
-                </div>
-              )}
               <div className="px-4 pt-3 pb-2">
                 <h3 className="text-sm sm:text-base font-bold text-primary">{t("trips.all")}</h3>
               </div>

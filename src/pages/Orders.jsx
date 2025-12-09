@@ -758,22 +758,22 @@ function Orders() {
       {/* Кнопка создания заказа для пассажира */}
       {showPassengerContent && (
         <div className="px-4 mb-3">
-          <Dialog 
-            className="w-full" 
-            open={dialog} 
-            onOpenChange={(open) => {
-              setDialog(open);
-              if (!open) {
-                // Сброс при закрытии
-                setCurrentStep(1);
-                setRouteData({ from: "", to: "", fromCoords: null, toCoords: null });
-                setFormErrors({});
-                setSelectedTime("12:00");
-                setEditingOrder(null);
-                setAmountInput("");
-              }
-            }}
-          >
+        <Dialog 
+          className="w-full" 
+          open={dialog} 
+          onOpenChange={(open) => {
+            setDialog(open);
+            if (!open) {
+              // Сброс при закрытии
+              setCurrentStep(1);
+              setRouteData({ from: "", to: "", fromCoords: null, toCoords: null });
+              setFormErrors({});
+              setSelectedTime("12:00");
+              setEditingOrder(null);
+              setAmountInput("");
+            }
+          }}
+        >
             <DialogTrigger asChild>
               <Button
                 className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-9 text-sm font-medium hover:brightness-110 transition-all"
@@ -781,7 +781,7 @@ function Orders() {
                 <Plus size={18} />
                 {t("orders.create")}
               </Button>
-            </DialogTrigger>
+          </DialogTrigger>
               <DialogContent
                 className="w-full h-[calc(100svh-2rem)] max-h-[calc(100svh-2rem)] sm:w-[95vw] sm:max-w-[760px] sm:max-h-[calc(100svh-2rem)] p-0 sm:p-3 sm:rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm overflow-hidden flex flex-col"
                 style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}
@@ -985,19 +985,33 @@ function Orders() {
       {/* Кнопка поиска заказа для водителя */}
       {showDriverContent && (
         <div className="px-4 mb-3">
-          <Dialog
-            className="w-full"
-            open={searchDialog}
-            onOpenChange={setSearchDialog}
-          >
-            <DialogTrigger asChild>
-              <Button
-                className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-9 text-sm font-medium hover:brightness-110 transition-all"
-              >
-                <Search size={18} />
-                {t("orders.search")}
-              </Button>
-            </DialogTrigger>
+        <Dialog
+          className="w-full"
+          open={searchDialog}
+          onOpenChange={setSearchDialog}
+        >
+            <Button
+              onClick={() => {
+                if (hasActiveSearch) {
+                  handleClearSearch();
+                } else {
+                  setSearchDialog(true);
+                }
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-9 text-sm font-medium hover:brightness-110 transition-all"
+            >
+              {hasActiveSearch ? (
+                <>
+                  <X size={18} />
+                  {t("orders.searchForm.clear")}
+                </>
+              ) : (
+                <>
+                  <Search size={18} />
+                  {t("orders.search")}
+                </>
+              )}
+            </Button>
           <DialogContent 
             className="overflow-hidden rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm max-h-none"
             style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}
@@ -1075,110 +1089,92 @@ function Orders() {
       
       <Card className="px-0 rounded-3xl shadow-lg border">
         <CardContent className="px-0 rounded-3xl bg-card/90 backdrop-blur-sm">
-          {activeFilters.from && (
-            <div className="px-4 mb-2">
-              <div className="flex items-center justify-between bg-accent rounded-lg p-2">
-                <div className="text-sm text-accent-foreground">
-                  <span className="font-medium">Поиск:</span> {activeFilters.from} → {activeFilters.to}
-                  {activeFilters.date && ` • ${activeFilters.date}`}
-                </div>
-                <Button
-                  onClick={handleClearSearch}
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-6 px-2"
-                >
-                  {t("orders.searchForm.clear")}
-                </Button>
-              </div>
-            </div>
-          )}
-          
+            
           {/* Карта - для пассажира показываем мои заказы, для водителя - все заказы */}
-          <div className="px-4 mb-4">
-            <OrdersMap 
-              orders={ordersToDisplay} 
-              isLoading={isLoadingOrders} 
-              mapHeight="h-[50vh]"
+                <div className="px-4 mb-4">
+                  <OrdersMap 
+                    orders={ordersToDisplay} 
+                    isLoading={isLoadingOrders} 
+                    mapHeight="h-[50vh]"
               showRoute={showPassengerContent}
-              onRefresh={() => {
-                refetch();
+                    onRefresh={() => {
+                      refetch();
                 if (showPassengerContent) {
-                  myOrdersRefetch();
-                }
+                        myOrdersRefetch();
+                      }
                 if (showDriverContent) {
-                  driverOffersRefetch();
-                }
-              }}
-              onEditOrder={handleEditOrder}
-              onDeleteOrder={handleDeleteOrder}
+                        driverOffersRefetch();
+                      }
+                    }}
+                    onEditOrder={handleEditOrder}
+                    onDeleteOrder={handleDeleteOrder}
               onCompleteOrder={handleCompleteOrder}
-            />
-          </div>
-          
+                  />
+                </div>
+            
           {/* История заказов - только для пассажира */}
           {showPassengerContent && (
-            <div className="px-4 pb-4">
-              <h3 className="text-sm sm:text-base font-bold text-primary mb-3">{t("orders.history.title")}</h3>
-              {historyOrders.length === 0 ? (
-                <div className="text-sm text-gray-500 text-center py-4">{t("orders.history.empty")}</div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {historyOrders.map((order) => {
-                    const time = order.time ? (order.time.includes(":") ? order.time.substring(0, 5) : order.time) : "";
-                    return (
-                      <div
-                        key={order.id}
-                        onClick={() => setSelectedHistoryOrder(order)}
-                        className="border rounded-xl p-2.5 sm:p-3 bg-card/90 backdrop-blur-sm shadow-sm ring-1 ring-blue-200/60 cursor-pointer hover:shadow-md transition-shadow"
-                        style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.10), rgba(79,70,229,0.06))" }}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 text-primary font-medium text-xs sm:text-sm min-w-0 flex-1">
-                            <span className="truncate">{order.from_address || order.from}</span>
-                            <span className="text-primary">→</span>
-                            <span className="truncate">{order.to_address || order.to}</span>
+              <div className="px-4 pb-4">
+                <h3 className="text-sm sm:text-base font-bold text-primary mb-3">{t("orders.history.title")}</h3>
+                {historyOrders.length === 0 ? (
+                  <div className="text-sm text-gray-500 text-center py-4">{t("orders.history.empty")}</div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {historyOrders.map((order) => {
+                      const time = order.time ? (order.time.includes(":") ? order.time.substring(0, 5) : order.time) : "";
+                      return (
+                        <div
+                          key={order.id}
+                          onClick={() => setSelectedHistoryOrder(order)}
+                          className="border rounded-xl p-2.5 sm:p-3 bg-card/90 backdrop-blur-sm shadow-sm ring-1 ring-blue-200/60 cursor-pointer hover:shadow-md transition-shadow"
+                          style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.10), rgba(79,70,229,0.06))" }}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 text-primary font-medium text-xs sm:text-sm min-w-0 flex-1">
+                              <span className="truncate">{order.from_address || order.from}</span>
+                              <span className="text-primary">→</span>
+                              <span className="truncate">{order.to_address || order.to}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-600 mt-1">
+                            <span>{order.date}</span>
+                            {time && (
+                              <>
+                                <span>•</span>
+                                <span>{time}</span>
+                              </>
+                            )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 text-[11px] sm:text-xs text-gray-600 mt-1">
-                          <span>{order.date}</span>
-                          {time && (
-                            <>
-                              <span>•</span>
-                              <span>{time}</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
           {/* История офферов водителя - только для водителя */}
           {showDriverContent && (
-            <div className="px-4 pb-4">
-              <h3 className="text-sm sm:text-base font-bold text-primary mb-3">{t("orders.history.title")}</h3>
-              {driverOffersLoading ? (
-                <div className="text-sm text-gray-500 text-center py-4">{t("orders.loading")}</div>
-              ) : historyDriverOffers.length === 0 ? (
-                <div className="text-sm text-gray-500 text-center py-4">{t("orders.history.empty")}</div>
-              ) : (
-                <div className="flex flex-col gap-2">
+              <div className="px-4 pb-4">
+                <h3 className="text-sm sm:text-base font-bold text-primary mb-3">{t("orders.history.title")}</h3>
+                {driverOffersLoading ? (
+                  <div className="text-sm text-gray-500 text-center py-4">{t("orders.loading")}</div>
+                ) : historyDriverOffers.length === 0 ? (
+                  <div className="text-sm text-gray-500 text-center py-4">{t("orders.history.empty")}</div>
+                ) : (
+                  <div className="flex flex-col gap-2">
                   {historyDriverOffers.map((offer) => (
                     <HistoryOfferItem
-                      key={offer.id}
+                          key={offer.id}
                       offer={offer}
                       onSelect={setSelectedHistoryOffer}
                       t={t}
                     />
                   ))}
-                </div>
+                            </div>
               )}
-            </div>
-          )}
+                  </div>
+                )}
         </CardContent>
       </Card>
 
