@@ -28,18 +28,9 @@ function TripsOrders() {
   }, [showPassengerContent, showDriverContent]);
 
   // Проверка telegram_chat_id для всех пользователей при загрузке страницы
-  // НО ТОЛЬКО ЕСЛИ У ПОЛЬЗОВАТЕЛЯ УЖЕ ЕСТЬ РОЛЬ
-  // Сначала должна быть выбрана роль, потом Telegram
+  // Независимо от роли - если telegram_chat_id пустой, показываем модальное окно
   useEffect(() => {
     if (!userData) return;
-    
-    // Проверяем, есть ли у пользователя роль
-    const hasValidRole = userData.role === "passenger" || userData.role === "driver";
-    
-    // Если роли нет, не показываем модальное окно Telegram (сначала должна быть выбрана роль)
-    if (!hasValidRole) {
-      return;
-    }
     
     // Проверяем на null, undefined и пустую строку
     const telegramChatId = userData.telegram_chat_id;
@@ -48,7 +39,6 @@ function TripsOrders() {
     
     console.log("TripsOrders: Checking telegram_chat_id", {
       role: userData.role,
-      hasValidRole,
       telegram_chat_id: telegramChatId,
       type: typeof telegramChatId,
       hasTelegram,
