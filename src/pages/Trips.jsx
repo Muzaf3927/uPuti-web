@@ -335,34 +335,39 @@ function Trips() {
       {/* Кнопка поиска для пассажира */}
       {showPassengerContent && (
         <div className="px-4 mb-3">
-          <Dialog
-            className="w-full"
-            open={searchDialog}
-            onOpenChange={setSearchDialog}
+          <Button
+            onClick={() => {
+              if (hasActiveSearch) {
+                handleClearSearch();
+              } else {
+                setSearchDialog(true);
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-9 text-sm font-medium hover:brightness-110 transition-all"
           >
-            <Button
-              onClick={() => {
-                if (hasActiveSearch) {
-                  handleClearSearch();
-                } else {
-                  setSearchDialog(true);
-                }
-              }}
-              className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-9 text-sm font-medium hover:brightness-110 transition-all"
-            >
-              {hasActiveSearch ? (
-                <>
-                  <X size={18} />
-                  {t("trips.searchForm.clear")}
-                </>
-              ) : (
-                <>
-                  <Search size={18} />
-                  {t("trips.searchForm.search")}
-                </>
-              )}
-            </Button>
-            <DialogContent 
+            {hasActiveSearch ? (
+              <>
+                <X size={18} />
+                {t("trips.searchForm.clear")}
+              </>
+            ) : (
+              <>
+                <Search size={18} />
+                {t("trips.searchForm.search")}
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+      
+      {/* Диалог поиска для пассажира */}
+      {showPassengerContent && (
+        <Dialog
+          className="w-full"
+          open={searchDialog}
+          onOpenChange={setSearchDialog}
+        >
+          <DialogContent 
               className="overflow-hidden rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm max-h-none"
               style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))" }}
               autoFocusScroll
@@ -435,7 +440,6 @@ function Trips() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
       )}
       
       {/* Кнопка создания поездки для водителя */}
