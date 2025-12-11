@@ -21,6 +21,7 @@ import Onboarding from "@/components/Onboarding";
 import { getInitials } from "@/lib/utils";
 import { useKeyboardInsets } from "@/hooks/useKeyboardInsets.jsx";
 import RoleSelection from "@/components/RoleSelection";
+import GeolocationPermissionModal from "@/components/GeolocationPermissionModal";
 
 // shadcn
 import {
@@ -68,6 +69,7 @@ function MainLayout() {
   const [supportOpen, setSupportOpen] = React.useState(false);
   const [showRoleSelection, setShowRoleSelection] = React.useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = React.useState(false);
+  const [geolocationModalOpen, setGeolocationModalOpen] = React.useState(false);
   const { keyboardInset } = useKeyboardInsets();
   const updateRoleMutation = useUpdateRole();
 
@@ -109,6 +111,80 @@ function MainLayout() {
       }
     }
   }, [userData, userLoading]);
+
+  // Проверяем WebView и геолокацию
+  React.useEffect(() => {
+    // Проверяем только если роль уже выбрана
+    if (!userData || userLoading || showRoleSelection) return;
+
+    const checkWebViewAndGeolocation = async () => {
+      try {
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera || "";
+        // Проверяем наличие "AndroidUPuti" для Android или "UputiIOS" для iOS в user agent
+        const isWebViewApp = /AndroidUPuti|UputiIOS/i.test(userAgent);
+        
+        if (!isWebViewApp) {
+          // Не WebView, не показываем модальное окно
+          return;
+        }
+
+        // Это WebView, проверяем геолокацию
+        if (!navigator.geolocation) {
+          // Геолокация не поддерживается
+          return;
+        }
+
+        // Проверяем разрешение через Permissions API, если доступен
+        if (navigator.permissions && navigator.permissions.query) {
+          try {
+            const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+            // Если разрешение уже предоставлено, не показываем модальное окно
+            if (permissionStatus.state === 'granted') {
+              return;
+            }
+            // Если разрешение отклонено, показываем модальное окно
+            // 'prompt' означает, что разрешение еще не запрашивалось - не показываем сразу
+            if (permissionStatus.state === 'denied') {
+              setGeolocationModalOpen(true);
+              return;
+            }
+          } catch (error) {
+            // Permissions API может не поддерживаться, используем альтернативную проверку
+            console.log("Permissions API not supported, using fallback");
+          }
+        }
+
+        // Альтернативная проверка: пытаемся получить позицию с коротким таймаутом
+        navigator.geolocation.getCurrentPosition(
+          () => {
+            // Геолокация работает, не показываем модальное окно
+          },
+          (error) => {
+            // Показываем модальное окно если:
+            // 1. PERMISSION_DENIED - разрешение отклонено пользователем
+            // 2. POSITION_UNAVAILABLE - геолокация отключена на уровне системы телефона
+            if (error.code === error.PERMISSION_DENIED || error.code === error.POSITION_UNAVAILABLE) {
+              setGeolocationModalOpen(true);
+            }
+            // TIMEOUT - не показываем, так как это может быть из-за плохого интернета
+          },
+          {
+            timeout: 1000,
+            maximumAge: 0,
+          }
+        );
+      } catch (e) {
+        console.error("Error checking WebView and geolocation:", e);
+      }
+    };
+
+    // Небольшая задержка, чтобы не показывать модальное окно сразу после загрузки
+    const timer = setTimeout(() => {
+      checkWebViewAndGeolocation();
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [userData, userLoading, showRoleSelection]);
 
   // Получаем роль из профиля пользователя
   const userRole = userData?.role || "passenger";
@@ -555,6 +631,12 @@ function MainLayout() {
           </div>
         </div>
       )}
+
+      {/* Geolocation Permission Modal для WebView */}
+      <GeolocationPermissionModal
+        open={geolocationModalOpen}
+        onOpenChange={setGeolocationModalOpen}
+      />
 
     </div>
   );

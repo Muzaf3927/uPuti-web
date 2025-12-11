@@ -485,6 +485,26 @@ const dict = {
       price: "Narx",
       offer: "Taklif",
     },
+    geolocation: {
+      title: "Geolokatsiyani yoqing",
+      description: "Ilovadan to'liq foydalanish uchun geolokatsiyani yoqishingiz kerak",
+      android: {
+        step1: "Telefon sozlamalariga kiring",
+        step2: "Ilovalar yoki Dasturlar bo'limini tanlang",
+        step3: "UPuti ilovasini toping",
+        step4: "Ruxsatlar bo'limida Geolokatsiyani yoqing"
+      },
+      ios: {
+        step1: "Telefon sozlamalariga kiring",
+        step2: "Maxfiylik bo'limini tanlang",
+        step3: "Xizmatlar bo'limida Geolokatsiyani toping",
+        step4: "UPuti ilovasi uchun Geolokatsiyani yoqing"
+      },
+      generic: {
+        instructions: "Brauzer sozlamalarida geolokatsiya ruxsatini yoqing"
+      },
+      button: "Tushundim"
+    },
   },
   ru: {
     nav: {
@@ -966,6 +986,26 @@ const dict = {
       seats: "мест",
       price: "Цена",
       offer: "Предложение",
+    },
+    geolocation: {
+      title: "Включите геолокацию",
+      description: "Для полноценного использования приложения необходимо включить геолокацию",
+      android: {
+        step1: "Откройте настройки телефона",
+        step2: "Выберите раздел Приложения или Программы",
+        step3: "Найдите приложение UPuti",
+        step4: "В разделе Разрешения включите Геолокацию"
+      },
+      ios: {
+        step1: "Откройте настройки телефона",
+        step2: "Выберите раздел Конфиденциальность",
+        step3: "В разделе Службы найдите Геолокацию",
+        step4: "Включите Геолокацию для приложения UPuti"
+      },
+      generic: {
+        instructions: "Включите разрешение на геолокацию в настройках браузера"
+      },
+      button: "Понятно"
     },
   },
 };
