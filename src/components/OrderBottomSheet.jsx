@@ -151,7 +151,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
       />
       
       {/* Bottom Sheet - занимает половину экрана на мобильных */}
-      <div className={`bg-white rounded-t-3xl shadow-2xl border-t-2 border-gray-200 ${!isMyOrder ? 'h-[55vh] max-h-[55vh]' : 'h-[50vh] max-h-[50vh]'} flex flex-col`}>
+      <div className={`bg-white rounded-t-3xl shadow-2xl border-t-2 border-gray-200 ${!isMyOrder ? 'h-[55vh] max-h-[55vh]' : order.status === 'in_progress' ? 'h-[65vh] max-h-[65vh]' : 'h-[50vh] max-h-[50vh]'} flex flex-col`}>
         {/* Handle bar */}
         <div className="flex justify-center pt-2 pb-1">
           <div className="w-12 h-1 bg-gray-300 rounded-full" />
@@ -167,7 +167,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
         </button>
 
         {/* Content */}
-        <div className={`px-2.5 pt-0.5 ${!isMyOrder ? 'pb-0' : order.status === 'in_progress' ? 'pb-0' : 'pb-1.5'} ${!isMyOrder ? '' : order.status === 'in_progress' ? '' : 'overflow-y-auto flex-1'}`}>
+        <div className={`px-2.5 pt-0.5 ${!isMyOrder ? 'pb-0' : order.status === 'in_progress' ? 'pb-24' : 'pb-1.5'} ${!isMyOrder ? '' : 'overflow-y-auto flex-1'}`}>
           {/* Маршрут - минималистичный компактный дизайн */}
           <div className={`flex flex-col gap-0.5 ${!isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-2'}`}>
             {isDriver ? (
@@ -542,7 +542,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
 
         {/* Кнопки действий - для моих заказов (in_progress) */}
         {isMyOrder && order.status === "in_progress" && (
-          <div className="px-3 pb-2 pt-1">
+          <div className="px-3 pb-3 pt-2 border-t border-gray-200 bg-white sticky bottom-0 flex-shrink-0 z-10">
             {onComplete && (
               <Button
                 type="button"
@@ -550,9 +550,9 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
                   onComplete(order);
                   onClose();
                 }}
-                className="w-full h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center gap-1.5 text-xs"
+                className="w-full h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center gap-1.5 text-sm font-semibold shadow-md"
               >
-                <CircleCheck className="w-3.5 h-3.5" />
+                <CircleCheck className="w-4 h-4" />
                 {t("orders.myOrderActions.complete") || "Завершить"}
               </Button>
             )}
