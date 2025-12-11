@@ -86,8 +86,23 @@ api.interceptors.response.use(
 
     const originalRequest = error.config || {};
     const status = error.response?.status;
+    const errorMessage = error.response?.data?.message;
 
     if (status === 401) {
+      // Если сообщение "Unauthenticated.", сразу перенаправляем на логин
+      if (errorMessage === "Unauthenticated.") {
+        // Очищаем токены
+        safeLocalStorage.removeItem("token");
+        safeLocalStorage.removeItem("reFreshToken");
+        safeLocalStorage.removeItem("user");
+        
+        // Перенаправляем на логин, если не на странице логина
+        if (typeof window !== "undefined" && window.location?.pathname !== "/login") {
+          window.location.href = "/login";
+        }
+        return Promise.reject(error);
+      }
+
       // Do not attempt refresh on auth endpoints
       if (isAuthPath(originalRequest.url)) {
         return Promise.reject(error);
@@ -96,6 +111,13 @@ api.interceptors.response.use(
       // Require refresh token to try refresh
       const hasRefresh = !!safeLocalStorage.getItem("reFreshToken");
       if (!hasRefresh) {
+        // Нет refresh token, очищаем и перенаправляем
+        safeLocalStorage.removeItem("token");
+        safeLocalStorage.removeItem("reFreshToken");
+        safeLocalStorage.removeItem("user");
+        if (typeof window !== "undefined" && window.location?.pathname !== "/login") {
+          window.location.href = "/login";
+        }
         return Promise.reject(error);
       }
 
@@ -108,6 +130,7 @@ api.interceptors.response.use(
           // Clear tokens and optionally redirect if not on login page
           safeLocalStorage.removeItem("token");
           safeLocalStorage.removeItem("reFreshToken");
+          safeLocalStorage.removeItem("user");
           try {
             if (typeof window !== "undefined" && window.location?.pathname !== "/login") {
               window.location.href = "/login";
