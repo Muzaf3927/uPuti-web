@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+// Leaflet Routing Machine подключается через script тег в index.html
 import { Navigation } from "lucide-react";
 import { toast } from "sonner";
 import OrderBottomSheet from "./OrderBottomSheet";
@@ -36,6 +37,8 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
   const routePolylineRef = useRef(null);
   const fromMarkerRef = useRef(null);
   const toMarkerRef = useRef(null);
+  const currentRouteOrderIdRef = useRef(null); // Отслеживаем ID заказа, для которого рисуется маршрут
+  const routingControlRef = useRef(null); // Референс для Leaflet Routing Machine
 
   // Получаем текущего пользователя
   const currentUser = sessionManager.getUserData();
@@ -229,6 +232,36 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
     selectedOrderRef.current = selectedOrder;
   }, [selectedOrder]);
 
+  // Отрисовываем маршрут при открытии заказа
+  // Отключено по запросу пользователя
+  // useEffect(() => {
+  //   if (selectedOrder && mapInstanceRef.current) {
+  //     console.log("Drawing route for order:", selectedOrder.id);
+  //     // Всегда удаляем предыдущий маршрут перед рисованием нового
+  //     // Это гарантирует, что на карте всегда только один маршрут
+  //     clearRoute();
+  //     
+  //     const orderId = selectedOrder.id;
+  //     displayRoute(selectedOrder).then(() => {
+  //       console.log("Route drawn successfully for order:", orderId);
+  //       // Проверяем, что заказ все еще выбран после завершения отрисовки
+  //       if (selectedOrderRef.current?.id !== orderId) {
+  //         console.log("Order changed during route drawing, clearing route");
+  //         // Если заказ изменился во время отрисовки, удаляем маршрут
+  //         clearRoute();
+  //       }
+  //     }).catch((error) => {
+  //       console.error("Error displaying route:", error);
+  //       clearRoute();
+  //     });
+  //   } else {
+  //     console.log("No selected order or map not ready");
+  //   }
+  //   // При закрытии bottom sheet (selectedOrder становится null) маршрут остается на карте
+  //   // Не удаляем маршрут, чтобы он остался видимым
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [selectedOrder?.id]); // Используем только id, чтобы избежать лишних перерисовок
+
   // Обновляем выбранный заказ при изменении orders, чтобы синхронизировать данные (например, driver_offers)
   useEffect(() => {
     if (selectedOrder && orders && orders.length > 0) {
@@ -270,19 +303,16 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
     return null;
   };
 
-  // Функция для получения маршрута через OSRM API
+  // Функция для получения маршрута
+  // Все публичные OSRM серверы блокируются CORS или требуют API ключ
+  // Для маршрута по дорогам нужно использовать прокси на бэкенде или API с ключом
+  // Пока используем прямую линию
   const getRoute = async (fromLat, fromLng, toLat, toLng) => {
-    try {
-      const response = await fetch(
-        `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`
-      );
-      const data = await response.json();
-      if (data.code === "Ok" && data.routes && data.routes.length > 0) {
-        return data.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]);
-      }
-    } catch (error) {
-      console.error("Route API error:", error);
-    }
+    // Все публичные OSRM серверы недоступны из-за CORS
+    // Для получения маршрута по дорогам нужно:
+    // 1. Использовать прокси на бэкенде
+    // 2. Или использовать API с ключом (Mapbox, Google Maps, Yandex)
+    // Пока возвращаем null, чтобы использовать прямую линию
     return null;
   };
 
@@ -290,6 +320,13 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
   const clearRoute = () => {
     if (!mapInstanceRef.current) return;
 
+    // Удаляем Leaflet Routing Machine control
+    if (routingControlRef.current) {
+      mapInstanceRef.current.removeControl(routingControlRef.current);
+      routingControlRef.current = null;
+    }
+
+    // Удаляем старые маркеры и полилинию (на случай если использовались)
     if (routePolylineRef.current) {
       mapInstanceRef.current.removeLayer(routePolylineRef.current);
       routePolylineRef.current = null;
@@ -302,11 +339,56 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
       mapInstanceRef.current.removeLayer(toMarkerRef.current);
       toMarkerRef.current = null;
     }
+    // НЕ сбрасываем currentRouteOrderIdRef здесь, так как он используется для проверки актуальности заказа
+    // Он будет обновлен при создании нового маршрута
+  };
+
+  // Функция для ожидания загрузки Leaflet Routing Machine
+  const waitForRoutingMachine = () => {
+    return new Promise((resolve, reject) => {
+      console.log("Checking for L.Routing...", { 
+        "L.Routing": typeof L.Routing, 
+        "window.L": typeof window.L,
+        "window.L.Routing": typeof (window.L && window.L.Routing)
+      });
+      
+      if (L.Routing || (window.L && window.L.Routing)) {
+        if (window.L && window.L.Routing && !L.Routing) {
+          L.Routing = window.L.Routing;
+        }
+        console.log("L.Routing found immediately");
+        resolve(L.Routing);
+        return;
+      }
+      
+      // Ждем до 3 секунд
+      let attempts = 0;
+      const maxAttempts = 30; // 30 попыток по 100ms = 3 секунды
+      const checkInterval = setInterval(() => {
+        attempts++;
+        if (L.Routing || (window.L && window.L.Routing)) {
+          if (window.L && window.L.Routing && !L.Routing) {
+            L.Routing = window.L.Routing;
+          }
+          clearInterval(checkInterval);
+          console.log("L.Routing found after", attempts, "attempts");
+          resolve(L.Routing);
+        } else if (attempts >= maxAttempts) {
+          clearInterval(checkInterval);
+          console.error("L.Routing not found after", maxAttempts, "attempts");
+          reject(new Error("Leaflet Routing Machine not loaded after 3 seconds"));
+        }
+      }, 100);
+    });
   };
 
   // Функция для отображения маршрута на карте
   const displayRoute = async (order) => {
     if (!mapInstanceRef.current) return;
+
+    const orderId = order.id;
+    // Сохраняем ID заказа, для которого рисуем маршрут (ДО clearRoute, чтобы не потерять)
+    currentRouteOrderIdRef.current = orderId;
 
     // Удаляем предыдущий маршрут и маркеры
     clearRoute();
@@ -395,131 +477,67 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
       return;
     }
 
-    // Получаем маршрут только если есть обе координаты
-    let finalRouteCoordinates = null;
-    if (fromCoords && toCoords) {
-      const routeCoordinates = await getRoute(
-        fromCoords[0],
-        fromCoords[1],
-        toCoords[0],
-        toCoords[1]
-      );
+    // Проверяем, что заказ все еще актуален перед созданием маршрута
+    // Используем currentRouteOrderIdRef, который был установлен после clearRoute
+    // Убираем эту проверку, так как она блокирует создание маршрута
+    // if (currentRouteOrderIdRef.current !== orderId) {
+    //   console.log("Order changed before creating route, aborting. Current:", currentRouteOrderIdRef.current, "Expected:", orderId);
+    //   return;
+    // }
 
-      if (routeCoordinates && routeCoordinates.length > 0) {
-        finalRouteCoordinates = routeCoordinates;
-      } else {
-        // Если не удалось получить маршрут, просто рисуем прямую линию
-        finalRouteCoordinates = [fromCoords, toCoords];
-      }
-    }
-
-    // Создаем маркер для точки отправления
-    const fromIcon = L.divIcon({
-      className: "custom-route-marker",
-      html: `
-        <div style="
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background-color: #22c55e;
-          border: 3px solid white;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        "></div>
-      `,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-    });
-
-    // Создаем маркер для точки назначения
-    const toIcon = L.divIcon({
-      className: "custom-route-marker",
-      html: `
-        <div style="
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          background-color: #ef4444;
-          border: 3px solid white;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-        "></div>
-      `,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-    });
-
-    // Добавляем маркеры на карту
-    console.log("Adding markers:", { fromCoords, toCoords });
+    // Рисуем прямую линию между точками
+    // Leaflet Routing Machine не загружается, поэтому используем простую полилинию
+    console.log("Creating route (straight line):", { fromCoords, toCoords });
     
-    if (fromCoords && Array.isArray(fromCoords) && fromCoords.length === 2 && 
-        !isNaN(fromCoords[0]) && !isNaN(fromCoords[1])) {
-      try {
-        fromMarkerRef.current = L.marker(fromCoords, { icon: fromIcon })
-          .addTo(mapInstanceRef.current)
-          .bindPopup("Откуда");
-        console.log("From marker added at:", fromCoords);
-      } catch (error) {
-        console.error("Error adding from marker:", error);
-      }
-    } else {
-      console.error("From coords are invalid:", fromCoords);
+    // Проверяем, что координаты валидны
+    if (!fromCoords || !toCoords || !Array.isArray(fromCoords) || !Array.isArray(toCoords)) {
+      console.error("Invalid coordinates:", { fromCoords, toCoords });
+      return;
     }
-
-    if (toCoords && Array.isArray(toCoords) && toCoords.length === 2 && 
-        !isNaN(toCoords[0]) && !isNaN(toCoords[1])) {
-      try {
-        toMarkerRef.current = L.marker(toCoords, { icon: toIcon })
-          .addTo(mapInstanceRef.current)
-          .bindPopup("Куда");
-        console.log("To marker added at:", toCoords);
-      } catch (error) {
-        console.error("Error adding to marker:", error);
-      }
-    } else {
-      console.error("To coords are invalid or missing:", toCoords);
-      // Если конечная точка не найдена, все равно показываем начальную
-      if (fromCoords) {
-        toast.warning("Конечная точка маршрута не найдена");
-      }
+    
+    // Проверяем, что координаты - это числа
+    if (isNaN(fromCoords[0]) || isNaN(fromCoords[1]) || isNaN(toCoords[0]) || isNaN(toCoords[1])) {
+      console.error("Coordinates contain NaN:", { fromCoords, toCoords });
+      return;
     }
-
-    // Создаем полилинию для маршрута
-    const routePolyline = L.polyline([], {
-      color: "#3b82f6",
-      weight: 5,
-      opacity: 0.7,
-      smoothFactor: 1,
-    }).addTo(mapInstanceRef.current);
-
-    routePolylineRef.current = routePolyline;
-
-    // Анимация появления маршрута
-    let currentIndex = 0;
-    const totalPoints = finalRouteCoordinates.length;
-    const animationInterval = setInterval(() => {
-      if (currentIndex < totalPoints) {
-        const partialRoute = finalRouteCoordinates.slice(0, currentIndex + 1);
-        routePolyline.setLatLngs(partialRoute);
-        currentIndex += Math.max(1, Math.floor(totalPoints / 50)); // Анимируем постепенно
-      } else {
-        clearInterval(animationInterval);
-        // Устанавливаем полный маршрут в конце анимации
-        routePolyline.setLatLngs(finalRouteCoordinates);
+    
+    // Создаем прямую линию между точками
+    try {
+      console.log("Creating polyline with coordinates:", fromCoords, "to", toCoords);
+      
+      const routePolyline = L.polyline([fromCoords, toCoords], {
+        color: "#3b82f6",
+        weight: 5,
+        opacity: 0.7,
+        smoothFactor: 1,
+      });
+      
+      console.log("Polyline created, adding to map...");
+      console.log("Map instance:", mapInstanceRef.current);
+      console.log("Polyline object:", routePolyline);
+      
+      routePolyline.addTo(mapInstanceRef.current);
+      routePolylineRef.current = routePolyline;
+      
+      // Проверяем, что полилиния действительно добавлена
+      const isOnMap = mapInstanceRef.current.hasLayer(routePolyline);
+      console.log("Polyline added to map:", isOnMap);
+      console.log("routePolylineRef.current:", routePolylineRef.current);
+      
+      // Подстраиваем карту под маршрут
+      if (fromCoords && toCoords) {
+        const bounds = L.latLngBounds([fromCoords, toCoords]);
+        mapInstanceRef.current.fitBounds(bounds, {
+          padding: [50, 50],
+          maxZoom: 15,
+        });
+        console.log("Map bounds adjusted to:", bounds.toBBoxString());
       }
-    }, 20);
-
-    // Подстраиваем карту под маршрут
-    if (fromCoords && toCoords) {
-      const bounds = L.latLngBounds([fromCoords, toCoords]);
-      mapInstanceRef.current.fitBounds(bounds, {
-        padding: [50, 50],
-        maxZoom: 15,
-      });
-    } else if (fromCoords) {
-      // Если есть только начальная точка, центрируем на ней
-      mapInstanceRef.current.setView(fromCoords, 13, {
-        animate: true,
-        duration: 0.5,
-      });
+      
+      console.log("Route created successfully");
+    } catch (error) {
+      console.error("Error creating polyline:", error);
+      console.error("Error stack:", error.stack);
     }
   };
 
@@ -608,8 +626,9 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
     selectedMarkerRef.current = null;
     selectedOrderRef.current = null;
     
-    // Удаляем маршрут при обновлении маркеров
-    clearRoute();
+    // НЕ удаляем маршрут при обновлении маркеров, если заказ все еще выбран
+    // Маршрут должен оставаться на карте
+    // clearRoute();
     
     // Очищаем существующие маркеры
     markerClusterGroupRef.current.clearLayers();
@@ -731,10 +750,7 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
                   clearRoute();
                   return null;
                 } else {
-                  // Открываем bottom sheet и показываем маршрут только если включено
-                  if (showRoute) {
-                    displayRoute(order);
-                  }
+                  // Открываем bottom sheet (маршрут отключен)
                   return order;
                 }
               });
@@ -758,10 +774,7 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
             lastSelectedOrderIdRef.current = order.id; // Сохраняем ID последнего выбранного заказа
             setSelectedOrder(order);
 
-            // Отображаем маршрут на карте только если включено
-            if (showRoute) {
-              displayRoute(order);
-            }
+            // Маршрут отключен
           });
 
           markersRef.current.push(marker);
@@ -828,9 +841,8 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
         <OrderBottomSheet
           order={selectedOrder}
           onClose={() => {
-            // Закрываем bottom sheet, но маркер остается зеленым
-            // Маркер будет сброшен только при выборе другого маркера
-            clearRoute();
+            // Закрываем bottom sheet, но маршрут остается на карте
+            // Маршрут будет удален только при открытии другого заказа
             setSelectedOrder(null);
           }}
           onSubmit={() => {

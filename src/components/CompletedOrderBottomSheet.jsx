@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { X, MapPin, Route, Calendar, Clock, Users, DollarSign, MessageSquare, Car, Phone, Star } from "lucide-react";
+import { X, Route, Calendar, Clock, Users, DollarSign, MessageSquare, Car, Phone, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/app/i18n.jsx";
 
@@ -66,7 +66,7 @@ function CompletedOrderBottomSheet({ order, onClose }) {
           {/* Маршрут - минималистичный компактный дизайн */}
           <div className="flex flex-col gap-1 mb-2">
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-50/30">
-              <MapPin className="text-blue-600 flex-shrink-0" size={14} />
+              <img src="/passenger.png" alt="From" className="flex-shrink-0" style={{ width: '14px', height: '14px' }} />
               <div className="flex-1 min-w-0">
                 <div className="text-[9px] text-gray-400 leading-tight">{t("orders.form.from")}</div>
                 <div className="text-[11px] font-medium text-gray-900 truncate leading-tight">{fromAddress}</div>
@@ -78,7 +78,7 @@ function CompletedOrderBottomSheet({ order, onClose }) {
             </div>
             
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-50/30">
-              <MapPin className="text-red-600 flex-shrink-0" size={14} />
+              <img src="/toAddress.png" alt="To" className="flex-shrink-0" style={{ width: '14px', height: '14px' }} />
               <div className="flex-1 min-w-0">
                 <div className="text-[9px] text-gray-400 leading-tight">{t("orders.form.to")}</div>
                 <div className="text-[11px] font-medium text-gray-900 truncate leading-tight">{toAddress}</div>

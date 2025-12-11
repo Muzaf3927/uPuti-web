@@ -15,24 +15,123 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-// Создаем кастомные иконки для маркеров
-const fromIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+// Создаем кастомную иконку с поднятой рукой для точки отправления (Point A)
+// Используем готовую иконку из public/passenger.png в желтой оболочке со стрелкой вниз
+const createPassengerIcon = () => {
+  const iconHtml = `
+    <div style="position: relative; display: inline-block; width: 50px; height: 70px;">
+      <!-- Желтая оболочка (круг) -->
+      <div style="
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 44px;
+        height: 44px;
+        background-color: #FFD700;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      ">
+        <!-- Иконка пассажира внутри круга -->
+        <img src="/passenger.png" alt="Passenger" style="width: 36px; height: 36px; display: block;" />
+      </div>
+      <!-- Вертикальная линия вниз -->
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 44px;
+        transform: translateX(-50%);
+        width: 2px;
+        height: 20px;
+        background-color: #000000;
+      "></div>
+      <!-- Острие стрелки внизу -->
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 64px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 6px solid #000000;
+      "></div>
+    </div>
+  `;
+  
+  return L.divIcon({
+    html: iconHtml,
+    className: 'custom-passenger-marker',
+    iconSize: [50, 70], // Размер иконки (ширина, высота с учетом стрелки)
+    iconAnchor: [25, 70], // Точка привязки (центр по X, низ по Y - конец стрелки)
+    popupAnchor: [0, -70], // Смещение для попапа
+  });
+};
 
-const toIcon = new L.Icon({
-  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+const fromIcon = createPassengerIcon();
+
+// Создаем кастомную иконку для конечной точки (куда)
+// Используем готовую иконку из public/toAddress.png в желтой оболочке со стрелкой вниз
+const createToAddressIcon = () => {
+  const iconHtml = `
+    <div style="position: relative; display: inline-block; width: 50px; height: 70px;">
+      <!-- Желтая оболочка (круг) -->
+      <div style="
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 44px;
+        height: 44px;
+        background-color: #FFD700;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      ">
+        <!-- Иконка конечной точки внутри круга -->
+        <img src="/toAddress.png" alt="To Address" style="width: 36px; height: 36px; display: block;" />
+      </div>
+      <!-- Вертикальная линия вниз -->
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 44px;
+        transform: translateX(-50%);
+        width: 2px;
+        height: 20px;
+        background-color: #000000;
+      "></div>
+      <!-- Острие стрелки внизу -->
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 64px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 6px solid #000000;
+      "></div>
+    </div>
+  `;
+  
+  return L.divIcon({
+    html: iconHtml,
+    className: 'custom-to-address-marker',
+    iconSize: [50, 70], // Размер иконки (ширина, высота с учетом стрелки)
+    iconAnchor: [25, 70], // Точка привязки (центр по X, низ по Y - конец стрелки)
+    popupAnchor: [0, -70], // Смещение для попапа
+  });
+};
+
+const toIcon = createToAddressIcon();
 
 function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, initialFromCoords = null, initialToCoords = null }) {
   const { t } = useI18n();
@@ -595,7 +694,7 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         {/* Поле "Откуда" */}
         <div className="relative address-search-container" style={{ zIndex: showFromSuggestions ? 10000 : 'auto' }}>
           <div className="flex items-center gap-2">
-            <MapPin className="text-blue-600 flex-shrink-0" size={16} />
+            <img src="/passenger.png" alt="From" className="flex-shrink-0" style={{ width: '18px', height: '18px' }} />
             <Input
               type="text"
               placeholder={t("orders.form.from")}
@@ -645,7 +744,7 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
                   className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 bg-white"
                 >
                   <div className="flex items-start gap-2">
-                    <MapPin className="text-blue-600 flex-shrink-0 mt-0.5" size={14} />
+                    <img src="/passenger.png" alt="From" className="flex-shrink-0 mt-0.5" style={{ width: '14px', height: '14px' }} />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-gray-900 truncate">
                         {suggestion.display_name}
@@ -666,7 +765,7 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         {/* Поле "Куда" */}
         <div className="relative address-search-container" style={{ zIndex: showToSuggestions ? 10000 : 'auto' }}>
           <div className="flex items-center gap-2">
-            <MapPin className="text-red-600 flex-shrink-0" size={16} />
+            <img src="/toAddress.png" alt="To" className="flex-shrink-0" style={{ width: '18px', height: '18px' }} />
             <Input
               type="text"
               placeholder={t("orders.form.to")}
@@ -716,7 +815,7 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
                   className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0 bg-white"
                 >
                   <div className="flex items-start gap-2">
-                    <MapPin className="text-red-600 flex-shrink-0 mt-0.5" size={14} />
+                    <img src="/toAddress.png" alt="To" className="flex-shrink-0 mt-0.5" style={{ width: '14px', height: '14px' }} />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-gray-900 truncate">
                         {suggestion.display_name}

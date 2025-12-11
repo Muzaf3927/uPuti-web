@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { X, MapPin, Route, Calendar, Clock, Users, DollarSign, MessageSquare, Car, CircleCheck, Phone, Star, Pencil, Trash2 } from "lucide-react";
+import { X, Route, Calendar, Clock, Users, DollarSign, MessageSquare, Car, CircleCheck, Phone, Star, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/app/i18n.jsx";
 import { sessionManager } from "@/lib/sessionManager";
@@ -19,6 +19,9 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
 
   // Проверяем, является ли заказ моим (я пассажир)
   const isMyOrder = order.user_id === currentUserId;
+  
+  // Проверяем роль пользователя из API
+  const isDriver = currentUser?.role === "driver";
 
   // Проверяем, есть ли оффер от текущего пользователя (для чужих заказов)
   const userOffer = useMemo(() => {
@@ -67,6 +70,78 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
     }
   };
 
+  // Функция для открытия навигатора с маршрутом
+  const openNavigation = (address, lat, lng, isFrom = false) => {
+    // Определяем начальную и конечную точки маршрута
+    let startLat, startLng, endLat, endLng;
+    
+    if (isFrom) {
+      // Если кликнули на адрес "откуда", строим маршрут от этой точки до "куда"
+      startLat = fromLat;
+      startLng = fromLng;
+      endLat = toLat;
+      endLng = toLng;
+    } else {
+      // Если кликнули на адрес "куда", строим маршрут от "откуда" до этой точки
+      startLat = fromLat;
+      startLng = fromLng;
+      endLat = toLat;
+      endLng = toLng;
+    }
+
+    // Если нет координат, открываем через адрес
+    if (!endLat || !endLng) {
+      const encodedAddress = encodeURIComponent(address);
+      const yandexUrl = `https://yandex.ru/maps/?text=${encodedAddress}`;
+      window.open(yandexUrl, '_blank');
+      return;
+    }
+
+    // Пробуем открыть Яндекс.Навигатор с маршрутом
+    if (startLat && startLng) {
+      // Маршрут от начальной точки до конечной
+      const yandexNaviUrl = `yandexnavi://build_route?lat_from=${startLat}&lon_from=${startLng}&lat_to=${endLat}&lon_to=${endLng}`;
+      
+      const yandexNaviLink = document.createElement('a');
+      yandexNaviLink.href = yandexNaviUrl;
+      yandexNaviLink.style.display = 'none';
+      document.body.appendChild(yandexNaviLink);
+      yandexNaviLink.click();
+      document.body.removeChild(yandexNaviLink);
+    } else {
+      // Если нет начальной точки, строим маршрут только до конечной
+      const yandexNaviUrl = `yandexnavi://build_route?lat_to=${endLat}&lon_to=${endLng}`;
+      
+      const yandexNaviLink = document.createElement('a');
+      yandexNaviLink.href = yandexNaviUrl;
+      yandexNaviLink.style.display = 'none';
+      document.body.appendChild(yandexNaviLink);
+      yandexNaviLink.click();
+      document.body.removeChild(yandexNaviLink);
+    }
+
+    // Если Яндекс.Навигатор не установлен, через 500ms открываем веб-версию
+    setTimeout(() => {
+      let mapsUrl;
+      if (startLat && startLng) {
+        // Маршрут от начальной до конечной точки
+        mapsUrl = `https://yandex.ru/maps/?rtext=${startLat},${startLng}~${endLat},${endLng}&rtt=auto`;
+      } else {
+        // Только конечная точка
+        mapsUrl = `https://yandex.ru/maps/?rtext=${endLat},${endLng}&rtt=auto`;
+      }
+      
+      // Пробуем открыть Яндекс.Карты
+      window.open(mapsUrl, '_blank');
+    }, 500);
+  };
+
+  // Получаем координаты для адресов
+  const fromLat = order.from_lat;
+  const fromLng = order.from_lng;
+  const toLat = order.to_lat || order.toLat || order.toLatitude;
+  const toLng = order.to_lng || order.toLng || order.toLongitude || order.to_longitude;
+
   return (
     <div className="fixed inset-x-0 bottom-0 z-[2000] animate-in slide-in-from-bottom duration-300">
       {/* Backdrop */}
@@ -95,25 +170,51 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
         <div className={`px-2.5 pt-0.5 ${!isMyOrder ? 'pb-0' : order.status === 'in_progress' ? 'pb-0' : 'pb-1.5'} ${!isMyOrder ? '' : order.status === 'in_progress' ? '' : 'overflow-y-auto flex-1'}`}>
           {/* Маршрут - минималистичный компактный дизайн */}
           <div className={`flex flex-col gap-0.5 ${!isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-2'}`}>
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50/30">
-              <MapPin className="text-blue-600 flex-shrink-0" size={12} />
-              <div className="flex-1 min-w-0">
-                <div className="text-[8px] text-gray-400 leading-tight">{t("orders.form.from")}</div>
-                <div className="text-[10px] font-semibold text-gray-900 truncate leading-tight">{fromAddress}</div>
+            {isDriver ? (
+              <button
+                onClick={() => openNavigation(fromAddress, fromLat, fromLng, true)}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50/30 hover:bg-blue-50/50 active:bg-blue-50/70 transition-colors cursor-pointer text-left w-full"
+              >
+                <img src="/passenger.png" alt="From" className="flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[8px] text-gray-400 leading-tight">{t("orders.form.from")}</div>
+                  <div className="text-[10px] font-semibold text-gray-900 truncate leading-tight">{fromAddress}</div>
+                </div>
+              </button>
+            ) : (
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50/30">
+                <img src="/passenger.png" alt="From" className="flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[8px] text-gray-400 leading-tight">{t("orders.form.from")}</div>
+                  <div className="text-[10px] font-semibold text-gray-900 truncate leading-tight">{fromAddress}</div>
+                </div>
               </div>
-            </div>
+            )}
             
             <div className="flex justify-center -my-0.5 px-1">
               <Route className="text-blue-500" size={10} />
             </div>
             
-            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-50/30">
-              <MapPin className="text-red-600 flex-shrink-0" size={12} />
-              <div className="flex-1 min-w-0">
-                <div className="text-[8px] text-gray-400 leading-tight">{t("orders.form.to")}</div>
-                <div className="text-[10px] font-semibold text-gray-900 truncate leading-tight">{toAddress}</div>
+            {isDriver ? (
+              <button
+                onClick={() => openNavigation(toAddress, toLat, toLng, false)}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-50/30 hover:bg-red-50/50 active:bg-red-50/70 transition-colors cursor-pointer text-left w-full"
+              >
+                <img src="/toAddress.png" alt="To" className="flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[8px] text-gray-400 leading-tight">{t("orders.form.to")}</div>
+                  <div className="text-[10px] font-semibold text-gray-900 truncate leading-tight">{toAddress}</div>
+                </div>
+              </button>
+            ) : (
+              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-red-50/30">
+                <img src="/toAddress.png" alt="To" className="flex-shrink-0" style={{ width: '12px', height: '12px' }} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[8px] text-gray-400 leading-tight">{t("orders.form.to")}</div>
+                  <div className="text-[10px] font-semibold text-gray-900 truncate leading-tight">{toAddress}</div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Детали заказа - компактная сетка */}
