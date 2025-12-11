@@ -674,27 +674,59 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
           const markerColor = order.status === "in_progress" ? "#ef4444" : "#3b82f6";
           const selectedMarkerColor = order.status === "in_progress" ? "#dc2626" : "#22c55e";
 
+          // Подсчитываем количество pending офферов
+          const pendingOffersCount = order.driver_offers && Array.isArray(order.driver_offers)
+            ? order.driver_offers.filter(offer => offer.status === "pending").length
+            : 0;
+
           // Создаем стандартную иконку маркера - используем divIcon для лучшего контроля
           const defaultIcon = L.divIcon({
             className: "custom-order-marker",
             html: `
-              <div style="
-                width: 30px;
-                height: 30px;
-                border-radius: 50% 50% 50% 0;
-                transform: rotate(-45deg);
-                background-color: ${markerColor};
-                border: 3px solid white;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              ">
+              <div style="position: relative; width: 30px; height: 30px;">
                 <div style="
-                  width: 100%;
-                  height: 100%;
-                  transform: rotate(45deg);
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                "></div>
+                  width: 30px;
+                  height: 30px;
+                  border-radius: 50% 50% 50% 0;
+                  transform: rotate(-45deg);
+                  background-color: ${markerColor};
+                  border: 3px solid white;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                ">
+                  <div style="
+                    width: 100%;
+                    height: 100%;
+                    transform: rotate(45deg);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "></div>
+                </div>
+                ${pendingOffersCount > 0 ? `
+                  <div style="
+                    position: absolute;
+                    top: -10px;
+                    right: -10px;
+                    min-width: 24px;
+                    height: 24px;
+                    background-color: #ef4444;
+                    border: 3px solid white;
+                    border-radius: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                    z-index: 1000;
+                    padding: 0 6px;
+                  ">
+                    <span style="
+                      color: white;
+                      font-size: 13px;
+                      font-weight: bold;
+                      line-height: 1;
+                    ">+${pendingOffersCount}</span>
+                  </div>
+                ` : ''}
               </div>
             `,
             iconSize: [30, 30],
@@ -706,23 +738,50 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
           const selectedIcon = L.divIcon({
             className: "custom-order-marker selected",
             html: `
-              <div style="
-                width: 36px;
-                height: 36px;
-                border-radius: 50% 50% 50% 0;
-                transform: rotate(-45deg);
-                background-color: ${selectedMarkerColor};
-                border: 3px solid white;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-              ">
+              <div style="position: relative; width: 36px; height: 36px;">
                 <div style="
-                  width: 100%;
-                  height: 100%;
-                  transform: rotate(45deg);
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                "></div>
+                  width: 36px;
+                  height: 36px;
+                  border-radius: 50% 50% 50% 0;
+                  transform: rotate(-45deg);
+                  background-color: ${selectedMarkerColor};
+                  border: 3px solid white;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                ">
+                  <div style="
+                    width: 100%;
+                    height: 100%;
+                    transform: rotate(45deg);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  "></div>
+                </div>
+                ${pendingOffersCount > 0 ? `
+                  <div style="
+                    position: absolute;
+                    top: -10px;
+                    right: -10px;
+                    min-width: 26px;
+                    height: 26px;
+                    background-color: #ef4444;
+                    border: 3px solid white;
+                    border-radius: 13px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                    z-index: 1000;
+                    padding: 0 6px;
+                  ">
+                    <span style="
+                      color: white;
+                      font-size: 14px;
+                      font-weight: bold;
+                      line-height: 1;
+                    ">+${pendingOffersCount}</span>
+                  </div>
+                ` : ''}
               </div>
             `,
             iconSize: [36, 36],

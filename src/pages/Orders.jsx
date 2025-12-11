@@ -816,7 +816,7 @@ function Orders() {
             {currentStep === 1 ? (
               // Шаг 1: Выбор маршрута на карте
               <div className="flex flex-col gap-2 sm:gap-3 flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 pb-3 sm:pb-4">
-                <div className="flex-shrink-0 flex flex-col" style={{ maxHeight: 'calc(100svh - 180px)', minHeight: '400px' }}>
+                <div className="flex-shrink-0 flex flex-col" style={{ maxHeight: 'calc(100svh - 160px)', minHeight: '450px' }}>
                   <RouteSelectorMap
                     isOpen={dialog && currentStep === 1}
                     onRouteSelect={(route) => {
