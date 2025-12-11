@@ -815,8 +815,8 @@ function Orders() {
             
             {currentStep === 1 ? (
               // Шаг 1: Выбор маршрута на карте
-              <div className="flex flex-col gap-2 sm:gap-3 flex-1 min-h-0 overflow-hidden px-3 sm:px-4 pb-3 sm:pb-4">
-                <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              <div className="flex flex-col gap-2 sm:gap-3 flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 pb-3 sm:pb-4">
+                <div className="flex-shrink-0 flex flex-col" style={{ maxHeight: 'calc(100svh - 180px)', minHeight: '400px' }}>
                   <RouteSelectorMap
                     isOpen={dialog && currentStep === 1}
                     onRouteSelect={(route) => {
@@ -863,7 +863,7 @@ function Orders() {
                     initialToCoords={editingOrder && routeData.toCoords ? routeData.toCoords : null}
                   />
                 </div>
-                <div className="flex gap-2 w-full bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-white/70 py-1 flex-shrink-0">
+                <div className="flex gap-2 w-full bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-white/70 py-1 flex-shrink-0 sticky bottom-0 z-10">
                   <DialogClose asChild>
                     <Button type="button" className="rounded-2xl w-1/2 h-9 text-xs sm:text-sm">{t("orders.form.cancel")}</Button>
                   </DialogClose>

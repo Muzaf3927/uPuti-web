@@ -1157,7 +1157,7 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
           )}
         </div>
       </div>
-      <div className="w-full flex-1 min-h-[65vh] sm:min-h-[500px] md:min-h-[550px] rounded-2xl overflow-hidden border shadow-lg relative">
+      <div className="w-full flex-1 min-h-[400px] max-h-[calc(100svh-200px)] sm:min-h-[500px] sm:max-h-[550px] rounded-2xl overflow-hidden border shadow-lg relative">
         <div ref={mapRef} className="w-full h-full" />
         {/* Кнопка определения местоположения */}
         {mapReady && (
