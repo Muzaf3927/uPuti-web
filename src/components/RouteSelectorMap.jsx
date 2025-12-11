@@ -233,11 +233,65 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         mapInstanceRef.current.removeLayer(fromMarkerRef.current);
       }
 
-      // Создаем маркер с адресом
+      // Создаем маркер с адресом и возможностью перетаскивания
       const address = fromCity || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-      fromMarkerRef.current = L.marker(coords, { icon: fromIcon })
+      fromMarkerRef.current = L.marker(coords, { 
+        icon: fromIcon,
+        draggable: true
+      })
         .bindPopup(`${t("orders.map.from")}: ${address}`)
         .addTo(mapInstanceRef.current);
+      
+      // Обработчик перемещения маркера "Откуда"
+      fromMarkerRef.current.on('dragend', async (e) => {
+        const marker = e.target;
+        const position = marker.getLatLng();
+        const newCoords = [position.lat, position.lng];
+        
+        // Получаем адрес для новых координат
+        let newAddress = `${newCoords[0].toFixed(6)}, ${newCoords[1].toFixed(6)}`;
+        try {
+          const geocodedAddress = await reverseGeocode(newCoords[0], newCoords[1]);
+          if (geocodedAddress && !geocodedAddress.match(/^\d+\.\d+,\s*\d+\.\d+$/)) {
+            newAddress = geocodedAddress;
+          }
+        } catch (error) {
+          console.error("Geocoding error:", error);
+        }
+        
+        // Обновляем popup
+        marker.setPopupContent(`${t("orders.map.from")}: ${newAddress}`).openPopup();
+        
+        // Обновляем поле поиска
+        setFromSearchQuery(newAddress);
+        
+        // Обновляем маршрут, если есть конечная точка
+        if (toMarkerRef.current) {
+          const toPosition = toMarkerRef.current.getLatLng();
+          const toCoords = [toPosition.lat, toPosition.lng];
+          
+          // Обновляем линию маршрута
+          if (routeLineRef.current) {
+            mapInstanceRef.current.removeLayer(routeLineRef.current);
+          }
+          
+          const routeLine = L.polyline([newCoords, toCoords], {
+            color: "#3b82f6",
+            weight: 4,
+            opacity: 0.7,
+          }).addTo(mapInstanceRef.current);
+          
+          routeLineRef.current = routeLine;
+        }
+        
+        // Обновляем состояние через onRouteSelect
+        if (onRouteSelect) {
+          onRouteSelect({
+            from: newAddress,
+            fromCoords: newCoords,
+          });
+        }
+      });
 
       // Обновляем состояние выбора
       setSelectingFrom(false);
@@ -255,11 +309,65 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         mapInstanceRef.current.removeLayer(toMarkerRef.current);
       }
 
-      // Создаем маркер с адресом
+      // Создаем маркер с адресом и возможностью перетаскивания
       const address = toCity || `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
-      toMarkerRef.current = L.marker(coords, { icon: toIcon })
+      toMarkerRef.current = L.marker(coords, { 
+        icon: toIcon,
+        draggable: true
+      })
         .bindPopup(`${t("orders.map.to")}: ${address}`)
         .addTo(mapInstanceRef.current);
+      
+      // Обработчик перемещения маркера "Куда"
+      toMarkerRef.current.on('dragend', async (e) => {
+        const marker = e.target;
+        const position = marker.getLatLng();
+        const newCoords = [position.lat, position.lng];
+        
+        // Получаем адрес для новых координат
+        let newAddress = `${newCoords[0].toFixed(6)}, ${newCoords[1].toFixed(6)}`;
+        try {
+          const geocodedAddress = await reverseGeocode(newCoords[0], newCoords[1]);
+          if (geocodedAddress && !geocodedAddress.match(/^\d+\.\d+,\s*\d+\.\d+$/)) {
+            newAddress = geocodedAddress;
+          }
+        } catch (error) {
+          console.error("Geocoding error:", error);
+        }
+        
+        // Обновляем popup
+        marker.setPopupContent(`${t("orders.map.to")}: ${newAddress}`).openPopup();
+        
+        // Обновляем поле поиска
+        setToSearchQuery(newAddress);
+        
+        // Обновляем маршрут, если есть начальная точка
+        if (fromMarkerRef.current) {
+          const fromPosition = fromMarkerRef.current.getLatLng();
+          const fromCoords = [fromPosition.lat, fromPosition.lng];
+          
+          // Обновляем линию маршрута
+          if (routeLineRef.current) {
+            mapInstanceRef.current.removeLayer(routeLineRef.current);
+          }
+          
+          const routeLine = L.polyline([fromCoords, newCoords], {
+            color: "#3b82f6",
+            weight: 4,
+            opacity: 0.7,
+          }).addTo(mapInstanceRef.current);
+          
+          routeLineRef.current = routeLine;
+        }
+        
+        // Обновляем состояние через onRouteSelect
+        if (onRouteSelect) {
+          onRouteSelect({
+            to: newAddress,
+            toCoords: newCoords,
+          });
+        }
+      });
     }
 
     // Рисуем линию маршрута, если обе точки заданы
@@ -331,10 +439,64 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         mapInstanceRef.current.removeLayer(fromMarkerRef.current);
       }
 
-      // Создаем новый маркер отправления
-      fromMarkerRef.current = L.marker(coords, { icon: fromIcon })
+      // Создаем новый маркер отправления с возможностью перетаскивания
+      fromMarkerRef.current = L.marker(coords, { 
+        icon: fromIcon,
+        draggable: true
+      })
         .bindPopup(`${t("orders.map.from")}: ${address}`)
         .addTo(mapInstanceRef.current);
+      
+      // Обработчик перемещения маркера "Откуда"
+      fromMarkerRef.current.on('dragend', async (e) => {
+        const marker = e.target;
+        const position = marker.getLatLng();
+        const newCoords = [position.lat, position.lng];
+        
+        // Получаем адрес для новых координат
+        let newAddress = `${newCoords[0].toFixed(6)}, ${newCoords[1].toFixed(6)}`;
+        try {
+          const geocodedAddress = await reverseGeocode(newCoords[0], newCoords[1]);
+          if (geocodedAddress && !geocodedAddress.match(/^\d+\.\d+,\s*\d+\.\d+$/)) {
+            newAddress = geocodedAddress;
+          }
+        } catch (error) {
+          console.error("Geocoding error:", error);
+        }
+        
+        // Обновляем popup
+        marker.setPopupContent(`${t("orders.map.from")}: ${newAddress}`).openPopup();
+        
+        // Обновляем поле поиска
+        setFromSearchQuery(newAddress);
+        
+        // Обновляем маршрут, если есть конечная точка
+        if (toMarkerRef.current) {
+          const toPosition = toMarkerRef.current.getLatLng();
+          const toCoords = [toPosition.lat, toPosition.lng];
+          
+          // Обновляем линию маршрута
+          if (routeLineRef.current) {
+            mapInstanceRef.current.removeLayer(routeLineRef.current);
+          }
+          
+          const routeLine = L.polyline([newCoords, toCoords], {
+            color: "#3b82f6",
+            weight: 4,
+            opacity: 0.7,
+          }).addTo(mapInstanceRef.current);
+          
+          routeLineRef.current = routeLine;
+        }
+        
+        // Обновляем состояние через onRouteSelect
+        if (onRouteSelect) {
+          onRouteSelect({
+            from: newAddress,
+            fromCoords: newCoords,
+          });
+        }
+      });
 
       // Обновляем поле поиска
       setFromSearchQuery(address);
@@ -365,10 +527,64 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         mapInstanceRef.current.removeLayer(toMarkerRef.current);
       }
 
-      // Создаем новый маркер назначения
-      toMarkerRef.current = L.marker(coords, { icon: toIcon })
+      // Создаем новый маркер назначения с возможностью перетаскивания
+      toMarkerRef.current = L.marker(coords, { 
+        icon: toIcon,
+        draggable: true
+      })
         .bindPopup(`${t("orders.map.to")}: ${address}`)
         .addTo(mapInstanceRef.current);
+      
+      // Обработчик перемещения маркера "Куда"
+      toMarkerRef.current.on('dragend', async (e) => {
+        const marker = e.target;
+        const position = marker.getLatLng();
+        const newCoords = [position.lat, position.lng];
+        
+        // Получаем адрес для новых координат
+        let newAddress = `${newCoords[0].toFixed(6)}, ${newCoords[1].toFixed(6)}`;
+        try {
+          const geocodedAddress = await reverseGeocode(newCoords[0], newCoords[1]);
+          if (geocodedAddress && !geocodedAddress.match(/^\d+\.\d+,\s*\d+\.\d+$/)) {
+            newAddress = geocodedAddress;
+          }
+        } catch (error) {
+          console.error("Geocoding error:", error);
+        }
+        
+        // Обновляем popup
+        marker.setPopupContent(`${t("orders.map.to")}: ${newAddress}`).openPopup();
+        
+        // Обновляем поле поиска
+        setToSearchQuery(newAddress);
+        
+        // Обновляем маршрут, если есть начальная точка
+        if (fromMarkerRef.current) {
+          const fromPosition = fromMarkerRef.current.getLatLng();
+          const fromCoords = [fromPosition.lat, fromPosition.lng];
+          
+          // Обновляем линию маршрута
+          if (routeLineRef.current) {
+            mapInstanceRef.current.removeLayer(routeLineRef.current);
+          }
+          
+          const routeLine = L.polyline([fromCoords, newCoords], {
+            color: "#3b82f6",
+            weight: 4,
+            opacity: 0.7,
+          }).addTo(mapInstanceRef.current);
+          
+          routeLineRef.current = routeLine;
+        }
+        
+        // Обновляем состояние через onRouteSelect
+        if (onRouteSelect) {
+          onRouteSelect({
+            to: newAddress,
+            toCoords: newCoords,
+          });
+        }
+      });
 
       // Обновляем поле поиска
       setToSearchQuery(address);
@@ -484,9 +700,63 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         mapInstanceRef.current.removeLayer(fromMarkerRef.current);
       }
       
-      fromMarkerRef.current = L.marker(coords, { icon: fromIcon })
+      fromMarkerRef.current = L.marker(coords, { 
+        icon: fromIcon,
+        draggable: true
+      })
         .bindPopup(`${t("orders.map.from")}: ${address}`)
         .addTo(mapInstanceRef.current);
+      
+      // Обработчик перемещения маркера "Откуда"
+      fromMarkerRef.current.on('dragend', async (e) => {
+        const marker = e.target;
+        const position = marker.getLatLng();
+        const newCoords = [position.lat, position.lng];
+        
+        // Получаем адрес для новых координат
+        let newAddress = `${newCoords[0].toFixed(6)}, ${newCoords[1].toFixed(6)}`;
+        try {
+          const geocodedAddress = await reverseGeocode(newCoords[0], newCoords[1]);
+          if (geocodedAddress && !geocodedAddress.match(/^\d+\.\d+,\s*\d+\.\d+$/)) {
+            newAddress = geocodedAddress;
+          }
+        } catch (error) {
+          console.error("Geocoding error:", error);
+        }
+        
+        // Обновляем popup
+        marker.setPopupContent(`${t("orders.map.from")}: ${newAddress}`).openPopup();
+        
+        // Обновляем поле поиска
+        setFromSearchQuery(newAddress);
+        
+        // Обновляем маршрут, если есть конечная точка
+        if (toMarkerRef.current) {
+          const toPosition = toMarkerRef.current.getLatLng();
+          const toCoords = [toPosition.lat, toPosition.lng];
+          
+          // Обновляем линию маршрута
+          if (routeLineRef.current) {
+            mapInstanceRef.current.removeLayer(routeLineRef.current);
+          }
+          
+          const routeLine = L.polyline([newCoords, toCoords], {
+            color: "#3b82f6",
+            weight: 4,
+            opacity: 0.7,
+          }).addTo(mapInstanceRef.current);
+          
+          routeLineRef.current = routeLine;
+        }
+        
+        // Обновляем состояние через onRouteSelect
+        if (onRouteSelect) {
+          onRouteSelect({
+            from: newAddress,
+            fromCoords: newCoords,
+          });
+        }
+      });
       
       // Если есть точка назначения, обновляем маршрут
       if (toCity && toMarkerRef.current) {
@@ -526,9 +796,63 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         mapInstanceRef.current.removeLayer(toMarkerRef.current);
       }
       
-      toMarkerRef.current = L.marker(coords, { icon: toIcon })
+      toMarkerRef.current = L.marker(coords, { 
+        icon: toIcon,
+        draggable: true
+      })
         .bindPopup(`${t("orders.map.to")}: ${address}`)
         .addTo(mapInstanceRef.current);
+      
+      // Обработчик перемещения маркера "Куда"
+      toMarkerRef.current.on('dragend', async (e) => {
+        const marker = e.target;
+        const position = marker.getLatLng();
+        const newCoords = [position.lat, position.lng];
+        
+        // Получаем адрес для новых координат
+        let newAddress = `${newCoords[0].toFixed(6)}, ${newCoords[1].toFixed(6)}`;
+        try {
+          const geocodedAddress = await reverseGeocode(newCoords[0], newCoords[1]);
+          if (geocodedAddress && !geocodedAddress.match(/^\d+\.\d+,\s*\d+\.\d+$/)) {
+            newAddress = geocodedAddress;
+          }
+        } catch (error) {
+          console.error("Geocoding error:", error);
+        }
+        
+        // Обновляем popup
+        marker.setPopupContent(`${t("orders.map.to")}: ${newAddress}`).openPopup();
+        
+        // Обновляем поле поиска
+        setToSearchQuery(newAddress);
+        
+        // Обновляем маршрут, если есть начальная точка
+        if (fromMarkerRef.current) {
+          const fromPosition = fromMarkerRef.current.getLatLng();
+          const fromCoords = [fromPosition.lat, fromPosition.lng];
+          
+          // Обновляем линию маршрута
+          if (routeLineRef.current) {
+            mapInstanceRef.current.removeLayer(routeLineRef.current);
+          }
+          
+          const routeLine = L.polyline([fromCoords, newCoords], {
+            color: "#3b82f6",
+            weight: 4,
+            opacity: 0.7,
+          }).addTo(mapInstanceRef.current);
+          
+          routeLineRef.current = routeLine;
+        }
+        
+        // Обновляем состояние через onRouteSelect
+        if (onRouteSelect) {
+          onRouteSelect({
+            to: newAddress,
+            toCoords: newCoords,
+          });
+        }
+      });
       
       // Обновляем маршрут если обе точки выбраны
       if (fromCity) {
