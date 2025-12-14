@@ -45,16 +45,26 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
     );
   }, [order.driver_offers, isMyOrder]);
 
-  // Получаем принятый оффер (для in_progress заказов)
-  const acceptedOffer = useMemo(() => {
-    if (!isMyOrder || !order.driver_offers || !Array.isArray(order.driver_offers)) {
-      return null;
+  // Получаем принятый booking (для in_progress заказов)
+  // Сначала проверяем bookings, если нет - проверяем driver_offers (для обратной совместимости)
+  const acceptedBooking = useMemo(() => {
+    if (!isMyOrder) return null;
+    
+    // Проверяем bookings (новая структура)
+    if (order.bookings && Array.isArray(order.bookings)) {
+      return order.bookings.find((booking) => booking.status === "in_progress");
     }
-    return order.driver_offers.find((offer) => offer.status === "accepted");
-  }, [order.driver_offers, isMyOrder]);
+    
+    // Если нет bookings, проверяем driver_offers (старая структура)
+    if (order.driver_offers && Array.isArray(order.driver_offers)) {
+      return order.driver_offers.find((offer) => offer.status === "accepted" || offer.status === "in_progress");
+    }
+    
+    return null;
+  }, [order.bookings, order.driver_offers, isMyOrder]);
 
-  // Получаем данные водителя из принятого оффера
-  const driver = acceptedOffer?.driver || acceptedOffer?.user || null;
+  // Получаем данные водителя из принятого booking/offer
+  const driver = acceptedBooking?.user || acceptedBooking?.driver || null;
   
   // Форматируем телефон водителя
   const driverPhone = useMemo(() => {
@@ -151,7 +161,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
       />
       
       {/* Bottom Sheet - занимает половину экрана на мобильных */}
-      <div className={`bg-white rounded-t-3xl shadow-2xl border-t-2 border-gray-200 ${!isMyOrder ? 'h-[55vh] max-h-[55vh]' : 'h-[50vh] max-h-[50vh]'} flex flex-col`}>
+      <div className={`bg-white rounded-t-3xl shadow-2xl border-t-2 border-gray-200 ${!isMyOrder ? 'h-[55vh] max-h-[55vh]' : order.status === 'active' ? 'h-auto max-h-[45vh]' : 'h-[50vh] max-h-[50vh]'} flex flex-col`}>
         {/* Handle bar */}
         <div className="flex justify-center pt-2 pb-1">
           <div className="w-12 h-1 bg-gray-300 rounded-full" />
@@ -167,9 +177,27 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
         </button>
 
         {/* Content */}
-        <div className={`px-2.5 pt-0.5 ${!isMyOrder ? 'pb-0' : order.status === 'in_progress' ? 'pb-0' : 'pb-1.5'} ${!isMyOrder ? '' : order.status === 'in_progress' ? '' : 'overflow-y-auto flex-1'}`}>
+        <div className={`px-2.5 pt-0.5 ${!isMyOrder ? 'pb-0' : order.status === 'in_progress' ? 'pb-0' : 'pb-0'} ${!isMyOrder ? '' : order.status === 'in_progress' ? '' : 'overflow-y-auto flex-1'}`}>
+          {/* Если это мой заказ со статусом active - показываем надпись "Ищется машина" в самом верху */}
+          {isMyOrder && order.status === "active" && (
+            <div className="text-center mb-1.5 pt-1">
+              <div className="text-base text-gray-900">
+                Ищется машина
+              </div>
+            </div>
+          )}
+          
+          {/* Если это мой заказ со статусом in_progress - показываем надпись "Машина найдена" в самом верху */}
+          {isMyOrder && order.status === "in_progress" && (
+            <div className="text-center mb-1.5 pt-1">
+              <div className="text-base text-gray-900">
+                Машина найдена
+              </div>
+            </div>
+          )}
+          
           {/* Маршрут - минималистичный компактный дизайн */}
-          <div className={`flex flex-col gap-0.5 ${!isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-2'}`}>
+          <div className={`flex flex-col gap-0.5 ${!isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-1'}`}>
             {isDriver ? (
               <button
                 onClick={() => openNavigation(fromAddress, fromLat, fromLng, true)}
@@ -218,7 +246,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
           </div>
 
           {/* Детали заказа - компактная сетка */}
-          <div className={`grid grid-cols-2 gap-1 ${!isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-2'}`}>
+          <div className={`grid grid-cols-2 gap-1 ${!isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-1'}`}>
             {/* Дата */}
             {order.date && (
               <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gray-50/30">
@@ -243,7 +271,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
           </div>
 
           {/* Количество мест и сумма - компактная сетка */}
-          <div className={`grid grid-cols-2 gap-1 ${!isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-2'}`}>
+          <div className={`grid grid-cols-2 gap-1 ${!isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-1'}`}>
             {/* Количество пассажиров */}
             {order.seats && (
               <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-green-50/30">
@@ -255,23 +283,21 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
               </div>
             )}
             
-            {/* Сумма */}
-            {order.amount && (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-yellow-50/30">
-                <DollarSign className="text-yellow-600 flex-shrink-0" size={11} />
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[8px] text-gray-400 leading-tight">{t("orders.popup.price")}</span>
-                  <span className="text-[10px] font-bold text-gray-900 truncate leading-tight">
-                    {Number(order.amount).toLocaleString()} сум
-                  </span>
-                </div>
+            {/* Сумма - всегда показываем, даже если не указана */}
+            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-yellow-50/30">
+              <DollarSign className="text-yellow-600 flex-shrink-0" size={11} />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[8px] text-gray-400 leading-tight">{t("orders.popup.price")}</span>
+                <span className="text-[10px] font-bold text-gray-900 truncate leading-tight">
+                  {order.amount ? `${Number(order.amount).toLocaleString()} сум` : (order.price ? `${Number(order.price).toLocaleString()} сум` : "Не указана")}
+                </span>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Комментарий */}
           {order.comment && (
-            <div className={`${!isMyOrder ? 'mb-0' : order.status === 'in_progress' ? 'mb-0' : 'mb-2'} px-1.5 py-0.5 rounded-md bg-gray-50/30`}>
+            <div className={`${!isMyOrder ? 'mb-0' : order.status === 'in_progress' ? 'mb-0' : 'mb-1'} px-1.5 py-0.5 rounded-md bg-gray-50/30`}>
               <div className="flex items-start gap-1">
                 <MessageSquare className="text-gray-600 flex-shrink-0 mt-0.5" size={11} />
                 <div className="flex-1 min-w-0">
@@ -283,18 +309,8 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
           )}
 
           {/* Если это мой заказ со статусом in_progress - показываем данные водителя */}
-          {isMyOrder && order.status === "in_progress" && acceptedOffer && driver && (
+          {isMyOrder && order.status === "in_progress" && acceptedBooking && driver && (
             <div className="mb-0 border-2 border-blue-200 rounded-xl p-3 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-sm font-bold text-gray-900">
-                  {t("orders.bottomSheet.driver") || "Водитель"}
-                </div>
-                {/* Надпись "Ваш водитель" */}
-                <div className="text-xs font-bold text-green-600 px-2 py-1 bg-green-50 rounded-md">
-                  {t("orders.bottomSheet.yourDriver")}
-                </div>
-              </div>
-              
               {/* Информация о водителе */}
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex-1 min-w-0">
@@ -316,76 +332,69 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
                 {driverPhone && (
                   <button
                     onClick={() => handleCall(driverPhone)}
-                    className="flex-shrink-0 px-4 py-2 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-2 text-sm font-semibold shadow-md"
+                    className="flex-shrink-0 px-2 py-1 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1 text-[10px] font-semibold shadow-sm"
                     aria-label={t("orders.popup.phone")}
                   >
-                    <Phone className="w-4 h-4" />
+                    <Phone className="w-3 h-3" />
                     <span>{t("orders.myOrderActions.callDriver")}</span>
                   </button>
                 )}
               </div>
 
               {/* Информация о машине */}
-              <div className="grid grid-cols-2 gap-2 mb-2">
-                {acceptedOffer.carModel && (
-                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/70 border border-gray-200">
-                    <Car className="text-gray-700 flex-shrink-0" size={16} />
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] text-gray-500 leading-tight mb-0.5">Модель</span>
-                      <span className="text-sm font-semibold text-gray-900 truncate leading-tight">
-                        {acceptedOffer.carModel}
-                      </span>
-                    </div>
+              {driver.car && (
+                <>
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    {driver.car.model && (
+                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/70 border border-gray-200">
+                        <Car className="text-gray-700 flex-shrink-0" size={16} />
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[10px] text-gray-500 leading-tight mb-0.5">Модель</span>
+                          <span className="text-sm font-semibold text-gray-900 truncate leading-tight">
+                            {driver.car.model}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {driver.car.color && (
+                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/70 border border-gray-200">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[10px] text-gray-500 leading-tight mb-0.5">Цвет</span>
+                          <span className="text-sm font-semibold text-gray-900 truncate leading-tight">
+                            {driver.car.color}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-                {acceptedOffer.carColor && (
-                  <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/70 border border-gray-200">
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] text-gray-500 leading-tight mb-0.5">Цвет</span>
-                      <span className="text-sm font-semibold text-gray-900 truncate leading-tight">
-                        {acceptedOffer.carColor}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
 
-              {acceptedOffer.numberCar && (
-                <div className="text-sm text-gray-700 mb-2 px-2.5 py-1.5 bg-white/70 rounded-lg border border-gray-200">
-                  <span className="font-medium">Номер:</span> <span className="font-bold">{acceptedOffer.numberCar}</span>
-                </div>
+                  {driver.car.number && (
+                    <div className="text-sm text-gray-700 mb-2 px-2.5 py-1.5 bg-white/70 rounded-lg border border-gray-200">
+                      <span className="font-medium">Номер:</span> <span className="font-bold">{driver.car.number}</span>
+                    </div>
+                  )}
+                </>
               )}
 
-              {/* Цена оффера */}
-              {acceptedOffer.price && (
+              {/* Цена booking (если указана) */}
+              {acceptedBooking.offered_price && (
                 <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-yellow-50/70 border border-yellow-200 mb-0">
                   <DollarSign className="text-yellow-600 flex-shrink-0" size={16} />
                   <div className="flex flex-col min-w-0">
                     <span className="text-[10px] text-gray-500 leading-tight mb-0.5">{t("orders.popup.price")}</span>
                     <span className="text-base font-bold text-gray-900 truncate leading-tight">
-                      {Number(acceptedOffer.price).toLocaleString()} сум
+                      {Number(acceptedBooking.offered_price).toLocaleString()} сум
                     </span>
                   </div>
                 </div>
               )}
             </div>
           )}
-
-          {/* Если это мой заказ со статусом active - показываем надпись "Ищется машина" */}
-          {isMyOrder && order.status === "active" && (
-            <div className="mb-2 px-2 py-3 rounded-lg bg-blue-50/50 border border-blue-200">
-              <div className="text-center">
-                <div className="text-base font-bold text-blue-600">
-                  Ищется машина
-                </div>
-              </div>
-            </div>
-          )}
         </div>
         
         {/* Кнопки действий - для моих заказов (активные) */}
         {isMyOrder && order.status === "active" && (
-          <div className="px-3 pb-2 pt-2">
+          <div className="px-3 pb-2 pt-1 border-t border-gray-100">
             {onDelete && (
               <Button
                 type="button"
@@ -404,18 +413,18 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
 
         {/* Кнопки действий - для моих заказов (in_progress) */}
         {isMyOrder && order.status === "in_progress" && (
-          <div className="px-3 pb-2 pt-1">
-            {onComplete && (
+          <div className="px-3 pb-2 pt-1 border-t border-gray-100">
+            {onDelete && (
               <Button
                 type="button"
                 onClick={() => {
-                  onComplete(order);
+                  onDelete(order);
                   onClose();
                 }}
-                className="w-full h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center gap-1.5 text-xs"
+                className="w-full h-9 rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-1.5 text-xs"
               >
-                <CircleCheck className="w-3.5 h-3.5" />
-                {t("orders.myOrderActions.complete") || "Завершить"}
+                <Trash2 className="w-4 h-4" />
+                Отменить
               </Button>
             )}
           </div>
