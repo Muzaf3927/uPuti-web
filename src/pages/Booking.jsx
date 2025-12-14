@@ -24,8 +24,11 @@ function Booking() {
   // API для моих подтвержденных броней (где я пассажир)
   const { data: myConfirmedBookingsRes, isPending: myConfirmedBookingsLoading, error: myConfirmedBookingsError, refetch: refetchMyConfirmed } = useGetData("/bookings/my/confirmed");
 
-  // API для подтвержденных броней на мои поездки (где я водитель)
-  const { data: confirmedBookingsToMyTripsRes, isPending: confirmedBookingsToMyTripsLoading, error: confirmedBookingsToMyTripsError, refetch: refetchConfirmedToMyTrips } = useGetData("/bookings/to-my-trips/confirmed");
+  // API /bookings/to-my-trips/confirmed удален
+  const confirmedBookingsToMyTripsRes = null;
+  const confirmedBookingsToMyTripsLoading = false;
+  const confirmedBookingsToMyTripsError = null;
+  const refetchConfirmedToMyTrips = () => {};
 
   // Получаем количество непрочитанных сообщений (React Query автоматически дедуплицирует запрос с Navbar)
   const { data: unreadCounts } = useQuery({ 
@@ -47,29 +50,20 @@ function Booking() {
   useEffect(() => {
     if (location.pathname === "/booking") {
       refetchMyConfirmed();
-      refetchConfirmedToMyTrips();
+      // API /bookings/to-my-trips/confirmed удален
     }
-  }, [location.pathname, refetchMyConfirmed, refetchConfirmedToMyTrips]);
+  }, [location.pathname, refetchMyConfirmed]);
 
 
   const myConfirmedBookings = myConfirmedBookingsRes?.bookings || [];
-  const confirmedBookingsToMyTrips = confirmedBookingsToMyTripsRes?.bookings || [];
+  // API /bookings/to-my-trips/confirmed удален
+  const confirmedBookingsToMyTrips = [];
 
   // Группируем брони по поездкам для второй вкладки
   const bookingsByTrip = React.useMemo(() => {
-    const grouped = {};
-    confirmedBookingsToMyTrips.forEach(booking => {
-      const tripId = booking.trip.id;
-      if (!grouped[tripId]) {
-        grouped[tripId] = {
-          trip: booking.trip,
-          bookings: []
-        };
-      }
-      grouped[tripId].bookings.push(booking);
-    });
-    return grouped;
-  }, [confirmedBookingsToMyTrips]);
+    // API удален - возвращаем пустой объект
+    return {};
+  }, []);
 
   // Показываем только нужный контент в зависимости от activeTab
   const showPassengerContent = activeTab === "passenger";
@@ -130,13 +124,6 @@ function Booking() {
                               </div>
                             </div>
                             <div className="flex flex-row sm:flex-col gap-2 flex-shrink-0">
-                              <Link
-                                  to={`/chats?tripId=${b.trip?.id}&receiverId=${b.trip?.driver?.id}`}
-                                  className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground px-3 py-2 rounded-lg text-xs sm:text-sm font-medium hover:brightness-110 transition-colors shadow-sm hover:shadow-md flex-1 sm:flex-none"
-                              >
-                                <MessageCircle size={14} />
-                                <span className="hidden sm:inline">{t("booking.write")}</span>
-                              </Link>
                               <a
                                   href={b.trip?.driver?.phone ? `tel:+998${b.trip.driver.phone}` : '#'}
                                   className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors shadow-sm hover:shadow-md flex-1 sm:flex-none ${

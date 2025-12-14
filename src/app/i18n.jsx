@@ -15,6 +15,8 @@ const dict = {
       chats: "Chatlar",
       passengerTab: "Yo'lovchi",
       driverTab: "Haydovchi",
+      city: "Shahar ichida",
+      intercity: "Shaharlararo",
     },
     roleSelection: {
       title: "Rolingizni tanlang",
@@ -405,6 +407,7 @@ const dict = {
         cancelRequest: "So'rovni bekor qilish",
         cancelSuccess: "So'rov muvaffaqiyatli bekor qilindi.",
         cancelError: "So'rovni bekor qilishda xatolik yuz berdi.",
+        bookingSuccess: "Poyezdka muvaffaqiyatli bron qilindi!",
         offers: "Takliflar",
         noOffers: "Hozircha takliflar yo'q.",
         acceptOffer: "Qabul qilish",
@@ -454,11 +457,6 @@ const dict = {
     download: {
       android: "Yuklab olish",
       ios: "Yuklab olish",
-    },
-    notifications: {
-      title: "Xabarnomalar",
-      markAllRead: "Barchasini o'qilgan deb belgilash",
-      noNotifications: "Xabarnomalar yo'q",
     },
     logout: {
       success: "Muvaffaqiyatli tizimdan chiqdingiz!",
@@ -517,6 +515,8 @@ const dict = {
       chats: "Чаты",
       passengerTab: "Пассажир",
       driverTab: "Водитель",
+      city: "По городу",
+      intercity: "Межгород",
     },
     roleSelection: {
       title: "Выберите вашу роль",
@@ -907,6 +907,7 @@ const dict = {
         cancelRequest: "Отменить запрос",
         cancelSuccess: "Запрос успешно отменен.",
         cancelError: "Ошибка при отмене запроса.",
+        bookingSuccess: "Поездка забронирована успешно!",
         offers: "Предложения",
         noOffers: "Пока нет предложений.",
         acceptOffer: "Принять",
@@ -956,11 +957,6 @@ const dict = {
     download: {
       android: "Скачать",
       ios: "Скачать",
-    },
-    notifications: {
-      title: "Уведомления",
-      markAllRead: "Прочитать все",
-      noNotifications: "Уведомлений нет",
     },
     logout: {
       success: "Вы успешно вышли из системы!",

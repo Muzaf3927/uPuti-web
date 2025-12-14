@@ -14,7 +14,6 @@ import EmptyState from "@/components/EmptyState.jsx";
 import { toast } from "sonner";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
-import { useSmartRefresh } from "@/hooks/useSmartRefresh.jsx";
 import { useActiveTab } from "@/layout/MainLayout";
 
 function Requests() {
@@ -42,15 +41,6 @@ function Requests() {
     cacheTime: 300000
   });
 
-  // Умное автоматическое обновление
-  const { forceRefresh, resetActivityFlags } = useSmartRefresh(
-    () => {
-      Promise.allSettled([refetchMine(), refetchToMe()]);
-    },
-    5000, // обновляем каждые 5 секунд
-    [refetchMine, refetchToMe]
-  );
-
   // Автоматическое обновление данных при переходе на страницу
   useEffect(() => {
     if (location.pathname === "/requests") {
@@ -63,9 +53,6 @@ function Requests() {
     try {
       await postData(`/bookings/${bookingId}`, { status: "confirmed" });
       toast.success("Tasdiqlandi.");
-      // Принудительно обновляем данные после подтверждения
-      resetActivityFlags();
-      forceRefresh();
       queryClient.invalidateQueries({ queryKey: ["bookings", "unread-count"] });
       // Обновляем все возможные запросы поездок (включая с фильтрами)
       queryClient.invalidateQueries({ queryKey: ["data"] });
@@ -79,9 +66,6 @@ function Requests() {
     try {
       await postData(`/bookings/${bookingId}`, { status: "declined" });
       toast.success("Bekor qilindi.");
-      // Принудительно обновляем данные после отклонения
-      resetActivityFlags();
-      forceRefresh();
       queryClient.invalidateQueries({ queryKey: ["bookings", "unread-count"] });
       // Обновляем все возможные запросы поездок (включая с фильтрами)
       queryClient.invalidateQueries({ queryKey: ["data"] });

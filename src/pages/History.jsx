@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
-import { useGetData, getData, postData } from "@/api/api";
+// API удалены - импорты больше не нужны
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,11 +24,19 @@ function History() {
   const [passengerPage, setPassengerPage] = useState(1);
   const PER_PAGE = 5; // По 5 записей на страницу для истории
   
-  const { data: asDriverRes, isPending: asDriverLoading, error: asDriverError, refetch: refetchAsDriver } = useGetData(`/trips/completed/mine?page=${driverPage}&per_page=${PER_PAGE}`);
-  const { data: asPassengerRes, isPending: asPassengerLoading, error: asPassengerError, refetch: refetchAsPassenger } = useGetData(`/trips/completed/as-passenger?page=${passengerPage}&per_page=${PER_PAGE}`);
+  // API удалены - данные пустые
+  const asDriverRes = null;
+  const asDriverLoading = false;
+  const asDriverError = null;
+  const refetchAsDriver = () => {};
+  
+  const asPassengerRes = null;
+  const asPassengerLoading = false;
+  const asPassengerError = null;
+  const refetchAsPassenger = () => {};
 
-  const asDriver = asDriverRes?.data || [];
-  const asPassenger = asPassengerRes?.data || [];
+  const asDriver = [];
+  const asPassenger = [];
 
   // Временно закомментирована функциональность оценки
   // const [rateOpen, setRateOpen] = useState(false);
@@ -38,40 +46,22 @@ function History() {
   const [confirmedBookings, setConfirmedBookings] = useState([]);
   const queryClient = useQueryClient();
 
-  // Автоматическое обновление данных при переходе на страницу
+  // API удалены - обновление не требуется
   useEffect(() => {
-    if (location.pathname === "/history") {
-      refetchAsDriver();
-      refetchAsPassenger();
-    }
-  }, [location.pathname, refetchAsDriver, refetchAsPassenger]);
-
-  // Обновление данных при изменении страниц
-  useEffect(() => {
-    refetchAsDriver();
-  }, [driverPage, refetchAsDriver]);
+    // API удален
+  }, [location.pathname]);
 
   useEffect(() => {
-    refetchAsPassenger();
-  }, [passengerPage, refetchAsPassenger]);
+    // API удален
+  }, [driverPage]);
 
-  // Загружаем подтвержденные брони отдельно
   useEffect(() => {
-    let isCancelled = false;
-    async function loadBookings() {
-      try {
-        const confirmedBookingsRes = await getData("/bookings/to-my-trips/confirmed");
-        if (!isCancelled) {
-          setConfirmedBookings(confirmedBookingsRes?.bookings || []);
-        }
-      } catch (_e) {
-        if (!isCancelled) {
-          setConfirmedBookings([]);
-        }
-      }
-    }
-    loadBookings();
-    return () => { isCancelled = true; };
+    // API удален
+  }, [passengerPage]);
+
+  // API /bookings/to-my-trips/confirmed удален
+  useEffect(() => {
+    setConfirmedBookings([]);
   }, []);
 
   // Мемоизированный расчет доходов

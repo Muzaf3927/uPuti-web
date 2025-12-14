@@ -20,10 +20,8 @@ function DriverOfferDialog({ order, open, onOpenChange, onSuccess }) {
   // Создаем мутацию для отправки оффера с динамическим URL
   const offerMutation = useMutation({
     mutationFn: async (offerData) => {
-      if (!order?.id) {
-        throw new Error("Order ID is required");
-      }
-      return postData(`/passenger-requests/${order.id}/offer`, offerData);
+      // API /passenger-requests удален
+      throw new Error("API удален");
     },
   });
 

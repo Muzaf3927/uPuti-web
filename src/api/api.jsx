@@ -5,13 +5,13 @@ import { safeLocalStorage } from "@/lib/localStorage";
 const { VITE_API_BASE } = import.meta.env;
 
 // Локальный API для тестирования
-// const LOCAL_API_BASE = "http://localhost:8000/api";
-const PRODUCTION_API_BASE = "https://api.uputi.net/api";
+const LOCAL_API_BASE = "http://localhost:8000/api";
+// const PRODUCTION_API_BASE = "https://api.uputi.net/api";
 
-// Используем продакшн API
+// Используем локальный API для тестирования
 const api = axios.create({
-  baseURL: VITE_API_BASE || PRODUCTION_API_BASE, // Основной API
-  // baseURL: LOCAL_API_BASE, // Локальный API (закомментирован)
+  // baseURL: VITE_API_BASE || PRODUCTION_API_BASE, // Основной API (закомментирован)
+  baseURL: LOCAL_API_BASE, // Локальный API для теста
   headers: {
     "Content-Type": "application/json",
   },
@@ -33,9 +33,9 @@ const refreshAccessToken = async () => {
   const refreshToken = safeLocalStorage.getItem("reFreshToken");
   if (!refreshToken) throw new Error("No refresh token available");
 
-  // Используем продакшн API
-  const API_BASE = VITE_API_BASE || PRODUCTION_API_BASE; // Основной API
-  // const API_BASE = LOCAL_API_BASE; // Локальный API (закомментирован)
+  // Используем локальный API для тестирования
+  // const API_BASE = VITE_API_BASE || PRODUCTION_API_BASE; // Основной API (закомментирован)
+  const API_BASE = LOCAL_API_BASE; // Локальный API для теста
   
   const { data } = await axios.post(
     `${API_BASE}/refresh-token`,
@@ -295,92 +295,7 @@ export const useUpdateRole = () => {
   });
 };
 
-// Chat API helpers
-export const chatsApi = {
-  getUserChats: () => getData("/chats"),
-  getUnreadCount: () => getData("/chats/unread-count"),
-  getChatMessages: (tripId, receiverId) =>
-    getData(`/chats/${tripId}/with/${receiverId}`),
-  sendMessage: (tripId, body) => postData(`/chats/${tripId}/send`, body),
-};
-
-export const useGetUserChats = () =>
-  useQuery({ queryKey: ["chats", "list"], queryFn: chatsApi.getUserChats });
-
-export const useGetUnreadCount = () =>
-  useQuery({ 
-    queryKey: ["chats", "unread"], 
-    queryFn: chatsApi.getUnreadCount, 
-    refetchInterval: 30000,
-    staleTime: 15000,
-    cacheTime: 300000
-  });
-
-export const useGetChatMessages = (tripId, receiverId, enabled = true) =>
-  useQuery({
-    queryKey: ["chats", "messages", tripId, receiverId],
-    queryFn: () => chatsApi.getChatMessages(tripId, receiverId),
-    enabled: Boolean(tripId && receiverId && enabled),
-    refetchInterval: 30000,
-    staleTime: 10000,
-    cacheTime: 300000
-  });
-
-export const useSendChatMessage = (tripId) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (body) => chatsApi.sendMessage(tripId, body),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["chats", "messages", tripId, variables?.receiver_id],
-      });
-      queryClient.invalidateQueries({ queryKey: ["chats", "list"] });
-      queryClient.invalidateQueries({ queryKey: ["chats", "unread"] });
-    },
-  });
-};
-
-// Notifications API helpers
-export const notificationsApi = {
-  list: () => getData("/notifications"),
-  unreadCount: () => getData("/notifications/unread-count"),
-  markAsRead: (id) => postData(`/notifications/${id}/read`, {}),
-  markAllAsRead: () => postData("/notifications/read-all", {}),
-};
-
-export const useNotifications = () =>
-  useQuery({ queryKey: ["notifications", "list"], queryFn: notificationsApi.list, refetchInterval: 30000 });
-
-export const useNotificationsUnread = () =>
-  useQuery({ 
-    queryKey: ["notifications", "unread"], 
-    queryFn: notificationsApi.unreadCount, 
-    refetchInterval: 30000,
-    staleTime: 15000,
-    cacheTime: 300000
-  });
-
-export const useMarkNotificationRead = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id) => notificationsApi.markAsRead(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
-    },
-  });
-};
-
-export const useMarkAllNotificationsRead = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: () => notificationsApi.markAllAsRead(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications", "unread"] });
-    },
-  });
-};
+// Chat API удален
 
 // Booking unread count API helpers
 export const bookingsApi = {

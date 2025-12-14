@@ -5,7 +5,6 @@ import {
   Login,
   Trips,
   Requests,
-  Chats,
   Booking,
   History,
   Profile,
@@ -58,7 +57,17 @@ function App() {
       children: [
         {
           index: true,
-          element: <Navigate to="/trips-orders" replace />,
+          element: <Navigate to="/city" replace />,
+          errorElement: <ErrorElement />,
+        },
+        {
+          path: "/city",
+          element: <TripsOrders type="city" />,
+          errorElement: <ErrorElement />,
+        },
+        {
+          path: "/intercity",
+          element: <TripsOrders type="intercity" />,
           errorElement: <ErrorElement />,
         },
         {
@@ -78,17 +87,12 @@ function App() {
         },
         {
           path: "/trips-orders",
-          element: <TripsOrders />,
+          element: <Navigate to="/city" replace />,
           errorElement: <ErrorElement />,
         },
         {
           path: "/orders",
-          element: <Navigate to="/trips-orders" replace />,
-          errorElement: <ErrorElement />,
-        },
-        {
-          path: "/chats",
-          element: <Chats />,
+          element: <Navigate to="/city" replace />,
           errorElement: <ErrorElement />,
         },
         {

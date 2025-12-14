@@ -35,7 +35,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import TripsCardSkeleton from "@/components/TripsCardSkeleton";
 import { toast } from "sonner";
 import MyTripsCard from "@/components/MyTripsCard";
-import { useSmartRefresh } from "@/hooks/useSmartRefresh.jsx";
 import EmptyState from "@/components/EmptyState.jsx";
 import TelegramConnectModal from "@/components/TelegramConnectModal.jsx";
 import { sessionManager } from "@/lib/sessionManager.js";
@@ -115,16 +114,6 @@ function Trips() {
     error: myTripsError,
     refetch: myTripsRefetch,
   } = useGetData(`/my-trips?page=${myPage}&per_page=${MY_PER_PAGE}`);
-
-  // Умное автоматическое обновление
-  const { forceRefresh, resetActivityFlags } = useSmartRefresh(
-    () => {
-      // Обновляем все запросы, включая с фильтрами
-      Promise.allSettled([refetch(), myTripsRefetch()]);
-    },
-    5000, // обновляем каждые 5 секунд
-    [refetch, myTripsRefetch]
-  );
 
   // Автоматическое обновление данных при переходе на страницу
   useEffect(() => {
@@ -288,9 +277,6 @@ function Trips() {
       if (res.message === "Trip created!") {
         toast.success(t("trips.form.successMessage"));
         setDialog(false);
-        // Принудительно обновляем данные после создания поездки
-        resetActivityFlags();
-        forceRefresh();
         
         // Отслеживание события создания поездки в Яндекс.Метрике
         if (typeof window !== "undefined" && window.ym) {

@@ -3,7 +3,6 @@ import Navbar from "@/components/Navbar";
 import { safeLocalStorage } from "@/lib/localStorage";
 import { sessionManager } from "@/lib/sessionManager";
 import {
-  Bell,
   Car,
   CircleUser,
   LogOut,
@@ -23,24 +22,10 @@ import { useKeyboardInsets } from "@/hooks/useKeyboardInsets.jsx";
 import RoleSelection from "@/components/RoleSelection";
 import GeolocationPermissionModal from "@/components/GeolocationPermissionModal";
 
-// shadcn
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
 // others
 import {
   usePostData,
   useGetData,
-  useNotifications,
-  useNotificationsUnread,
-  useMarkAllNotificationsRead,
-  useMarkNotificationRead,
   useUpdateRole,
 } from "@/api/api";
 import { toast } from "sonner";
@@ -88,10 +73,6 @@ function MainLayout() {
   }, []);
 
   const logoutMutation = usePostData("/logout");
-  const { data: notifications } = useNotifications();
-  const { data: unread } = useNotificationsUnread();
-  const markAll = useMarkAllNotificationsRead();
-  const markRead = useMarkNotificationRead();
   const {
     data: userData,
     isLoading: userLoading,
@@ -238,38 +219,6 @@ function MainLayout() {
     }
   };
 
-  // Обработка клика по уведомлению
-  const handleNotificationClick = (notification) => {
-    try {
-      const data = JSON.parse(notification.data);
-      
-      // Отмечаем уведомление как прочитанное
-      markRead.mutate(notification.id);
-      
-      // Перенаправляем в зависимости от типа уведомления
-      switch (notification.type) {
-        case 'chat':
-          // Перенаправляем в чат
-          navigate(`/chats?tripId=${data.trip_id}&receiverId=${notification.sender_id}`);
-          break;
-        case 'new_booking':
-          // Перенаправляем на страницу запросов
-          navigate('/requests');
-          break;
-        case 'booking_confirmed':
-          // Перенаправляем на раздел брони
-          navigate('/booking');
-          break;
-        default:
-          // Для других типов уведомлений ничего не делаем
-          break;
-      }
-    } catch (error) {
-      console.error('Error parsing notification data:', error);
-      // Если не удалось распарсить данные, просто отмечаем как прочитанное
-      markRead.mutate(notification.id);
-    }
-  };
   return (
     <div className="flex flex-col min-h-screen ">
       <header className="h-16 sm:h-20 sticky top-0 z-50 bg-gradient-to-tr from-blue-100/85 to-cyan-200/75 dark:from-white/5 dark:to-white/10 backdrop-blur-md border-b">
@@ -302,67 +251,6 @@ function MainLayout() {
                 </div>
               )}
             </button>
-            <div className="flex gap-2 sm:gap-3 items-center">
-              <DropdownMenu>
-                <DropdownMenuTrigger className="relative">
-                  <Bell className="cursor-pointer text-gray-700 hover:text-primary transition w-6 h-6 sm:w-7 sm:h-7" />
-                  {!!unread?.unread_count && (
-                    <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] px-1 rounded-full bg-destructive text-white text-[9px] sm:text-[10px] flex items-center justify-center">
-                      {unread.unread_count}
-                    </span>
-                  )}
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-64 sm:w-72 max-h-96 overflow-auto">
-                  <div className="flex items-center justify-between px-2 py-1">
-                    <DropdownMenuLabel className="text-xs sm:text-sm">
-                      {t("notifications.title")}
-                    </DropdownMenuLabel>
-                    <button
-                      disabled={markAll.isPending}
-                      onClick={() => markAll.mutate()}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      {t("notifications.markAllRead")}
-                    </button>
-                  </div>
-                  <DropdownMenuSeparator />
-                  {!notifications?.notifications?.filter((n) => !n.is_read)
-                    ?.length && (
-                    <DropdownMenuLabel className="text-center text-xs py-6 text-gray-500">
-                      {t("notifications.noNotifications")}
-                    </DropdownMenuLabel>
-                  )}
-                  {notifications?.notifications
-                    ?.filter((n) => !n.is_read)
-                    ?.map((n) => (
-                      <DropdownMenuItem
-                        key={n.id}
-                        className="whitespace-normal py-1 sm:py-2 cursor-pointer"
-                        onClick={() => handleNotificationClick(n)}
-                      >
-                        <div className="flex items-start justify-between gap-1 sm:gap-2 w-full">
-                          <div className="flex-1">
-                            <div
-                              className={`text-xs sm:text-sm ${
-                                n.is_read
-                                  ? "text-gray-600"
-                                  : "text-gray-900 font-semibold"
-                              }`}
-                            >
-                              {n.message}
-                            </div>
-                            {n.created_at && (
-                              <div className="text-[9px] sm:text-[10px] text-gray-400 mt-0.5">
-                                {new Date(n.created_at).toLocaleString()}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
             <button
               type="button"
               onClick={() => {

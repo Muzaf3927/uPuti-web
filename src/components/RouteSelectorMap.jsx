@@ -133,13 +133,241 @@ const createToAddressIcon = () => {
 
 const toIcon = createToAddressIcon();
 
-function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, initialFromCoords = null, initialToCoords = null }) {
+// Создаем зеленую иконку для активных заказов с пульсирующей анимацией
+const createActiveOrderIcon = () => {
+  const iconHtml = `
+    <div style="position: relative; display: inline-block; width: 50px; height: 70px;">
+      <!-- Пульсирующий круг (анимация) -->
+      <div style="
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%) translateY(-50%);
+        width: 44px;
+        height: 44px;
+        border: 3px solid #22c55e;
+        border-radius: 50%;
+        animation: pulse 2s ease-in-out infinite;
+        opacity: 0.8;
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      "></div>
+      <!-- Второй пульсирующий круг (задержка) -->
+      <div style="
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%) translateY(-50%);
+        width: 44px;
+        height: 44px;
+        border: 3px solid #22c55e;
+        border-radius: 50%;
+        animation: pulse 2s ease-in-out infinite 0.5s;
+        opacity: 0.8;
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      "></div>
+      <!-- Зеленая оболочка (круг) -->
+      <div style="
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 44px;
+        height: 44px;
+        background-color: #22c55e;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        z-index: 1;
+      ">
+        <!-- Иконка пассажира внутри круга -->
+        <img src="/passenger.png" alt="Passenger" style="width: 36px; height: 36px; display: block;" />
+      </div>
+      <!-- Вертикальная линия вниз -->
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 44px;
+        transform: translateX(-50%);
+        width: 2px;
+        height: 20px;
+        background-color: #000000;
+        z-index: 1;
+      "></div>
+      <!-- Острие стрелки внизу -->
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 64px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 6px solid #000000;
+        z-index: 1;
+      "></div>
+      <style>
+        @keyframes pulse {
+          0% {
+            transform: translateX(-50%) translateY(-50%) scale(1);
+            opacity: 0.8;
+            box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+          }
+          50% {
+            transform: translateX(-50%) translateY(-50%) scale(1.8);
+            opacity: 0.5;
+            box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+          }
+          100% {
+            transform: translateX(-50%) translateY(-50%) scale(2.5);
+            opacity: 0;
+            box-shadow: 0 0 0 20px rgba(34, 197, 94, 0);
+          }
+        }
+      </style>
+    </div>
+  `;
+  
+  return L.divIcon({
+    html: iconHtml,
+    className: 'custom-active-order-marker',
+    iconSize: [50, 70],
+    iconAnchor: [25, 70],
+    popupAnchor: [0, -70],
+  });
+};
+
+const activeOrderIcon = createActiveOrderIcon();
+
+// Создаем синюю иконку для заказов в процессе (водитель уже нашелся и едет)
+const createInProgressOrderIcon = () => {
+  const iconHtml = `
+    <div style="position: relative; display: inline-block; width: 50px; height: 70px;">
+      <!-- Вращающийся круг (анимация движения) -->
+      <div style="
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%) translateY(-50%);
+        width: 60px;
+        height: 60px;
+        border: 3px solid #3b82f6;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 1.5s linear infinite;
+        opacity: 0.8;
+      "></div>
+      <!-- Пульсирующий круг (анимация) -->
+      <div style="
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%) translateY(-50%);
+        width: 44px;
+        height: 44px;
+        border: 3px solid #3b82f6;
+        border-radius: 50%;
+        animation: pulseBlue 2s ease-in-out infinite;
+        opacity: 0.8;
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+      "></div>
+      <!-- Синяя оболочка (круг) -->
+      <div style="
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 44px;
+        height: 44px;
+        background-color: #3b82f6;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        z-index: 1;
+      ">
+        <!-- Иконка машины внутри круга -->
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
+          <path d="M5 11L6.5 6.5H17.5L19 11M5 11H3M5 11V18M19 11H21M19 11V18M7 18H5M19 18H17M7 18V16H17V18M7 18H17M9 6.5V4H15V6.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <!-- Вертикальная линия вниз -->
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 44px;
+        transform: translateX(-50%);
+        width: 2px;
+        height: 20px;
+        background-color: #000000;
+        z-index: 1;
+      "></div>
+      <!-- Острие стрелки внизу -->
+      <div style="
+        position: absolute;
+        left: 50%;
+        top: 64px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 6px solid #000000;
+        z-index: 1;
+      "></div>
+      <style>
+        @keyframes spin {
+          0% {
+            transform: translateX(-50%) translateY(-50%) rotate(0deg);
+          }
+          100% {
+            transform: translateX(-50%) translateY(-50%) rotate(360deg);
+          }
+        }
+        @keyframes pulseBlue {
+          0% {
+            transform: translateX(-50%) translateY(-50%) scale(1);
+            opacity: 0.8;
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+          }
+          50% {
+            transform: translateX(-50%) translateY(-50%) scale(1.8);
+            opacity: 0.5;
+            box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+          }
+          100% {
+            transform: translateX(-50%) translateY(-50%) scale(2.5);
+            opacity: 0;
+            box-shadow: 0 0 0 20px rgba(59, 130, 246, 0);
+          }
+        }
+      </style>
+    </div>
+  `;
+  
+  return L.divIcon({
+    html: iconHtml,
+    className: 'custom-in-progress-order-marker',
+    iconSize: [50, 70],
+    iconAnchor: [25, 70],
+    popupAnchor: [0, -70],
+  });
+};
+
+const inProgressOrderIcon = createInProgressOrderIcon();
+
+function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, initialFromCoords = null, initialToCoords = null, activeOrders = [], inProgressOrders = [], onActiveOrderClick = null, onInProgressOrderClick = null }) {
   const { t } = useI18n();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const fromMarkerRef = useRef(null);
   const toMarkerRef = useRef(null);
   const routeLineRef = useRef(null);
+  const activeOrdersMarkersRef = useRef([]);
+  const inProgressOrdersMarkersRef = useRef([]);
   const [selectingFrom, setSelectingFrom] = useState(true);
   const [mapReady, setMapReady] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
@@ -209,14 +437,136 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
   useEffect(() => {
     if (fromCity && !fromSearchQuery) {
       setFromSearchQuery(fromCity);
+    } else if (!fromCity) {
+      // Если fromCity стал пустым, очищаем маркеры и поле поиска
+      if (fromMarkerRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(fromMarkerRef.current);
+        fromMarkerRef.current = null;
+      }
+      if (routeLineRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(routeLineRef.current);
+        routeLineRef.current = null;
+      }
+      setFromSearchQuery("");
+      setFromSuggestions([]);
+      setShowFromSuggestions(false);
     }
   }, [fromCity]);
 
   useEffect(() => {
     if (toCity && !toSearchQuery) {
       setToSearchQuery(toCity);
+    } else if (!toCity) {
+      // Если toCity стал пустым, очищаем маркеры и поле поиска
+      if (toMarkerRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(toMarkerRef.current);
+        toMarkerRef.current = null;
+      }
+      if (routeLineRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(routeLineRef.current);
+        routeLineRef.current = null;
+      }
+      setToSearchQuery("");
+      setToSuggestions([]);
+      setShowToSuggestions(false);
     }
   }, [toCity]);
+
+  // Сбрасываем выбор на первое поле, когда оба адреса пустые
+  useEffect(() => {
+    if (!fromCity && !toCity) {
+      setSelectingFrom(true);
+      selectingFromRef.current = true;
+    }
+  }, [fromCity, toCity]);
+
+  // Отображаем активные заказы на карте
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current || !activeOrders || activeOrders.length === 0) {
+      // Удаляем все маркеры активных заказов, если их нет
+      if (activeOrdersMarkersRef.current.length > 0) {
+        activeOrdersMarkersRef.current.forEach(marker => {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.removeLayer(marker);
+          }
+        });
+        activeOrdersMarkersRef.current = [];
+      }
+      return;
+    }
+
+    // Удаляем старые маркеры
+    activeOrdersMarkersRef.current.forEach(marker => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(marker);
+      }
+    });
+    activeOrdersMarkersRef.current = [];
+
+    // Создаем маркеры только для начального адреса каждого активного заказа
+    activeOrders.forEach((order) => {
+      if (order.from_lat && order.from_lng) {
+        const fromMarker = L.marker([order.from_lat, order.from_lng], {
+          icon: activeOrderIcon
+        })
+          .bindPopup(`<div><strong>${order.from_address || 'Не указано'}</strong></div>`)
+          .addTo(mapInstanceRef.current);
+        
+        // Добавляем обработчик клика для открытия bottom sheet
+        if (onActiveOrderClick) {
+          fromMarker.on('click', () => {
+            onActiveOrderClick(order);
+          });
+        }
+        
+        activeOrdersMarkersRef.current.push(fromMarker);
+      }
+    });
+  }, [mapReady, activeOrders, onActiveOrderClick]);
+
+  // Отображаем заказы в процессе (in_progress) на карте
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current || !inProgressOrders || inProgressOrders.length === 0) {
+      // Удаляем все маркеры заказов в процессе, если их нет
+      if (inProgressOrdersMarkersRef.current.length > 0) {
+        inProgressOrdersMarkersRef.current.forEach(marker => {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.removeLayer(marker);
+          }
+        });
+        inProgressOrdersMarkersRef.current = [];
+      }
+      return;
+    }
+
+    // Удаляем старые маркеры
+    inProgressOrdersMarkersRef.current.forEach(marker => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(marker);
+      }
+    });
+    inProgressOrdersMarkersRef.current = [];
+
+    // Создаем маркеры только для начального адреса каждого заказа в процессе
+    inProgressOrders.forEach((order) => {
+      if (order.from_lat && order.from_lng) {
+        const fromMarker = L.marker([order.from_lat, order.from_lng], {
+          icon: inProgressOrderIcon
+        })
+          .bindPopup(`<div><strong>${order.from_address || 'Не указано'}</strong><br/>Водитель уже нашелся и едет</div>`)
+          .addTo(mapInstanceRef.current);
+        
+        // Добавляем обработчик клика для открытия bottom sheet
+        if (onInProgressOrderClick) {
+          fromMarker.on('click', () => {
+            onInProgressOrderClick(order);
+          });
+        }
+        
+        inProgressOrdersMarkersRef.current.push(fromMarker);
+      }
+    });
+  }, [mapReady, inProgressOrders, onInProgressOrderClick]);
 
   // Отображаем начальные маркеры, если координаты уже заданы (для режима редактирования)
   useEffect(() => {
@@ -266,23 +616,24 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         setFromSearchQuery(newAddress);
         
         // Обновляем маршрут, если есть конечная точка
-        if (toMarkerRef.current) {
-          const toPosition = toMarkerRef.current.getLatLng();
-          const toCoords = [toPosition.lat, toPosition.lng];
-          
-          // Обновляем линию маршрута
-          if (routeLineRef.current) {
-            mapInstanceRef.current.removeLayer(routeLineRef.current);
-          }
-          
-          const routeLine = L.polyline([newCoords, toCoords], {
-            color: "#3b82f6",
-            weight: 4,
-            opacity: 0.7,
-          }).addTo(mapInstanceRef.current);
-          
-          routeLineRef.current = routeLine;
-        }
+        // Линия маршрута отключена
+        // if (toMarkerRef.current) {
+        //   const toPosition = toMarkerRef.current.getLatLng();
+        //   const toCoords = [toPosition.lat, toPosition.lng];
+        //   
+        //   // Обновляем линию маршрута
+        //   if (routeLineRef.current) {
+        //     mapInstanceRef.current.removeLayer(routeLineRef.current);
+        //   }
+        //   
+        //   const routeLine = L.polyline([newCoords, toCoords], {
+        //     color: "#3b82f6",
+        //     weight: 4,
+        //     opacity: 0.7,
+        //   }).addTo(mapInstanceRef.current);
+        //   
+        //   routeLineRef.current = routeLine;
+        // }
         
         // Обновляем состояние через onRouteSelect
         if (onRouteSelect) {
@@ -342,23 +693,24 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         setToSearchQuery(newAddress);
         
         // Обновляем маршрут, если есть начальная точка
-        if (fromMarkerRef.current) {
-          const fromPosition = fromMarkerRef.current.getLatLng();
-          const fromCoords = [fromPosition.lat, fromPosition.lng];
-          
-          // Обновляем линию маршрута
-          if (routeLineRef.current) {
-            mapInstanceRef.current.removeLayer(routeLineRef.current);
-          }
-          
-          const routeLine = L.polyline([fromCoords, newCoords], {
-            color: "#3b82f6",
-            weight: 4,
-            opacity: 0.7,
-          }).addTo(mapInstanceRef.current);
-          
-          routeLineRef.current = routeLine;
-        }
+        // Линия маршрута отключена
+        // if (fromMarkerRef.current) {
+        //   const fromPosition = fromMarkerRef.current.getLatLng();
+        //   const fromCoords = [fromPosition.lat, fromPosition.lng];
+        //   
+        //   // Обновляем линию маршрута
+        //   if (routeLineRef.current) {
+        //     mapInstanceRef.current.removeLayer(routeLineRef.current);
+        //   }
+        //   
+        //   const routeLine = L.polyline([fromCoords, newCoords], {
+        //     color: "#3b82f6",
+        //     weight: 4,
+        //     opacity: 0.7,
+        //   }).addTo(mapInstanceRef.current);
+        //   
+        //   routeLineRef.current = routeLine;
+        // }
         
         // Обновляем состояние через onRouteSelect
         if (onRouteSelect) {
@@ -370,6 +722,7 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
       });
     }
 
+    // Линия маршрута отключена
     // Рисуем линию маршрута, если обе точки заданы
     if (initialFromCoords && initialToCoords && mapInstanceRef.current) {
       const fromLat = initialFromCoords.lat || initialFromCoords[0];
@@ -380,16 +733,17 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
       // Удаляем старую линию, если есть
       if (routeLineRef.current) {
         mapInstanceRef.current.removeLayer(routeLineRef.current);
+        routeLineRef.current = null;
       }
 
-      // Рисуем линию маршрута
-      const routeLine = L.polyline([[fromLat, fromLng], [toLat, toLng]], {
-        color: "#3b82f6",
-        weight: 4,
-        opacity: 0.7,
-      }).addTo(mapInstanceRef.current);
-
-      routeLineRef.current = routeLine;
+      // Линия маршрута отключена
+      // // Рисуем линию маршрута
+      // const routeLine = L.polyline([[fromLat, fromLng], [toLat, toLng]], {
+      //   color: "#3b82f6",
+      //   weight: 4,
+      //   opacity: 0.7,
+      // }).addTo(mapInstanceRef.current);
+      // routeLineRef.current = routeLine;
 
       // Подстраиваем карту под маршрут
       const bounds = L.latLngBounds([[fromLat, fromLng], [toLat, toLng]]);
@@ -471,23 +825,24 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         setFromSearchQuery(newAddress);
         
         // Обновляем маршрут, если есть конечная точка
-        if (toMarkerRef.current) {
-          const toPosition = toMarkerRef.current.getLatLng();
-          const toCoords = [toPosition.lat, toPosition.lng];
-          
-          // Обновляем линию маршрута
-          if (routeLineRef.current) {
-            mapInstanceRef.current.removeLayer(routeLineRef.current);
-          }
-          
-          const routeLine = L.polyline([newCoords, toCoords], {
-            color: "#3b82f6",
-            weight: 4,
-            opacity: 0.7,
-          }).addTo(mapInstanceRef.current);
-          
-          routeLineRef.current = routeLine;
-        }
+        // Линия маршрута отключена
+        // if (toMarkerRef.current) {
+        //   const toPosition = toMarkerRef.current.getLatLng();
+        //   const toCoords = [toPosition.lat, toPosition.lng];
+        //   
+        //   // Обновляем линию маршрута
+        //   if (routeLineRef.current) {
+        //     mapInstanceRef.current.removeLayer(routeLineRef.current);
+        //   }
+        //   
+        //   const routeLine = L.polyline([newCoords, toCoords], {
+        //     color: "#3b82f6",
+        //     weight: 4,
+        //     opacity: 0.7,
+        //   }).addTo(mapInstanceRef.current);
+        //   
+        //   routeLineRef.current = routeLine;
+        // }
         
         // Обновляем состояние через onRouteSelect
         if (onRouteSelect) {
@@ -559,23 +914,24 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         setToSearchQuery(newAddress);
         
         // Обновляем маршрут, если есть начальная точка
-        if (fromMarkerRef.current) {
-          const fromPosition = fromMarkerRef.current.getLatLng();
-          const fromCoords = [fromPosition.lat, fromPosition.lng];
-          
-          // Обновляем линию маршрута
-          if (routeLineRef.current) {
-            mapInstanceRef.current.removeLayer(routeLineRef.current);
-          }
-          
-          const routeLine = L.polyline([fromCoords, newCoords], {
-            color: "#3b82f6",
-            weight: 4,
-            opacity: 0.7,
-          }).addTo(mapInstanceRef.current);
-          
-          routeLineRef.current = routeLine;
-        }
+        // Линия маршрута отключена
+        // if (fromMarkerRef.current) {
+        //   const fromPosition = fromMarkerRef.current.getLatLng();
+        //   const fromCoords = [fromPosition.lat, fromPosition.lng];
+        //   
+        //   // Обновляем линию маршрута
+        //   if (routeLineRef.current) {
+        //     mapInstanceRef.current.removeLayer(routeLineRef.current);
+        //   }
+        //   
+        //   const routeLine = L.polyline([fromCoords, newCoords], {
+        //     color: "#3b82f6",
+        //     weight: 4,
+        //     opacity: 0.7,
+        //   }).addTo(mapInstanceRef.current);
+        //   
+        //   routeLineRef.current = routeLine;
+        // }
         
         // Обновляем состояние через onRouteSelect
         if (onRouteSelect) {
@@ -731,23 +1087,24 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         setFromSearchQuery(newAddress);
         
         // Обновляем маршрут, если есть конечная точка
-        if (toMarkerRef.current) {
-          const toPosition = toMarkerRef.current.getLatLng();
-          const toCoords = [toPosition.lat, toPosition.lng];
-          
-          // Обновляем линию маршрута
-          if (routeLineRef.current) {
-            mapInstanceRef.current.removeLayer(routeLineRef.current);
-          }
-          
-          const routeLine = L.polyline([newCoords, toCoords], {
-            color: "#3b82f6",
-            weight: 4,
-            opacity: 0.7,
-          }).addTo(mapInstanceRef.current);
-          
-          routeLineRef.current = routeLine;
-        }
+        // Линия маршрута отключена
+        // if (toMarkerRef.current) {
+        //   const toPosition = toMarkerRef.current.getLatLng();
+        //   const toCoords = [toPosition.lat, toPosition.lng];
+        //   
+        //   // Обновляем линию маршрута
+        //   if (routeLineRef.current) {
+        //     mapInstanceRef.current.removeLayer(routeLineRef.current);
+        //   }
+        //   
+        //   const routeLine = L.polyline([newCoords, toCoords], {
+        //     color: "#3b82f6",
+        //     weight: 4,
+        //     opacity: 0.7,
+        //   }).addTo(mapInstanceRef.current);
+        //   
+        //   routeLineRef.current = routeLine;
+        // }
         
         // Обновляем состояние через onRouteSelect
         if (onRouteSelect) {
@@ -827,23 +1184,24 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
         setToSearchQuery(newAddress);
         
         // Обновляем маршрут, если есть начальная точка
-        if (fromMarkerRef.current) {
-          const fromPosition = fromMarkerRef.current.getLatLng();
-          const fromCoords = [fromPosition.lat, fromPosition.lng];
-          
-          // Обновляем линию маршрута
-          if (routeLineRef.current) {
-            mapInstanceRef.current.removeLayer(routeLineRef.current);
-          }
-          
-          const routeLine = L.polyline([fromCoords, newCoords], {
-            color: "#3b82f6",
-            weight: 4,
-            opacity: 0.7,
-          }).addTo(mapInstanceRef.current);
-          
-          routeLineRef.current = routeLine;
-        }
+        // Линия маршрута отключена
+        // if (fromMarkerRef.current) {
+        //   const fromPosition = fromMarkerRef.current.getLatLng();
+        //   const fromCoords = [fromPosition.lat, fromPosition.lng];
+        //   
+        //   // Обновляем линию маршрута
+        //   if (routeLineRef.current) {
+        //     mapInstanceRef.current.removeLayer(routeLineRef.current);
+        //   }
+        //   
+        //   const routeLine = L.polyline([fromCoords, newCoords], {
+        //     color: "#3b82f6",
+        //     weight: 4,
+        //     opacity: 0.7,
+        //   }).addTo(mapInstanceRef.current);
+        //   
+        //   routeLineRef.current = routeLine;
+        // }
         
         // Обновляем состояние через onRouteSelect
         if (onRouteSelect) {
@@ -887,14 +1245,14 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
       const toCoords = await geocodeAddress(toCity);
 
       if (fromCoords && toCoords) {
-        // Рисуем прямую линию между точками
-        const routeLine = L.polyline([fromCoords, toCoords], {
-          color: "#3b82f6",
-          weight: 4,
-          opacity: 0.7,
-        }).addTo(mapInstanceRef.current);
-
-        routeLineRef.current = routeLine;
+        // Линия маршрута отключена
+        // // Рисуем прямую линию между точками
+        // const routeLine = L.polyline([fromCoords, toCoords], {
+        //   color: "#3b82f6",
+        //   weight: 4,
+        //   opacity: 0.7,
+        // }).addTo(mapInstanceRef.current);
+        // routeLineRef.current = routeLine;
 
         // Подстраиваем карту под маршрут
         const bounds = L.latLngBounds([fromCoords, toCoords]);
@@ -1047,7 +1405,9 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   clearFrom();
                   setFromSearchQuery("");
                 }}
@@ -1118,7 +1478,9 @@ function RouteSelectorMap({ onRouteSelect, fromCity, toCity, isOpen = true, init
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
                   clearTo();
                   setToSearchQuery("");
                 }}
