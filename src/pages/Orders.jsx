@@ -35,7 +35,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState.jsx";
 import { useActiveTab } from "@/layout/MainLayout";
-import { usePostData, useGetData } from "@/api/api";
+import { usePostData, useGetData, deleteData } from "@/api/api";
 
 function Orders({ showCreateOrder = true }) {
   const { t } = useI18n();
@@ -496,17 +496,49 @@ function Orders({ showCreateOrder = true }) {
   };
 
   // Обработчик удаления заказа
-  const handleDeleteOrder = (order) => {
-    setOrderToDelete(order);
-    setDeleteConfirmOpen(true);
+  const handleDeleteOrder = async (order) => {
+    if (!order?.id) return;
+    
+    try {
+      await deleteData(`/trips/${order.id}`);
+      toast.success(t("orders.deleteSuccess") || "Заказ удален");
+      
+      // Обновляем данные
+      queryClient.invalidateQueries({ queryKey: ["data", "/trips/my"] });
+      queryClient.invalidateQueries({ queryKey: ["data"] });
+      
+      // Обновляем список заказов
+      if (myOrdersRefetch) {
+        myOrdersRefetch();
+      }
+    } catch (error) {
+      console.error("Ошибка при удалении заказа:", error);
+      toast.error(t("orders.deleteError") || "Ошибка при удалении заказа");
+    }
   };
 
   // Подтверждение удаления
   const confirmDeleteOrder = async () => {
-    // API /passenger-requests удален
-    toast.error("API удален");
-        setDeleteConfirmOpen(false);
-        setOrderToDelete(null);
+    if (!orderToDelete?.id) return;
+    
+    try {
+      await deleteData(`/trips/${orderToDelete.id}`);
+      toast.success(t("orders.deleteSuccess") || "Заказ удален");
+      setDeleteConfirmOpen(false);
+      setOrderToDelete(null);
+      
+      // Обновляем данные
+      queryClient.invalidateQueries({ queryKey: ["data", "/trips/my"] });
+      queryClient.invalidateQueries({ queryKey: ["data"] });
+      
+      // Обновляем список заказов
+      if (myOrdersRefetch) {
+        myOrdersRefetch();
+      }
+    } catch (error) {
+      console.error("Ошибка при удалении заказа:", error);
+      toast.error(t("orders.deleteError") || "Ошибка при удалении заказа");
+    }
   };
 
   // Обработчик завершения заказа
@@ -655,7 +687,7 @@ function Orders({ showCreateOrder = true }) {
                   <OrdersMap 
                     orders={ordersToDisplay} 
                     isLoading={isLoadingOrders} 
-                    mapHeight={showCreateOrder ? "h-[calc(100vh-264px)] sm:h-[70vh]" : "h-[calc(100vh-200px)] sm:h-[60vh]"}
+                    mapHeight={showCreateOrder ? "h-[calc(100vh-264px)] sm:h-[70vh]" : "h-[calc(100vh-230px)] sm:h-[38vh]"}
               showRoute={showPassengerContent}
                     fromCoords={showCreateOrder ? fromCoords : null}
                     onFromLocationChange={showCreateOrder ? ((coords, address) => {
