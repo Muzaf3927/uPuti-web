@@ -40,7 +40,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useKeyboardInsets } from "@/hooks/useKeyboardInsets.jsx";
 
-function MyTripsCard({ trip }) {
+function MyTripsCard({ trip, hideActions = false }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { keyboardInset, viewportHeight } = useKeyboardInsets();
@@ -393,7 +393,7 @@ function MyTripsCard({ trip }) {
           </div>
         )}
       </CardContent>
-      {isExpanded && (
+      {isExpanded && !hideActions && (
       <CardFooter className="w-full pt-0" onClick={(e) => e.stopPropagation()}>
         {/* В развернутом виде добавим строку с номером авто */}
         <div className="w-full hidden sm:block">
@@ -481,6 +481,7 @@ function MyTripsCard({ trip }) {
       )}
 
       {/* Edit Dialog */}
+      {!hideActions && (
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent
           className="w-[95vw] sm:max-w-[760px] p-4 sm:p-6 overflow-hidden overscroll-contain touch-pan-y rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm max-h-[calc(100svh-2rem)]"
@@ -678,8 +679,10 @@ function MyTripsCard({ trip }) {
           </form>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Requests Dialog */}
+      {!hideActions && (
       <Dialog open={requestsOpen} onOpenChange={setRequestsOpen}>
         <DialogContent className="max-w-sm sm:max-w-md mx-2 sm:mx-4 overflow-hidden rounded-2xl">
           <DialogHeader className="pb-2 relative">
@@ -775,8 +778,10 @@ function MyTripsCard({ trip }) {
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Bookings Dialog */}
+      {!hideActions && (
       <Dialog open={bookingsOpen} onOpenChange={setBookingsOpen}>
         <DialogContent className="max-w-sm sm:max-w-md mx-2 sm:mx-4 overflow-hidden rounded-2xl">
           <DialogHeader className="pb-2 relative">
@@ -868,8 +873,10 @@ function MyTripsCard({ trip }) {
           </div>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Delete Confirmation Dialog */}
+      {!hideActions && (
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-sm sm:max-w-md mx-2 sm:mx-4 overflow-hidden rounded-2xl">
           <DialogHeader>
@@ -899,6 +906,7 @@ function MyTripsCard({ trip }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      )}
 
       {/* Временно закомментирован диалог для оценки пассажиров */}
       {/* <Dialog open={ratePassengersOpen} onOpenChange={setRatePassengersOpen}>

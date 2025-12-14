@@ -12,6 +12,7 @@ import {
   DownloadAndroid,
   Orders,
   TripsOrders,
+  CreateIntercityTrip,
 } from "./pages";
 import MainLayout from "./layout/MainLayout";
 import {
@@ -68,6 +69,11 @@ function App() {
         {
           path: "/intercity",
           element: <TripsOrders type="intercity" />,
+          errorElement: <ErrorElement />,
+        },
+        {
+          path: "/intercity/create",
+          element: <CreateIntercityTrip />,
           errorElement: <ErrorElement />,
         },
         {

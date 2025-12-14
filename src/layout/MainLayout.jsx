@@ -352,13 +352,14 @@ function MainLayout() {
                         {getRoleLabel(userData?.role)}
                       </span>
                     </div>
-                    <button
+                    {/* Кнопка смены роли временно закомментирована */}
+                    {/* <button
                       onClick={() => setIsRoleDialogOpen(true)}
                       className="text-xs text-primary hover:underline flex items-center gap-1"
                       disabled={updateRoleMutation.isPending}
                     >
                       {t("profilePage.changeRole")}
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </div>
@@ -398,8 +399,8 @@ function MainLayout() {
 
       {/* Onboarding disabled */}
 
-      {/* Role Change Dialog */}
-      {isRoleDialogOpen && (
+      {/* Role Change Dialog - временно закомментирован */}
+      {/* {isRoleDialogOpen && (
         <div className="fixed inset-0 z-[99999]">
           <div
             className="absolute inset-0 bg-black/40"
@@ -423,7 +424,6 @@ function MainLayout() {
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3 mb-3">
-                {/* Пассажир */}
                 <button
                   onClick={() => handleRoleChange("passenger")}
                   disabled={updateRoleMutation.isPending || userData?.role === "passenger"}
@@ -444,8 +444,6 @@ function MainLayout() {
                     {t("nav.passengerTab")}
                   </span>
                 </button>
-
-                {/* Водитель */}
                 <button
                   onClick={() => handleRoleChange("driver")}
                   disabled={updateRoleMutation.isPending || userData?.role === "driver"}
@@ -475,7 +473,7 @@ function MainLayout() {
             </div>
           </div>
         </div>
-      )}
+      )} */}
 
       {/* Support Modal */}
       {supportOpen && (
