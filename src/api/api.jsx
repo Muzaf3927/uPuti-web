@@ -165,7 +165,11 @@ export const deleteData = async (url) => {
 
 // Example usage with TanStack Query
 export const useGetData = (url) => {
-  return useQuery({ queryKey: ["data", url], queryFn: () => getData(url) });
+  return useQuery({ 
+    queryKey: ["data", url], 
+    queryFn: () => getData(url),
+    enabled: !!url, // Запрос выполняется только если url не null/undefined/пустая строка
+  });
 };
 
 export const usePostData = (url) => {

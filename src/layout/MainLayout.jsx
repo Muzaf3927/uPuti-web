@@ -284,7 +284,7 @@ function MainLayout() {
       )}
       {/* Right Panel Profile */}
       {profileOpen && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-[9999]">
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setProfileOpen(false)}
@@ -400,7 +400,7 @@ function MainLayout() {
 
       {/* Role Change Dialog */}
       {isRoleDialogOpen && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-[99999]">
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setIsRoleDialogOpen(false)}
@@ -479,7 +479,7 @@ function MainLayout() {
 
       {/* Support Modal */}
       {supportOpen && (
-        <div className="fixed inset-0 z-50">
+        <div className="fixed inset-0 z-[99999]">
           <div
             className="absolute inset-0 bg-black/40"
             onClick={() => setSupportOpen(false)}

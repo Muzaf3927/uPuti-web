@@ -66,6 +66,9 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
   // Получаем данные водителя из принятого booking/offer
   const driver = acceptedBooking?.user || acceptedBooking?.driver || null;
   
+  // Для водителей: получаем информацию о пассажире из order.user (когда это заказ водителя в процессе)
+  const passenger = isDriver && order.booking_id && order.status === "in_progress" ? order.user : null;
+  
   // Форматируем телефон водителя
   const driverPhone = useMemo(() => {
     if (!driver?.phone) return null;
@@ -73,6 +76,20 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
     if (raw.startsWith("+")) return raw;
     return raw.startsWith("998") ? `+${raw}` : `+998${raw}`;
   }, [driver?.phone]);
+  
+  // Форматируем телефон пассажира
+  const passengerPhone = useMemo(() => {
+    if (!passenger?.phone) return null;
+    const raw = String(passenger.phone);
+    if (raw.startsWith("+")) return raw;
+    return raw.startsWith("998") ? `+${raw}` : `+998${raw}`;
+  }, [passenger?.phone]);
+  
+  // Проверяем, является ли это заказом водителя в процессе
+  const isDriverInProgressOrder = isDriver && order.booking_id && order.status === "in_progress";
+  
+  // Проверяем, является ли это заказом из таба "Все заказы" для водителя (активный заказ, который еще не забронирован)
+  const isDriverActiveOrder = isDriver && !order.booking_id && (order.status === "active" || !order.status);
 
   const handleCall = (phoneNumber) => {
     if (phoneNumber) {
@@ -161,7 +178,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
       />
       
       {/* Bottom Sheet - занимает половину экрана на мобильных */}
-      <div className={`bg-white rounded-t-3xl shadow-2xl border-t-2 border-gray-200 ${!isMyOrder ? 'h-[55vh] max-h-[55vh]' : order.status === 'active' ? 'h-auto max-h-[45vh]' : 'h-[50vh] max-h-[50vh]'} flex flex-col`}>
+      <div className={`bg-white rounded-t-3xl shadow-2xl border-t-2 border-gray-200 ${isDriverInProgressOrder || isDriverActiveOrder ? 'h-auto max-h-[50vh]' : !isMyOrder ? 'h-[55vh] max-h-[55vh]' : order.status === 'active' ? 'h-auto max-h-[45vh]' : 'h-[50vh] max-h-[50vh]'} flex flex-col`}>
         {/* Handle bar */}
         <div className="flex justify-center pt-2 pb-1">
           <div className="w-12 h-1 bg-gray-300 rounded-full" />
@@ -177,9 +194,27 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
         </button>
 
         {/* Content */}
-        <div className={`px-2.5 pt-0.5 ${!isMyOrder ? 'pb-0' : order.status === 'in_progress' ? 'pb-0' : 'pb-0'} ${!isMyOrder ? '' : order.status === 'in_progress' ? '' : 'overflow-y-auto flex-1'}`}>
+        <div className={`px-2.5 ${isDriverInProgressOrder || isDriverActiveOrder ? 'pt-0.5 pb-0.5' : 'pt-0.5'} ${isDriverInProgressOrder || isDriverActiveOrder ? 'pb-0' : !isMyOrder ? 'pb-0' : order.status === 'in_progress' ? 'pb-0' : 'pb-0'} ${isDriverInProgressOrder || isDriverActiveOrder ? 'overflow-y-auto' : !isMyOrder ? '' : order.status === 'in_progress' ? '' : 'overflow-y-auto flex-1'}`}>
+          {/* Если это заказ водителя в процессе - показываем надпись "Пассажир ждет вас" в самом верху */}
+          {isDriverInProgressOrder && (
+            <div className="text-center mb-1.5 pt-0.5">
+              <div className="text-sm font-semibold text-blue-600">
+                Пассажир ждет вас
+              </div>
+            </div>
+          )}
+          
+          {/* Если это активный заказ из таба "Все заказы" для водителя - показываем надпись "Ищут машину..." */}
+          {isDriverActiveOrder && (
+            <div className="text-center mb-1.5 pt-0.5">
+              <div className="text-sm font-semibold text-gray-700">
+                Ищут машину...
+              </div>
+            </div>
+          )}
+          
           {/* Если это мой заказ со статусом active - показываем надпись "Ищется машина" в самом верху */}
-          {isMyOrder && order.status === "active" && (
+          {isMyOrder && order.status === "active" && !isDriverInProgressOrder && (
             <div className="text-center mb-1.5 pt-1">
               <div className="text-base text-gray-900">
                 Ищется машина
@@ -188,7 +223,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
           )}
           
           {/* Если это мой заказ со статусом in_progress - показываем надпись "Машина найдена" в самом верху */}
-          {isMyOrder && order.status === "in_progress" && (
+          {isMyOrder && order.status === "in_progress" && !isDriverInProgressOrder && (
             <div className="text-center mb-1.5 pt-1">
               <div className="text-base text-gray-900">
                 Машина найдена
@@ -197,7 +232,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
           )}
           
           {/* Маршрут - минималистичный компактный дизайн */}
-          <div className={`flex flex-col gap-0.5 ${!isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-1'}`}>
+          <div className={`flex flex-col gap-0.5 ${isDriverInProgressOrder || isDriverActiveOrder ? 'mb-1' : !isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-1'}`}>
             {isDriver ? (
               <button
                 onClick={() => openNavigation(fromAddress, fromLat, fromLng, true)}
@@ -246,7 +281,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
           </div>
 
           {/* Детали заказа - компактная сетка */}
-          <div className={`grid grid-cols-2 gap-1 ${!isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-1'}`}>
+          <div className={`grid grid-cols-2 gap-1 ${isDriverInProgressOrder || isDriverActiveOrder ? 'mb-1' : !isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-1'}`}>
             {/* Дата */}
             {order.date && (
               <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gray-50/30">
@@ -271,7 +306,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
           </div>
 
           {/* Количество мест и сумма - компактная сетка */}
-          <div className={`grid grid-cols-2 gap-1 ${!isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-1'}`}>
+          <div className={`grid grid-cols-2 gap-1 ${isDriverInProgressOrder || isDriverActiveOrder ? 'mb-1' : !isMyOrder ? 'mb-1.5' : order.status === 'in_progress' ? 'mb-1' : 'mb-1'}`}>
             {/* Количество пассажиров */}
             {order.seats && (
               <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-green-50/30">
@@ -297,7 +332,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
 
           {/* Комментарий */}
           {order.comment && (
-            <div className={`${!isMyOrder ? 'mb-0' : order.status === 'in_progress' ? 'mb-0' : 'mb-1'} px-1.5 py-0.5 rounded-md bg-gray-50/30`}>
+            <div className={`${isDriverInProgressOrder || isDriverActiveOrder ? 'mb-1' : !isMyOrder ? 'mb-0' : order.status === 'in_progress' ? 'mb-0' : 'mb-1'} px-1.5 py-0.5 rounded-md bg-gray-50/30`}>
               <div className="flex items-start gap-1">
                 <MessageSquare className="text-gray-600 flex-shrink-0 mt-0.5" size={11} />
                 <div className="flex-1 min-w-0">
@@ -308,8 +343,44 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
             </div>
           )}
 
+          {/* Если это заказ водителя в процессе - показываем информацию о пассажире */}
+          {isDriverInProgressOrder && passenger && (
+            <div className="mb-1.5 border-2 border-blue-200 rounded-xl p-2 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 shadow-sm">
+              {/* Информация о пассажире */}
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold text-gray-500 mb-0.5">Пассажир</div>
+                  <div className="text-sm font-bold text-gray-900 truncate mb-0.5">
+                    {passenger.name || "Пассажир"}
+                  </div>
+                  {passenger.rating && (
+                    <div className="flex items-center gap-1">
+                      <Star className="text-yellow-500" size={12} fill="currentColor" />
+                      <span className="text-xs font-semibold text-gray-700">
+                        {passenger.rating}
+                        {passenger.rating_count && (
+                          <span className="text-gray-500 font-normal"> ({passenger.rating_count})</span>
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {passengerPhone && (
+                  <button
+                    onClick={() => handleCall(passengerPhone)}
+                    className="flex-shrink-0 px-2.5 py-1.5 rounded-full bg-green-500 hover:bg-green-600 text-white transition-colors flex items-center gap-1 text-xs font-semibold shadow-sm"
+                    aria-label="Позвонить пассажиру"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Позвонить</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Если это мой заказ со статусом in_progress - показываем данные водителя */}
-          {isMyOrder && order.status === "in_progress" && acceptedBooking && driver && (
+          {isMyOrder && order.status === "in_progress" && !isDriverInProgressOrder && acceptedBooking && driver && (
             <div className="mb-0 border-2 border-blue-200 rounded-xl p-3 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 shadow-sm">
               {/* Информация о водителе */}
               <div className="flex items-center justify-between gap-3 mb-3">
@@ -411,8 +482,45 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
           </div>
         )}
 
-        {/* Кнопки действий - для моих заказов (in_progress) */}
-        {isMyOrder && order.status === "in_progress" && (
+        {/* Кнопки действий - для водителя в процессе (завершить заказ) */}
+        {isDriverInProgressOrder && (
+          <div className="px-3 pb-1.5 pt-1 border-t border-gray-100 flex-shrink-0">
+            {onComplete && (
+              <Button
+                type="button"
+                onClick={() => {
+                  onComplete(order);
+                  onClose();
+                }}
+                className="w-full h-9 rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm"
+              >
+                <CircleCheck className="w-4 h-4" />
+                Завершить заказ
+              </Button>
+            )}
+          </div>
+        )}
+        
+        {/* Кнопки действий - для водителя в табе "Все заказы" (забронировать заказ) */}
+        {isDriverActiveOrder && (
+          <div className="px-3 pb-1.5 pt-1 border-t border-gray-100 flex-shrink-0">
+            {onSubmit && (
+              <Button
+                type="button"
+                onClick={() => {
+                  onSubmit();
+                }}
+                className="w-full h-9 rounded-xl bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm"
+              >
+                <CircleCheck className="w-4 h-4" />
+                Забронировать заказ
+              </Button>
+            )}
+          </div>
+        )}
+        
+        {/* Кнопки действий - для моих заказов (in_progress) - пассажир */}
+        {isMyOrder && order.status === "in_progress" && !isDriverInProgressOrder && (
           <div className="px-3 pb-2 pt-1 border-t border-gray-100">
             {onDelete && (
               <Button
@@ -430,24 +538,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
           </div>
         )}
         
-        {/* Кнопки действий - только для чужих заказов */}
-        {!isMyOrder && (
-          <div className="px-2.5 pb-1 pt-1.5 border-t border-gray-200 flex gap-2 flex-shrink-0 bg-white sticky bottom-0">
-            <Button
-              type="button"
-              onClick={hasUserOffer ? onCancel : onSubmit}
-              className={`flex-1 h-9 rounded-xl text-xs ${
-                hasUserOffer
-                  ? "bg-red-500 hover:bg-red-600 text-white"
-                  : "bg-primary text-primary-foreground"
-              }`}
-            >
-              {hasUserOffer
-                ? t("orders.bottomSheet.cancelRequest")
-                : t("orders.bottomSheet.sendRequest")}
-            </Button>
-          </div>
-        )}
+        {/* Кнопки действий - только для чужих заказов (удалено по запросу) */}
       </div>
     </div>
   );

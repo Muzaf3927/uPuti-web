@@ -54,8 +54,11 @@ function Trips() {
   // Будет использовано позже
   // const [telegramModalOpen, setTelegramModalOpen] = useState(false);
   
-  // Получаем данные пользователя для проверки telegram_chat_id
-  // const { data: userData, refetch: refetchUser } = useGetData("/user");
+  // Получаем данные пользователя для проверки роли
+  const { data: userData, refetch: refetchUser } = useGetData("/user");
+  
+  // Определяем роль пользователя из API
+  const userRole = userData?.role || "passenger";
   
   const [selectedTime, setSelectedTime] = useState("12:00");
   const [formErrors, setFormErrors] = useState({});
@@ -281,6 +284,18 @@ function Trips() {
         toast.success(t("trips.form.successMessage"));
         setDialog(false);
         
+        // Сбрасываем форму
+        setCostInput("");
+        setSelectedTime("12:00");
+        setFormErrors({});
+        e.target.reset();
+        
+        // Обновляем списки поездок
+        if (userRole === "driver") {
+          myTripsRefetch();
+        }
+        refetch();
+        
         // Отслеживание события создания поездки в Яндекс.Метрике
         if (typeof window !== "undefined" && window.ym) {
           window.ym(105604771, "reachGoal", "create_trip", {
@@ -315,9 +330,9 @@ function Trips() {
   //   return;
   // }
 
-  // Показываем только нужный контент в зависимости от activeTab
-  const showPassengerContent = activeTab === "passenger";
-  const showDriverContent = activeTab === "driver";
+  // Показываем только нужный контент в зависимости от реальной роли пользователя из API
+  const showPassengerContent = userRole === "passenger";
+  const showDriverContent = userRole === "driver";
 
   return (
     <div>
@@ -448,6 +463,7 @@ function Trips() {
       )}
       
       {/* Диалог создания поездки (используется только для водителя через кнопку +) */}
+      {showDriverContent && (
       <Dialog className="w-full" open={dialog} onOpenChange={setDialog}>
           <DialogContent
             className="w-[95vw] sm:max-w-[760px] p-4 sm:p-6 overflow-hidden overscroll-contain touch-pan-y rounded-2xl ring-1 ring-blue-200/60 shadow-[0_10px_28px_rgba(59,130,246,0.18)] bg-card/90 backdrop-blur-sm max-h-[calc(100svh-2rem)]"
@@ -632,6 +648,7 @@ function Trips() {
             </form>
           </DialogContent>
         </Dialog>
+      )}
       
       <Card className="px-0 rounded-3xl shadow-lg border">
         <CardContent className="px-0 rounded-3xl bg-card/90 backdrop-blur-sm">

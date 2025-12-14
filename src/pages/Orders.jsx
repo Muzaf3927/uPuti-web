@@ -37,12 +37,17 @@ import EmptyState from "@/components/EmptyState.jsx";
 import { useActiveTab } from "@/layout/MainLayout";
 import { usePostData, useGetData, deleteData } from "@/api/api";
 
-function Orders({ showCreateOrder = true }) {
+function Orders({ showCreateOrder = true, showAllOrders = false }) {
   const { t } = useI18n();
   const { keyboardInset } = useKeyboardInsets();
   const location = useLocation();
   const queryClient = useQueryClient();
   const { activeTab: activeRoleTab } = useActiveTab();
+  
+  // Получаем данные пользователя для определения роли
+  const { data: userData } = useGetData("/user");
+  const userRole = userData?.role || "passenger";
+  const isDriver = userRole === "driver";
   const [dialog, setDialog] = useState(false);
   const [currentStep, setCurrentStep] = useState(1); // 1 - карта, 2 - форма
   const [editingOrder, setEditingOrder] = useState(null); // Заказ для редактирования
@@ -156,6 +161,7 @@ function Orders({ showCreateOrder = true }) {
 
     try {
       // Подготовка данных для отправки
+      const amount = amountInput ? parseInt(amountInput.replace(/\s/g, ""), 10) : null;
       const orderData = {
         from_lat: fromCoords.lat,
         from_lng: fromCoords.lng,
@@ -167,6 +173,7 @@ function Orders({ showCreateOrder = true }) {
         time: selectedTime,
         seats: passengerCount,
         comment: comment || null,
+        ...(amount && { amount }),
         role: "passenger",
       };
 
@@ -188,6 +195,7 @@ function Orders({ showCreateOrder = true }) {
       setSelectedTime("12:00");
       setPassengerCount(1);
       setComment("");
+      setAmountInput("");
       
       // Обновляем список заказов
       queryClient.invalidateQueries({ queryKey: ["data"] });
@@ -216,91 +224,103 @@ function Orders({ showCreateOrder = true }) {
     to_lng: null,
   });
 
-  // Данные заказов удалены - API /passenger-requests больше не используется
-  const data = null;
-  const isLoading = false;
-  const error = null;
-  const refetch = () => {};
+  // Для водителей в табе "Все заказы" используем API /trips/active
+  const {
+    data: allActiveTripsData,
+    isLoading: allActiveTripsLoading,
+    error: allActiveTripsError,
+    refetch: allActiveTripsRefetch
+  } = useGetData(isDriver && showAllOrders ? "/trips/active" : null);
 
-  // Получаем активные заказы пользователя для таба "Мои активные заказы"
+  // Получаем активные заказы пользователя для таба "Мои заказы"
+  // Для водителей используем /bookings/my/in-progress, для пассажиров - /trips/my
+  const myOrdersApiUrl = showCreateOrder 
+    ? null 
+    : (isDriver ? "/bookings/my/in-progress" : "/trips/my");
+  
   const {
     data: myTripsData, 
     isLoading: myTripsLoading, 
     error: myTripsError, 
     refetch: myTripsRefetch 
-  } = useGetData("/trips/my");
+  } = useGetData(myOrdersApiUrl);
 
-  // Обрабатываем данные из API /trips/my
-  // Структура может быть: { data: [...] } или просто [...]
+  // Обрабатываем данные из API /trips/active (для водителей - все заказы)
+  const allActiveOrdersRaw = (isDriver && showAllOrders) ? (allActiveTripsData?.data || allActiveTripsData || []) : [];
+  const allActiveOrders = Array.isArray(allActiveOrdersRaw) ? allActiveOrdersRaw : [];
+
+  // Обрабатываем данные из API (мои заказы)
+  // Для водителей: /bookings/my/in-progress возвращает массив бронирований с вложенным trip
+  // Для пассажиров: /trips/my возвращает массив поездок
   const myOrdersRaw = showCreateOrder ? null : (myTripsData?.data || myTripsData || []);
   const myOrders = Array.isArray(myOrdersRaw) ? myOrdersRaw : [];
-  const myOrdersLoading = showCreateOrder ? false : myTripsLoading;
-  const myOrdersError = showCreateOrder ? null : myTripsError;
-  const myOrdersRefetch = showCreateOrder ? () => {} : myTripsRefetch;
-
-  // Автоматическое обновление данных при переходе на страницу
-  useEffect(() => {
-    // API удален, обновление не требуется
-  }, [location.pathname]);
-
-  // Для таба "Мои активные заказы" используем данные из API
-  // Убеждаемся, что myOrders - это массив
-  const myOrdersList = showCreateOrder ? [] : (Array.isArray(myOrders) ? myOrders : []);
-
-  // Мутация создания заказа удалена
-  const orderPostMutation = { mutateAsync: async () => ({}) };
-
-  // Все заказы - пустой массив
-  const allOrdersFromBackend = [];
-
-  // Фильтрованные заказы - пустой массив
-  const filteredOrders = [];
-
-  const showSearchEmptyState = false;
+  
+  // Для водителей: преобразуем бронирования в формат, понятный для OrdersMap
+  // Извлекаем trip из каждого booking и добавляем информацию о booking
+  const processedMyOrders = isDriver && !showCreateOrder
+    ? myOrders.map((booking) => {
+        // Если booking содержит trip, используем данные trip и добавляем информацию о booking
+        if (booking.trip) {
+          return {
+            ...booking.trip, // Основная информация о поездке (from_lat, from_lng, from_address, to_lat, to_lng, to_address, date, time, status и т.д.)
+            id: booking.trip.id, // ID поездки (для совместимости с OrdersMap)
+            booking_id: booking.id, // ID бронирования
+            booking_seats: booking.seats, // Количество мест в бронировании
+            booking_offered_price: booking.offered_price, // Предложенная цена
+            booking_comment: booking.comment, // Комментарий к бронированию
+            booking_status: booking.status, // Статус бронирования (in_progress)
+            // Информация о пассажире уже есть в booking.trip.user
+            // driver_offers может отсутствовать, так как это уже принятое бронирование
+            driver_offers: booking.trip.driver_offers || [], // Офферы водителей (если есть)
+          };
+        }
+        return booking;
+      })
+    : myOrders;
+  
+  // Для таба "Мои заказы" используем обработанные данные
+  const myOrdersList = showCreateOrder ? [] : (Array.isArray(processedMyOrders) ? processedMyOrders : []);
 
   // Определяем, какие заказы показывать
-  // Если showCreateOrder === false, показываем только мои активные заказы
-  // Иначе показываем все заказы (для создания нового заказа)
-  const activeMyOrders = myOrdersList.filter((item) => item.status === "active" || item.status === "in_progress");
-  const showPassengerContent = activeRoleTab === "passenger";
-  const showDriverContent = activeRoleTab === "driver";
+  // Для водителей из /bookings/my/in-progress не нужно фильтровать по статусу, так как API уже возвращает in-progress
+  // Для пассажиров фильтруем по статусу active или in_progress
+  const activeMyOrders = isDriver 
+    ? myOrdersList // Для водителей берем все данные из /bookings/my/in-progress (уже обработанные)
+    : myOrdersList.filter((item) => item.status === "active" || item.status === "in_progress");
+  const showPassengerContent = userRole === "passenger";
+  const showDriverContent = userRole === "driver";
   
-  // Для таба "Мои активные заказы" показываем только мои активные заказы
-  // Для таба "Создать заказ" показываем все заказы (для пассажира - мои, для водителя - все)
-  const ordersToDisplay = showCreateOrder 
-    ? (showPassengerContent ? activeMyOrders : filteredOrders)
-    : activeMyOrders;
-  const isLoadingOrders = showCreateOrder 
-    ? (showPassengerContent ? myOrdersLoading : isLoading)
-    : myOrdersLoading;
+  // Для водителей:
+  // - Таб "Все заказы" (showAllOrders === true): показываем все активные заказы из /trips/active
+  // - Таб "Мои заказы" (showAllOrders === false): показываем мои заказы в процессе из /bookings/my/in-progress
+  // Для пассажиров:
+  // - Таб "Создать заказ" (showCreateOrder === true): показываем мои активные заказы
+  // - Таб "Мои заказы" (showCreateOrder === false): показываем мои активные заказы из /trips/my
+  const ordersToDisplay = isDriver 
+    ? (showAllOrders ? allActiveOrders : activeMyOrders)
+    : (showCreateOrder ? activeMyOrders : activeMyOrders);
+    
+  const isLoadingOrders = isDriver
+    ? (showAllOrders ? (allActiveTripsLoading || false) : (myTripsLoading || false))
+    : (showCreateOrder ? (myTripsLoading || false) : (myTripsLoading || false));
+    
+  const ordersRefetch = isDriver
+    ? (showAllOrders ? (allActiveTripsRefetch || (() => {})) : (myTripsRefetch || (() => {})))
+    : (showCreateOrder ? (() => {}) : (myTripsRefetch || (() => {})));
 
-  // Логирование для отладки
+  // Логирование для отладки (опционально, можно закомментировать в продакшене)
   useEffect(() => {
-    if (data) {
-      console.log("=== ALL ORDERS DEBUG ===");
-      console.log("Raw data from backend:", data);
-      console.log("All orders array:", allOrdersFromBackend);
-      console.log("Filtered active orders:", filteredOrders);
-    }
-  }, [data]);
-
-  // Логирование для отладки моих заказов
-  useEffect(() => {
-      console.log("=== MY ORDERS DEBUG ===");
+    console.log("=== ORDERS DEBUG ===");
+    console.log("isDriver:", isDriver);
     console.log("showCreateOrder:", showCreateOrder);
+    console.log("showAllOrders:", showAllOrders);
+    console.log("allActiveTripsData:", allActiveTripsData);
     console.log("myTripsData:", myTripsData);
-    console.log("myOrders:", myOrders);
-    console.log("myOrdersList:", myOrdersList);
+    console.log("allActiveOrders:", allActiveOrders);
     console.log("activeMyOrders:", activeMyOrders);
     console.log("ordersToDisplay:", ordersToDisplay);
     console.log("isLoadingOrders:", isLoadingOrders);
-  }, [showCreateOrder, myTripsData, myOrders, myOrdersList, activeMyOrders, ordersToDisplay, isLoadingOrders]);
-  
-  useEffect(() => {
-    console.log("=== ORDERS TO DISPLAY ===");
-    console.log("Orders to display on map:", ordersToDisplay);
-    console.log("Count:", ordersToDisplay?.length || 0);
-  }, [ordersToDisplay]);
+  }, [isDriver, showCreateOrder, showAllOrders, allActiveTripsData, myTripsData, allActiveOrders, activeMyOrders, ordersToDisplay, isLoadingOrders]);
 
   // Функция валидации формы
   const validateForm = (formData) => {
@@ -633,11 +653,9 @@ function Orders({ showCreateOrder = true }) {
 
   return (
     <div className="w-full">
-      <Card className="px-0 pt-0 rounded-3xl shadow-lg border w-full">
-        <CardContent className="px-0 pt-0 rounded-3xl bg-card/90 backdrop-blur-sm w-full">
-          {/* Поля "Откуда" и "Куда" над картой - только для таба "Создать заказ" */}
-          {showCreateOrder && (
-          <div className="px-4 pt-2 pb-3 flex flex-col gap-2">
+          {/* Поля "Откуда" и "Куда" над картой - только для таба "Создать заказ" (пассажиры) */}
+          {showCreateOrder && !isDriver && (
+          <div className="px-2 pt-2 pb-3 flex flex-col gap-2">
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary z-10" />
               <Input
@@ -682,23 +700,23 @@ function Orders({ showCreateOrder = true }) {
       </div>
       )}
             
-          {/* Карта - для пассажира показываем мои заказы, для водителя - все заказы */}
-                <div className="px-4 mb-4 w-full relative">
+          {/* Карта - для пассажира показываем мои заказы, для водителя - все заказы или мои заказы в зависимости от таба */}
+                <div className="px-2 mb-4 w-full relative">
                   <OrdersMap 
                     orders={ordersToDisplay} 
                     isLoading={isLoadingOrders} 
-                    mapHeight={showCreateOrder ? "h-[calc(100vh-264px)] sm:h-[70vh]" : "h-[calc(100vh-230px)] sm:h-[38vh]"}
-              showRoute={showPassengerContent}
-                    fromCoords={showCreateOrder ? fromCoords : null}
-                    onFromLocationChange={showCreateOrder ? ((coords, address) => {
+                    mapHeight={showCreateOrder && !isDriver ? "h-[calc(100vh-264px)] sm:h-[70vh]" : "h-[calc(100vh-230px)] sm:h-[38vh]"}
+              showRoute={showPassengerContent && showCreateOrder}
+                    fromCoords={showCreateOrder && !isDriver ? fromCoords : null}
+                    onFromLocationChange={showCreateOrder && !isDriver ? ((coords, address) => {
                       setRouteData(prev => ({
                         ...prev,
                         fromCoords: coords,
                         from: address || prev.from
                       }));
                     }) : null}
-                    toCoords={showCreateOrder ? toCoords : null}
-                    onToLocationChange={showCreateOrder ? ((coords, address) => {
+                    toCoords={showCreateOrder && !isDriver ? toCoords : null}
+                    onToLocationChange={showCreateOrder && !isDriver ? ((coords, address) => {
                       setRouteData(prev => ({
                         ...prev,
                         toCoords: coords,
@@ -707,21 +725,20 @@ function Orders({ showCreateOrder = true }) {
                     }) : null}
                     onRefresh={() => {
                       if (showCreateOrder) {
-                        refetch();
                         if (showPassengerContent) {
-                          myOrdersRefetch();
+                          myTripsRefetch();
                         }
                       } else {
-                        // Для таба "Мои заказы" обновляем только мои заказы
-                        myOrdersRefetch();
+                        // Обновляем заказы в зависимости от таба
+                        ordersRefetch();
                       }
                     }}
                     onEditOrder={handleEditOrder}
                     onDeleteOrder={handleDeleteOrder}
               onCompleteOrder={handleCompleteOrder}
                   />
-                  {/* Кнопка "Дальше" - только для таба "Создать заказ" */}
-                  {showCreateOrder && (
+                  {/* Кнопка "Дальше" - только для таба "Создать заказ" (пассажиры) */}
+                  {showCreateOrder && !isDriver && (
                   <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[1000] pointer-events-auto">
                     <Button
                       onClick={handleNextClick}
@@ -737,8 +754,6 @@ function Orders({ showCreateOrder = true }) {
                             </div>
                             )}
                           </div>
-        </CardContent>
-      </Card>
 
       {/* Диалог подтверждения удаления заказа */}
       <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
@@ -787,8 +802,8 @@ function Orders({ showCreateOrder = true }) {
           </DialogHeader>
           
           <div className="space-y-4 pt-2">
-            {/* Дата, время и количество пассажиров */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {/* Дата, время, количество пассажиров и сумма */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               {/* Выбор даты */}
               <div className="flex flex-col gap-1">
                 <Label htmlFor="order-date" className="text-xs font-medium">Дата *</Label>
@@ -839,6 +854,27 @@ function Orders({ showCreateOrder = true }) {
                   >
                     <Plus className="h-3 w-3" />
                   </button>
+                </div>
+              </div>
+
+              {/* Сумма заказа */}
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="order-amount" className="text-xs font-medium">Сумма (сум) *</Label>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    id="order-amount"
+                    inputMode="numeric"
+                    value={amountInput}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "");
+                      const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+                      setAmountInput(formatted);
+                    }}
+                    placeholder="0"
+                    className="w-full h-8 text-sm bg-white pr-10"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">сум</span>
                 </div>
               </div>
             </div>

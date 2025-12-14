@@ -216,6 +216,21 @@ body,
   }
 
   /* Пульсирующие волны для активных заказов */
+  @keyframes zzzPulse {
+    0%, 100% {
+      opacity: 0.4;
+      transform: scale(1) translateY(0);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.15) translateY(-2px);
+    }
+  }
+
+  .animate-zzz-pulse {
+    animation: zzzPulse 1.5s ease-in-out infinite;
+  }
+
   @keyframes pulse-ring {
     0% {
       transform: translate(-50%, -50%) scale(1);

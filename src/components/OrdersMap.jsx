@@ -5,11 +5,12 @@ import "leaflet/dist/leaflet.css";
 import { Navigation } from "lucide-react";
 import { toast } from "sonner";
 import OrderBottomSheet from "./OrderBottomSheet";
-import DriverOfferDialog from "./DriverOfferDialog";
 import { sessionManager } from "@/lib/sessionManager";
 import { postData } from "@/api/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useI18n } from "@/app/i18n.jsx";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 // Исправляем иконки маркеров для Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -44,7 +45,8 @@ function OrdersMap({
   const selectedMarkerRef = useRef(null);
   const selectedOrderRef = useRef(null);
   const lastSelectedOrderIdRef = useRef(null); // Сохраняем ID последнего выбранного заказа
-  const [offerDialogOpen, setOfferDialogOpen] = useState(false);
+  const [bookingConfirmOpen, setBookingConfirmOpen] = useState(false);
+  const [isBooking, setIsBooking] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const queryClient = useQueryClient();
   const routePolylineRef = useRef(null);
@@ -1053,6 +1055,47 @@ function OrdersMap({
                     ">+${pendingOffersCount}</span>
                   </div>
                 ` : ''}
+                ${((order.booking_id && order.status === "in_progress") || (order.user_id === currentUserId && order.status === "in_progress")) ? `
+                  <div style="
+                    position: absolute;
+                    top: -35px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    display: flex;
+                    align-items: center;
+                    gap: 1px;
+                    z-index: 1000;
+                    pointer-events: none;
+                  ">
+                    <span style="
+                      font-size: 22px;
+                      font-weight: 900;
+                      color: #3b82f6;
+                      text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
+                      animation: zzzPulse 1.5s ease-in-out infinite;
+                      animation-delay: 0s;
+                      line-height: 1;
+                    ">z</span>
+                    <span style="
+                      font-size: 22px;
+                      font-weight: 900;
+                      color: #3b82f6;
+                      text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
+                      animation: zzzPulse 1.5s ease-in-out infinite;
+                      animation-delay: 0.3s;
+                      line-height: 1;
+                    ">z</span>
+                    <span style="
+                      font-size: 22px;
+                      font-weight: 900;
+                      color: #3b82f6;
+                      text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
+                      animation: zzzPulse 1.5s ease-in-out infinite;
+                      animation-delay: 0.6s;
+                      line-height: 1;
+                    ">z</span>
+                  </div>
+                ` : ''}
               </div>
             `,
             iconSize: [40, 60],
@@ -1140,6 +1183,47 @@ function OrdersMap({
                       font-weight: bold;
                       line-height: 1;
                     ">+${pendingOffersCount}</span>
+                  </div>
+                ` : ''}
+                ${((order.booking_id && order.status === "in_progress") || (order.user_id === currentUserId && order.status === "in_progress")) ? `
+                  <div style="
+                    position: absolute;
+                    top: -40px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    display: flex;
+                    align-items: center;
+                    gap: 1px;
+                    z-index: 1000;
+                    pointer-events: none;
+                  ">
+                    <span style="
+                      font-size: 24px;
+                      font-weight: 900;
+                      color: #3b82f6;
+                      text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
+                      animation: zzzPulse 1.5s ease-in-out infinite;
+                      animation-delay: 0s;
+                      line-height: 1;
+                    ">z</span>
+                    <span style="
+                      font-size: 24px;
+                      font-weight: 900;
+                      color: #3b82f6;
+                      text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
+                      animation: zzzPulse 1.5s ease-in-out infinite;
+                      animation-delay: 0.3s;
+                      line-height: 1;
+                    ">z</span>
+                    <span style="
+                      font-size: 24px;
+                      font-weight: 900;
+                      color: #3b82f6;
+                      text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
+                      animation: zzzPulse 1.5s ease-in-out infinite;
+                      animation-delay: 0.6s;
+                      line-height: 1;
+                    ">z</span>
                   </div>
                 ` : ''}
               </div>
@@ -1235,6 +1319,18 @@ function OrdersMap({
 
   return (
     <div className={`w-full ${mapHeight || "h-[calc(100vh-300px)]"} ${mapHeight ? "" : "min-h-[400px]"} rounded-2xl overflow-hidden border shadow-lg relative`}>
+      <style>{`
+        @keyframes zzzPulse {
+          0%, 100% {
+            opacity: 0.4;
+            transform: scale(1) translateY(0);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.2) translateY(-3px);
+          }
+        }
+      `}</style>
       <div ref={mapRef} className="w-full h-full" />
       {/* Кнопка определения местоположения */}
       <button
@@ -1265,8 +1361,8 @@ function OrdersMap({
             setSelectedOrder(null);
           }}
           onSubmit={() => {
-            // Открываем диалог отправки оффера
-            setOfferDialogOpen(true);
+            // Открываем диалог подтверждения бронирования
+            setBookingConfirmOpen(true);
           }}
           onCancel={handleCancelOffer}
           onAcceptOffer={handleAcceptOffer}
@@ -1278,23 +1374,77 @@ function OrdersMap({
         />
       )}
 
-      {/* Диалог отправки оффера водителя */}
+      {/* Диалог подтверждения бронирования заказа */}
       {selectedOrder && (
-        <DriverOfferDialog
-          order={selectedOrder}
-          open={offerDialogOpen}
-          onOpenChange={setOfferDialogOpen}
-          onSuccess={() => {
-            // При успешной отправке оффера обновляем данные
-            queryClient.invalidateQueries({ queryKey: ["data"] });
-            if (onRefresh) {
-              onRefresh();
-            }
-            setOfferDialogOpen(false);
-            // Закрываем bottom sheet после отправки оффера
-            setSelectedOrder(null);
-          }}
-        />
+        <Dialog open={bookingConfirmOpen} onOpenChange={setBookingConfirmOpen}>
+          <DialogContent className="max-w-xs sm:max-w-sm mx-2 sm:mx-4 overflow-hidden rounded-2xl p-4" showCloseButton={false}>
+            <DialogHeader className="pb-1">
+              <DialogTitle className="text-center text-base font-semibold">
+                Забронировать заказ?
+              </DialogTitle>
+              <DialogDescription className="text-center pt-0.5 text-sm">
+                Вы действительно хотите забронировать этот заказ?
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-2 pt-2 pb-0">
+              <Button 
+                variant="outline" 
+                onClick={() => setBookingConfirmOpen(false)}
+                className="flex-1 rounded-xl h-9 text-xs"
+                disabled={isBooking}
+              >
+                Отмена
+              </Button>
+              <Button 
+                onClick={async () => {
+                  if (!selectedOrder?.id || isBooking) return;
+                  
+                  setIsBooking(true);
+                  try {
+                    const bookingData = {
+                      trip_id: selectedOrder.id,
+                      seats: selectedOrder.seats || 1,
+                      offered_price: selectedOrder.amount || selectedOrder.price || null,
+                      comment: null,
+                    };
+                    
+                    const res = await postData("/bookings", bookingData);
+                    
+                    if (res.message === "Booking created!" || res.booking?.id || res.id) {
+                      toast.success("Заказ успешно забронирован!");
+                      setBookingConfirmOpen(false);
+                      setSelectedOrder(null);
+                      
+                      // Обновляем данные
+                      queryClient.invalidateQueries({ queryKey: ["data"] });
+                      if (onRefresh) {
+                        onRefresh();
+                      }
+                    }
+                  } catch (err) {
+                    console.error("Error creating booking:", err);
+                    let errorMessage = "Ошибка при бронировании заказа";
+                    if (err.response?.data?.message) {
+                      errorMessage = err.response.data.message;
+                    } else if (err.response?.data?.errors) {
+                      const errorMessages = Object.values(err.response.data.errors).flat();
+                      errorMessage = errorMessages.join(", ");
+                    } else if (err.message) {
+                      errorMessage = err.message;
+                    }
+                    toast.error(errorMessage);
+                  } finally {
+                    setIsBooking(false);
+                  }
+                }}
+                disabled={isBooking}
+                className="flex-1 rounded-xl bg-green-500 hover:bg-green-600 text-white h-9 text-xs"
+              >
+                {isBooking ? "Бронирование..." : "Да"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

@@ -54,7 +54,7 @@ function RoleSelection({ onRoleSelected }) {
 
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={(e) => {
         // Предотвращаем закрытие при клике на backdrop
         e.preventDefault();
@@ -64,7 +64,7 @@ function RoleSelection({ onRoleSelected }) {
     >
       {/* Backdrop не закрывает модальное окно - выбор роли обязателен */}
       <div 
-        className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-4 border border-gray-200 relative z-[10000]"
+        className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-4 border border-gray-200 relative z-[100000]"
         onClick={(e) => {
           // Предотвращаем всплытие клика
           e.stopPropagation();
