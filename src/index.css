@@ -203,8 +203,40 @@ body,
   body {
     @apply bg-background text-foreground;
   }
+  /* Кастомное позиционирование контрола масштабирования Leaflet */
+  .leaflet-control-zoom {
+    margin: 0 !important;
+    margin-bottom: 20rem !important;
+    margin-right: 1rem !important;
+  }
+
   /* Prevent iOS zoom on inputs inside dialogs */
   input, select, textarea {
     font-size: 16px;
+  }
+
+  /* Пульсирующие волны для активных заказов */
+  @keyframes pulse-ring {
+    0% {
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: translate(-50%, -50%) scale(1.5);
+      opacity: 0.6;
+    }
+    100% {
+      transform: translate(-50%, -50%) scale(2.2);
+      opacity: 0;
+    }
+  }
+
+  .pulse-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 3px solid;
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    pointer-events: none;
+    z-index: 1;
   }
 }

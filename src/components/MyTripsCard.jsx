@@ -294,7 +294,7 @@ function MyTripsCard({ trip }) {
   //   }
   // };
 
-  // Используем данные пассажиров из trip объекта (приходят с /my-trips API)
+  // Используем данные пассажиров из trip объекта (приходят с /trips/my API)
   const pendingRequests = trip.pending_passengers || [];
   const confirmedBookings = trip.confirmed_passengers || [];
   
@@ -305,7 +305,7 @@ function MyTripsCard({ trip }) {
     try {
       await postData(`/bookings/${bookingId}`, { status: "confirmed" });
       toast.success(t("myTripsCard.acceptedToast"));
-      queryClient.invalidateQueries({ queryKey: ["data", "/my-trips"] });
+      queryClient.invalidateQueries({ queryKey: ["data", "/trips/my"] });
       queryClient.invalidateQueries({ queryKey: ["bookings", "unread-count"] });
     } catch (e) {
       toast.error(t("requests.acceptError"));
@@ -315,7 +315,7 @@ function MyTripsCard({ trip }) {
     try {
       await postData(`/bookings/${bookingId}`, { status: "declined" });
       toast.success(t("myTripsCard.declinedToast"));
-      queryClient.invalidateQueries({ queryKey: ["data", "/my-trips"] });
+      queryClient.invalidateQueries({ queryKey: ["data", "/trips/my"] });
       queryClient.invalidateQueries({ queryKey: ["bookings", "unread-count"] });
     } catch (e) {
       toast.error(t("requests.declineError"));

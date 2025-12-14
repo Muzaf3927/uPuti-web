@@ -1,11 +1,11 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 
 // components
 import OrdersMap from "@/components/OrdersMap";
 import RouteSelectorMap from "@/components/RouteSelectorMap";
 
 // icons
-import { Loader2, X, Phone, AlertTriangle } from "lucide-react";
+import { Loader2, X, Phone, AlertTriangle, MapPin, Route, Plus, Minus } from "lucide-react";
 
 // router
 import { useLocation } from "react-router-dom";
@@ -26,6 +26,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import TimePicker from "@/components/ui/time-picker";
+import DatePicker from "@/components/ui/date-picker";
 
 // API /passenger-requests удален - импорты больше не нужны
 import { useKeyboardInsets } from "@/hooks/useKeyboardInsets.jsx";
@@ -34,8 +35,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState.jsx";
 import { useActiveTab } from "@/layout/MainLayout";
+import { usePostData, useGetData } from "@/api/api";
 
-function Orders() {
+function Orders({ showCreateOrder = true }) {
   const { t } = useI18n();
   const { keyboardInset } = useKeyboardInsets();
   const location = useLocation();
@@ -46,8 +48,16 @@ function Orders() {
   const [editingOrder, setEditingOrder] = useState(null); // Заказ для редактирования
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
+  const [orderDetailsDialogOpen, setOrderDetailsDialogOpen] = useState(false); // Модальное окно для деталей заказа
   
   const [selectedTime, setSelectedTime] = useState("12:00");
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // По умолчанию сегодняшняя дата
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  });
+  const [passengerCount, setPassengerCount] = useState(1); // По умолчанию 1 пассажир
+  const [comment, setComment] = useState(""); // Комментарий до 30 символов
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [amountInput, setAmountInput] = useState("");
@@ -59,12 +69,142 @@ function Orders() {
     toCoords: null, // { lat, lng }
   });
   
+  // Ref для поля "куда" для автоматического перехода фокуса
+  const toInputRef = useRef(null);
+  
   // Для обратной совместимости
   const selectedFrom = routeData.from;
   const selectedTo = routeData.to;
   const fromCoords = routeData.fromCoords;
   const toCoords = routeData.toCoords;
+
+  // Хук для создания поездки
+  const createTripMutation = usePostData("/trips");
   
+  // Автоматический переход фокуса на поле "куда" после заполнения "откуда"
+  useEffect(() => {
+    if (fromCoords && fromCoords.lat && fromCoords.lng && selectedFrom && !selectedTo && toInputRef.current) {
+      // Небольшая задержка для плавности
+      setTimeout(() => {
+        toInputRef.current?.focus();
+      }, 100);
+    }
+  }, [fromCoords, selectedFrom, selectedTo]);
+
+  // Функция сброса поля "откуда"
+  const handleResetFrom = () => {
+    setRouteData(prev => ({
+      ...prev,
+    from: "",
+      fromCoords: null,
+    }));
+  };
+
+  // Функция сброса поля "куда"
+  const handleResetTo = () => {
+    setRouteData(prev => ({
+      ...prev,
+    to: "",
+      toCoords: null,
+    }));
+  };
+
+  // Функция сброса обоих полей
+  const handleResetRoute = () => {
+    setRouteData({
+    from: "",
+    to: "",
+      fromCoords: null,
+      toCoords: null,
+    });
+  };
+
+  // Функция для обрезки текста до 4 слов
+  const truncateAddress = (text) => {
+    if (!text) return "";
+    const words = text.split(" ");
+    if (words.length <= 4) return text;
+    return words.slice(0, 4).join(" ") + "...";
+  };
+
+  // Функции для управления количеством пассажиров
+  const handleDecreasePassengers = () => {
+    setPassengerCount((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleIncreasePassengers = () => {
+    setPassengerCount((prev) => Math.min(4, prev + 1));
+  };
+
+  // Функция обработки создания заказа
+  const handleCreateOrder = async () => {
+    // Валидация данных
+    if (!selectedFrom || !selectedTo) {
+      toast.error("Пожалуйста, выберите адреса отправления и назначения");
+      return;
+    }
+
+    if (!fromCoords || !toCoords) {
+      toast.error("Пожалуйста, выберите точки на карте");
+      return;
+    }
+
+    if (!selectedDate || !selectedTime) {
+      toast.error("Пожалуйста, выберите дату и время");
+      return;
+    }
+
+    try {
+      // Подготовка данных для отправки
+      const orderData = {
+        from_lat: fromCoords.lat,
+        from_lng: fromCoords.lng,
+        from_address: selectedFrom,
+        to_lat: toCoords.lat,
+        to_lng: toCoords.lng,
+        to_address: selectedTo,
+        date: selectedDate,
+        time: selectedTime,
+        seats: passengerCount,
+        comment: comment || null,
+        role: "passenger",
+      };
+
+      // Отправка запроса
+      await createTripMutation.mutateAsync(orderData);
+      
+      // Успешное создание заказа
+      toast.success("Заказ успешно создан!");
+      
+      // Закрываем модальное окно
+      setOrderDetailsDialogOpen(false);
+      
+      // Очищаем форму
+      handleResetRoute();
+      setSelectedDate(() => {
+        const today = new Date();
+        return today.toISOString().split('T')[0];
+      });
+      setSelectedTime("12:00");
+      setPassengerCount(1);
+      setComment("");
+      
+      // Обновляем список заказов
+      queryClient.invalidateQueries({ queryKey: ["data"] });
+    } catch (error) {
+      console.error("Ошибка при создании заказа:", error);
+      const errorMessage = error?.response?.data?.message || "Не удалось создать заказ. Попробуйте еще раз.";
+      toast.error(errorMessage);
+    }
+  };
+
+  // Обработчик открытия модального окна заказа
+  const handleNextClick = () => {
+    if (selectedFrom && selectedTo && fromCoords && toCoords) {
+      setOrderDetailsDialogOpen(true);
+    }
+  };
+
   const [activeFilters, setActiveFilters] = useState({
     from: "",
     to: "",
@@ -82,17 +222,30 @@ function Orders() {
   const error = null;
   const refetch = () => {};
 
-  const myOrders = null;
-  const myOrdersLoading = false;
-  const myOrdersError = null;
-  const myOrdersRefetch = () => {};
+  // Получаем активные заказы пользователя для таба "Мои активные заказы"
+  const {
+    data: myTripsData, 
+    isLoading: myTripsLoading, 
+    error: myTripsError, 
+    refetch: myTripsRefetch 
+  } = useGetData("/trips/my");
+
+  // Обрабатываем данные из API /trips/my
+  // Структура может быть: { data: [...] } или просто [...]
+  const myOrdersRaw = showCreateOrder ? null : (myTripsData?.data || myTripsData || []);
+  const myOrders = Array.isArray(myOrdersRaw) ? myOrdersRaw : [];
+  const myOrdersLoading = showCreateOrder ? false : myTripsLoading;
+  const myOrdersError = showCreateOrder ? null : myTripsError;
+  const myOrdersRefetch = showCreateOrder ? () => {} : myTripsRefetch;
 
   // Автоматическое обновление данных при переходе на страницу
   useEffect(() => {
     // API удален, обновление не требуется
   }, [location.pathname]);
 
-  const myOrdersList = [];
+  // Для таба "Мои активные заказы" используем данные из API
+  // Убеждаемся, что myOrders - это массив
+  const myOrdersList = showCreateOrder ? [] : (Array.isArray(myOrders) ? myOrders : []);
 
   // Мутация создания заказа удалена
   const orderPostMutation = { mutateAsync: async () => ({}) };
@@ -105,15 +258,21 @@ function Orders() {
 
   const showSearchEmptyState = false;
 
-  // Определяем, какие заказы показывать в зависимости от роли
-  // На карте для пассажиров показываем активные (active) и в процессе (in_progress) заказы
+  // Определяем, какие заказы показывать
+  // Если showCreateOrder === false, показываем только мои активные заказы
+  // Иначе показываем все заказы (для создания нового заказа)
   const activeMyOrders = myOrdersList.filter((item) => item.status === "active" || item.status === "in_progress");
   const showPassengerContent = activeRoleTab === "passenger";
   const showDriverContent = activeRoleTab === "driver";
   
-  // Для пассажира показываем только мои заказы (active и in_progress), для водителя - все заказы
-  const ordersToDisplay = showPassengerContent ? activeMyOrders : filteredOrders;
-  const isLoadingOrders = showPassengerContent ? myOrdersLoading : isLoading;
+  // Для таба "Мои активные заказы" показываем только мои активные заказы
+  // Для таба "Создать заказ" показываем все заказы (для пассажира - мои, для водителя - все)
+  const ordersToDisplay = showCreateOrder 
+    ? (showPassengerContent ? activeMyOrders : filteredOrders)
+    : activeMyOrders;
+  const isLoadingOrders = showCreateOrder 
+    ? (showPassengerContent ? myOrdersLoading : isLoading)
+    : myOrdersLoading;
 
   // Логирование для отладки
   useEffect(() => {
@@ -127,14 +286,15 @@ function Orders() {
 
   // Логирование для отладки моих заказов
   useEffect(() => {
-    if (myOrders) {
       console.log("=== MY ORDERS DEBUG ===");
-      console.log("Raw myOrders data:", myOrders);
-      console.log("My orders list:", myOrdersList);
-      console.log("Active my orders (active + in_progress):", activeMyOrders);
-      console.log("Orders with in_progress status:", myOrdersList.filter((item) => item.status === "in_progress"));
-    }
-  }, [myOrders, myOrdersList, activeMyOrders]);
+    console.log("showCreateOrder:", showCreateOrder);
+    console.log("myTripsData:", myTripsData);
+    console.log("myOrders:", myOrders);
+    console.log("myOrdersList:", myOrdersList);
+    console.log("activeMyOrders:", activeMyOrders);
+    console.log("ordersToDisplay:", ordersToDisplay);
+    console.log("isLoadingOrders:", isLoadingOrders);
+  }, [showCreateOrder, myTripsData, myOrders, myOrdersList, activeMyOrders, ordersToDisplay, isLoadingOrders]);
   
   useEffect(() => {
     console.log("=== ORDERS TO DISPLAY ===");
@@ -316,7 +476,7 @@ function Orders() {
 
     // API /passenger-requests удален
     toast.error("API удален");
-    setIsSubmitting(false);
+      setIsSubmitting(false);
   };
 
   // Обработчик редактирования заказа
@@ -345,8 +505,8 @@ function Orders() {
   const confirmDeleteOrder = async () => {
     // API /passenger-requests удален
     toast.error("API удален");
-    setDeleteConfirmOpen(false);
-    setOrderToDelete(null);
+        setDeleteConfirmOpen(false);
+        setOrderToDelete(null);
   };
 
   // Обработчик завершения заказа
@@ -436,24 +596,91 @@ function Orders() {
 
     // API /passenger-requests удален
     toast.error("API удален");
-    setIsSubmitting(false);
+      setIsSubmitting(false);
   };
 
   return (
-    <div>
-      <Card className="px-0 rounded-3xl shadow-lg border">
-        <CardContent className="px-0 rounded-3xl bg-card/90 backdrop-blur-sm">
+    <div className="w-full">
+      <Card className="px-0 pt-0 rounded-3xl shadow-lg border w-full">
+        <CardContent className="px-0 pt-0 rounded-3xl bg-card/90 backdrop-blur-sm w-full">
+          {/* Поля "Откуда" и "Куда" над картой - только для таба "Создать заказ" */}
+          {showCreateOrder && (
+          <div className="px-4 pt-2 pb-3 flex flex-col gap-2">
+            <div className="relative">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary z-10" />
+              <Input
+                type="text"
+                placeholder={t("orders.form.fromPlaceholder") || "Откуда"}
+                value={selectedFrom}
+                onChange={(e) => setRouteData(prev => ({ ...prev, from: e.target.value }))}
+                className={`pl-10 ${selectedFrom ? 'pr-10' : ''} bg-white/90 backdrop-blur-sm border-border rounded-xl h-10 text-sm`}
+              />
+              {selectedFrom && (
+                <button
+                    type="button"
+                  onClick={handleResetFrom}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors z-20"
+                  aria-label="Сбросить поле откуда"
+                >
+                  <X className="h-4 w-4 text-gray-600" />
+                </button>
+              )}
+                </div>
+            <div className="relative">
+              <Route className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary z-10" />
+                      <Input 
+                ref={toInputRef}
+                type="text"
+                placeholder={t("orders.form.toPlaceholder") || "Куда"}
+                value={selectedTo}
+                onChange={(e) => setRouteData(prev => ({ ...prev, to: e.target.value }))}
+                className={`pl-10 ${selectedTo ? 'pr-10' : ''} bg-white/90 backdrop-blur-sm border-border rounded-xl h-10 text-sm`}
+              />
+              {selectedTo && (
+                <button
+                    type="button"
+                  onClick={handleResetTo}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors z-20"
+                  aria-label="Сбросить поле куда"
+                >
+                  <X className="h-4 w-4 text-gray-600" />
+                </button>
+              )}
+                </div>
+      </div>
+      )}
             
           {/* Карта - для пассажира показываем мои заказы, для водителя - все заказы */}
-                <div className="px-4 mb-4">
+                <div className="px-4 mb-4 w-full relative">
                   <OrdersMap 
                     orders={ordersToDisplay} 
                     isLoading={isLoadingOrders} 
-                    mapHeight="h-[50vh]"
+                    mapHeight={showCreateOrder ? "h-[calc(100vh-264px)] sm:h-[70vh]" : "h-[calc(100vh-200px)] sm:h-[60vh]"}
               showRoute={showPassengerContent}
+                    fromCoords={showCreateOrder ? fromCoords : null}
+                    onFromLocationChange={showCreateOrder ? ((coords, address) => {
+                      setRouteData(prev => ({
+                        ...prev,
+                        fromCoords: coords,
+                        from: address || prev.from
+                      }));
+                    }) : null}
+                    toCoords={showCreateOrder ? toCoords : null}
+                    onToLocationChange={showCreateOrder ? ((coords, address) => {
+                      setRouteData(prev => ({
+                        ...prev,
+                        toCoords: coords,
+                        to: address || prev.to
+                      }));
+                    }) : null}
                     onRefresh={() => {
-                      refetch();
-                if (showPassengerContent) {
+                      if (showCreateOrder) {
+                        refetch();
+                        if (showPassengerContent) {
+                          myOrdersRefetch();
+                        }
+                      } else {
+                        // Для таба "Мои заказы" обновляем только мои заказы
                         myOrdersRefetch();
                       }
                     }}
@@ -461,7 +688,23 @@ function Orders() {
                     onDeleteOrder={handleDeleteOrder}
               onCompleteOrder={handleCompleteOrder}
                   />
-                </div>
+                  {/* Кнопка "Дальше" - только для таба "Создать заказ" */}
+                  {showCreateOrder && (
+                  <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[1000] pointer-events-auto">
+                    <Button
+                      onClick={handleNextClick}
+                      disabled={!selectedFrom || !selectedTo || !fromCoords || !toCoords}
+                      className={`rounded-xl h-9 px-4 text-sm font-medium shadow-lg transition-all ${
+                        !selectedFrom || !selectedTo || !fromCoords || !toCoords
+                          ? "bg-white/90 backdrop-blur-md border-2 border-green-400 text-black opacity-60 cursor-not-allowed"
+                          : "bg-gradient-to-tr from-blue-500 to-cyan-400 text-white border-2 border-green-500 hover:brightness-105"
+                      }`}
+                    >
+                      Дальше
+                    </Button>
+                            </div>
+                            )}
+                          </div>
         </CardContent>
       </Card>
 
@@ -495,6 +738,122 @@ function Orders() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Модальное окно для деталей заказа */}
+      <Dialog open={orderDetailsDialogOpen} onOpenChange={setOrderDetailsDialogOpen}>
+        <DialogContent className="max-w-sm sm:max-w-md mx-2 sm:mx-4 overflow-hidden rounded-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Детали заказа</DialogTitle>
+            <DialogDescription className="text-left pt-2 space-y-1">
+              <div>
+                <span className="font-bold text-green-600">Откуда:</span> <span className="font-semibold">{truncateAddress(selectedFrom)}</span>
+              </div>
+              <div>
+                <span className="font-bold text-red-600">Куда:</span> <span className="font-semibold">{truncateAddress(selectedTo)}</span>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 pt-2">
+            {/* Дата, время и количество пассажиров */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {/* Выбор даты */}
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="order-date" className="text-xs font-medium">Дата *</Label>
+                <DatePicker
+                  id="order-date"
+                  value={selectedDate}
+                  onChange={setSelectedDate}
+                  size="sm"
+                  dropdownMaxHeight={192}
+                  minDate={new Date().toISOString().split('T')[0]}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Выбор времени */}
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="order-time" className="text-xs font-medium">Время *</Label>
+                <TimePicker
+                  id="order-time"
+                  value={selectedTime}
+                  onChange={setSelectedTime}
+                  size="sm"
+                  dropdownMaxHeight={96}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Количество пассажиров */}
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs font-medium">Пассажиры *</Label>
+                <div className="flex items-center gap-1.5 bg-white border rounded-lg h-8 px-2">
+                  <button
+                    type="button"
+                    onClick={handleDecreasePassengers}
+                    disabled={passengerCount <= 1}
+                    className="flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Уменьшить количество"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </button>
+                  <span className="flex-1 text-center text-xs font-medium">{passengerCount}</span>
+                  <button
+                    type="button"
+                    onClick={handleIncreasePassengers}
+                    disabled={passengerCount >= 4}
+                    className="flex items-center justify-center w-5 h-5 rounded-full border border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    aria-label="Увеличить количество"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Комментарий */}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="order-comment" className="text-sm font-medium">
+                Комментарий {comment.length > 0 && <span className="text-muted-foreground">({comment.length}/30)</span>}
+              </Label>
+              <Input
+                type="text"
+                id="order-comment"
+                value={comment}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value.length <= 30) {
+                    setComment(value);
+                  }
+                }}
+                placeholder="Дополнительная информация (необязательно)"
+                maxLength={30}
+                className="w-full h-9 text-sm bg-white"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOrderDetailsDialogOpen(false);
+              }}
+              className="flex-1 rounded-xl"
+            >
+              Отменить
+            </Button>
+            <Button
+              onClick={handleCreateOrder}
+              disabled={createTripMutation.isPending}
+              className="flex-1 rounded-xl"
+            >
+              {createTripMutation.isPending ? "Создание..." : "Заказать"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

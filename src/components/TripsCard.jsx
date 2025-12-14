@@ -27,7 +27,7 @@ import { useI18n } from "@/app/i18n.jsx";
 import { useKeyboardInsets } from "@/hooks/useKeyboardInsets.jsx";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import TelegramConnectModal from "@/components/TelegramConnectModal.jsx";
+// import TelegramConnectModal from "@/components/TelegramConnectModal.jsx";
 import { sessionManager } from "@/lib/sessionManager.js";
 
 function TripsCard({ trip }) {
@@ -42,10 +42,12 @@ function TripsCard({ trip }) {
   const [seats, setSeats] = useState("1");
   const [offeredPrice, setOfferedPrice] = useState("");
   const [comment, setComment] = useState("");
-  const [telegramModalOpen, setTelegramModalOpen] = useState(false);
+  // Закомментировано: проверка telegram_chat_id после логина
+  // Будет использовано позже
+  // const [telegramModalOpen, setTelegramModalOpen] = useState(false);
   
   // Получаем данные пользователя для проверки telegram_chat_id
-  const { data: userData, refetch: refetchUser } = useGetData("/user");
+  // const { data: userData, refetch: refetchUser } = useGetData("/user");
   const shouldStackCities = React.useMemo(() => {
     const fromLength = trip?.from_city?.length ?? 0;
     const toLength = trip?.to_city?.length ?? 0;
@@ -71,22 +73,23 @@ function TripsCard({ trip }) {
     e.stopPropagation();
     setSeats("1");
     setBookingDialogOpen(true);
+    // Закомментировано: проверка telegram_chat_id после логина
     // Сразу отправляем запрос на бэкенд для проверки telegram_chat_id
-    try {
-      const result = await refetchUser();
-      const updatedUser = result?.data || userData || sessionManager.getUserData();
-      // Показываем модальное окно Telegram сразу, если telegram_chat_id отсутствует
-      if (updatedUser && !updatedUser.telegram_chat_id) {
-        setTelegramModalOpen(true);
-      }
-    } catch (error) {
-      console.error("Failed to refetch user data:", error);
-      // В случае ошибки проверяем из кэша
-      const user = userData || sessionManager.getUserData();
-      if (user && !user.telegram_chat_id) {
-        setTelegramModalOpen(true);
-      }
-    }
+    // try {
+    //   const result = await refetchUser();
+    //   const updatedUser = result?.data || userData || sessionManager.getUserData();
+    //   // Показываем модальное окно Telegram сразу, если telegram_chat_id отсутствует
+    //   if (updatedUser && !updatedUser.telegram_chat_id) {
+    //     setTelegramModalOpen(true);
+    //   }
+    // } catch (error) {
+    //   console.error("Failed to refetch user data:", error);
+    //   // В случае ошибки проверяем из кэша
+    //   const user = userData || sessionManager.getUserData();
+    //   if (user && !user.telegram_chat_id) {
+    //     setTelegramModalOpen(true);
+    //   }
+    // }
   };
   const openOfferDialog = async (e) => {
     e.stopPropagation();
@@ -94,22 +97,23 @@ function TripsCard({ trip }) {
     setOfferedPrice("");
     setComment("");
     setOfferDialogOpen(true);
+    // Закомментировано: проверка telegram_chat_id после логина
     // Сразу отправляем запрос на бэкенд для проверки telegram_chat_id
-    try {
-      const result = await refetchUser();
-      const updatedUser = result?.data || userData || sessionManager.getUserData();
-      // Показываем модальное окно Telegram сразу, если telegram_chat_id отсутствует
-      if (updatedUser && !updatedUser.telegram_chat_id) {
-        setTelegramModalOpen(true);
-      }
-    } catch (error) {
-      console.error("Failed to refetch user data:", error);
-      // В случае ошибки проверяем из кэша
-      const user = userData || sessionManager.getUserData();
-      if (user && !user.telegram_chat_id) {
-        setTelegramModalOpen(true);
-      }
-    }
+    // try {
+    //   const result = await refetchUser();
+    //   const updatedUser = result?.data || userData || sessionManager.getUserData();
+    //   // Показываем модальное окно Telegram сразу, если telegram_chat_id отсутствует
+    //   if (updatedUser && !updatedUser.telegram_chat_id) {
+    //     setTelegramModalOpen(true);
+    //   }
+    // } catch (error) {
+    //   console.error("Failed to refetch user data:", error);
+    //   // В случае ошибки проверяем из кэша
+    //   const user = userData || sessionManager.getUserData();
+    //   if (user && !user.telegram_chat_id) {
+    //     setTelegramModalOpen(true);
+    //   }
+    // }
   };
   const handleSubmitBooking = async (e) => {
     e.preventDefault();
@@ -550,7 +554,8 @@ function TripsCard({ trip }) {
           </div>
         </DialogContent>
       </Dialog>
-      <TelegramConnectModal 
+      {/* Закомментировано: проверка telegram_chat_id после логина */}
+      {/* <TelegramConnectModal 
         open={telegramModalOpen} 
         onOpenChange={setTelegramModalOpen}
         onCloseParent={(close) => {
@@ -562,7 +567,7 @@ function TripsCard({ trip }) {
             setOfferDialogOpen(false);
           }
         }}
-      />
+      /> */}
     </>
   );
 }

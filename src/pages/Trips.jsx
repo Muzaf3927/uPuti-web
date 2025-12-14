@@ -36,7 +36,7 @@ import TripsCardSkeleton from "@/components/TripsCardSkeleton";
 import { toast } from "sonner";
 import MyTripsCard from "@/components/MyTripsCard";
 import EmptyState from "@/components/EmptyState.jsx";
-import TelegramConnectModal from "@/components/TelegramConnectModal.jsx";
+// import TelegramConnectModal from "@/components/TelegramConnectModal.jsx";
 import { sessionManager } from "@/lib/sessionManager.js";
 import { useActiveTab } from "@/layout/MainLayout";
 import { Plus } from "lucide-react";
@@ -50,10 +50,12 @@ function Trips() {
   const { activeTab } = useActiveTab();
   const [dialog, setDialog] = useState(false);
   const [searchDialog, setSearchDialog] = useState(false);
-  const [telegramModalOpen, setTelegramModalOpen] = useState(false);
+  // Закомментировано: проверка telegram_chat_id после логина
+  // Будет использовано позже
+  // const [telegramModalOpen, setTelegramModalOpen] = useState(false);
   
   // Получаем данные пользователя для проверки telegram_chat_id
-  const { data: userData, refetch: refetchUser } = useGetData("/user");
+  // const { data: userData, refetch: refetchUser } = useGetData("/user");
   
   const [selectedTime, setSelectedTime] = useState("12:00");
   const [formErrors, setFormErrors] = useState({});
@@ -113,7 +115,7 @@ function Trips() {
     isLoading: myTripsLoading,
     error: myTripsError,
     refetch: myTripsRefetch,
-  } = useGetData(`/my-trips?page=${myPage}&per_page=${MY_PER_PAGE}`);
+  } = useGetData(`/trips/my?page=${myPage}&per_page=${MY_PER_PAGE}`);
 
   // Автоматическое обновление данных при переходе на страницу
   useEffect(() => {
@@ -124,34 +126,35 @@ function Trips() {
   }, [location.pathname, refetch, myTripsRefetch]);
 
 
+  // Закомментировано: проверка telegram_chat_id после логина
   // Показываем модальное окно Telegram при открытии диалога создания поездки
   // Только если у пользователя нет telegram_chat_id
-  useEffect(() => {
-    if (dialog) {
-      // Отслеживание открытия диалога создания поездки в Яндекс.Метрике
-      if (typeof window !== "undefined" && window.ym) {
-        window.ym(105604771, "reachGoal", "open_create_trip_dialog");
-      }
-      
-      // Отправляем один запрос на бэкенд для проверки telegram_chat_id
-      refetchUser().then((result) => {
-        // Проверяем после обновления данных - используем данные из результата или из кэша
-        const updatedUser = result?.data || queryClient.getQueryData(["data", "/user"]) || sessionManager.getUserData();
-        // Показываем модальное окно только если telegram_chat_id отсутствует или пустая строка
-        const hasTelegram = updatedUser?.telegram_chat_id && updatedUser.telegram_chat_id.trim() !== "";
-        if (updatedUser && !hasTelegram) {
-          setTelegramModalOpen(true);
-        }
-      }).catch(() => {
-        // В случае ошибки проверяем из кэша
-        const user = userData || sessionManager.getUserData();
-        const hasTelegram = user?.telegram_chat_id && user.telegram_chat_id.trim() !== "";
-        if (user && !hasTelegram) {
-          setTelegramModalOpen(true);
-        }
-      });
-    }
-  }, [dialog, refetchUser, queryClient]);
+  // useEffect(() => {
+  //   if (dialog) {
+  //     // Отслеживание открытия диалога создания поездки в Яндекс.Метрике
+  //     if (typeof window !== "undefined" && window.ym) {
+  //       window.ym(105604771, "reachGoal", "open_create_trip_dialog");
+  //     }
+  //     
+  //     // Отправляем один запрос на бэкенд для проверки telegram_chat_id
+  //     refetchUser().then((result) => {
+  //       // Проверяем после обновления данных - используем данные из результата или из кэша
+  //       const updatedUser = result?.data || queryClient.getQueryData(["data", "/user"]) || sessionManager.getUserData();
+  //       // Показываем модальное окно только если telegram_chat_id отсутствует или пустая строка
+  //       const hasTelegram = updatedUser?.telegram_chat_id && updatedUser.telegram_chat_id.trim() !== "";
+  //       if (updatedUser && !hasTelegram) {
+  //         setTelegramModalOpen(true);
+  //       }
+  //     }).catch(() => {
+  //       // В случае ошибки проверяем из кэша
+  //       const user = userData || sessionManager.getUserData();
+  //       const hasTelegram = user?.telegram_chat_id && user.telegram_chat_id.trim() !== "";
+  //       if (user && !hasTelegram) {
+  //         setTelegramModalOpen(true);
+  //       }
+  //     });
+  //   }
+  // }, [dialog, refetchUser, queryClient]);
 
   // Отслеживание открытия диалога поиска в Яндекс.Метрике
   useEffect(() => {
@@ -720,11 +723,12 @@ function Trips() {
       </Card>
       {/* Floating refresh button */}
       {/* RefreshFab рендерится глобально из MainLayout через портал */}
-      <TelegramConnectModal 
+      {/* Закомментировано: проверка telegram_chat_id после логина */}
+      {/* <TelegramConnectModal 
         open={telegramModalOpen} 
         onOpenChange={setTelegramModalOpen}
         onCloseParent={setDialog}
-      />
+      /> */}
     </div>
   );
 }

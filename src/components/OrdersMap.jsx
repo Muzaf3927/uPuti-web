@@ -19,7 +19,20 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
 });
 
-function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, onDeleteOrder, onCompleteOrder, showRoute = false }) {
+function OrdersMap({ 
+  orders = [], 
+  isLoading, 
+  onRefresh, 
+  mapHeight, 
+  onEditOrder, 
+  onDeleteOrder, 
+  onCompleteOrder, 
+  showRoute = false,
+  fromCoords = null, // Координаты точки "откуда"
+  onFromLocationChange = null, // Callback для обновления координат "откуда"
+  toCoords = null, // Координаты точки "куда"
+  onToLocationChange = null, // Callback для обновления координат "куда"
+}) {
   const { t } = useI18n();
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -39,6 +52,8 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
   const toMarkerRef = useRef(null);
   const currentRouteOrderIdRef = useRef(null); // Отслеживаем ID заказа, для которого рисуется маршрут
   const routingControlRef = useRef(null); // Референс для Leaflet Routing Machine
+  const fromLocationMarkerRef = useRef(null); // Маркер для точки "откуда"
+  const toLocationMarkerRef = useRef(null); // Маркер для точки "куда"
 
   // Получаем текущего пользователя
   const currentUser = sessionManager.getUserData();
@@ -199,7 +214,7 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
     const map = L.map(mapRef.current, {
       center: [41.3111, 69.2797], // Ташкент
       zoom: 10,
-      zoomControl: true,
+      zoomControl: false, // Отключаем стандартный контрол, создадим свой
     });
 
     // Добавляем тайлы OpenStreetMap
@@ -209,6 +224,12 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
     }).addTo(map);
 
     mapInstanceRef.current = map;
+
+    // Создаем кастомный контрол масштабирования в правом нижнем углу
+    const zoomControl = L.control.zoom({
+      position: 'bottomright'
+    });
+    zoomControl.addTo(map);
 
     // Создаем группу кластеров маркеров (используем простую группу для начала)
     markerClusterGroupRef.current = L.layerGroup().addTo(map);
@@ -221,11 +242,254 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
     };
   }, []);
 
+  // Обработчик клика на карту для установки точки "откуда" или "куда"
+  useEffect(() => {
+    if (!mapInstanceRef.current || (!onFromLocationChange && !onToLocationChange)) return;
+
+    const handleMapClick = async (e) => {
+      const { lat, lng } = e.latlng;
+      const coords = { lat, lng };
+      
+      // Получаем адрес через reverse geocoding
+      const address = await reverseGeocode(lat, lng);
+      
+      // Если точка "откуда" уже заполнена, устанавливаем "куда"
+      if (fromCoords && fromCoords.lat && fromCoords.lng && onToLocationChange) {
+        onToLocationChange(coords, address || "");
+      } else if (onFromLocationChange) {
+        // Иначе устанавливаем "откуда"
+        onFromLocationChange(coords, address || "");
+      }
+    };
+
+    mapInstanceRef.current.on("click", handleMapClick);
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.off("click", handleMapClick);
+      }
+    };
+  }, [onFromLocationChange, onToLocationChange, fromCoords]);
+
   useEffect(() => {
     if (mapInstanceRef.current && markerClusterGroupRef.current) {
       updateMarkers();
     }
   }, [orders]);
+
+  // Обновляем маркер точки "откуда" при изменении координат
+  useEffect(() => {
+    if (!mapInstanceRef.current || !onFromLocationChange) return;
+
+    // Удаляем старый маркер
+    if (fromLocationMarkerRef.current) {
+      mapInstanceRef.current.removeLayer(fromLocationMarkerRef.current);
+      fromLocationMarkerRef.current = null;
+    }
+
+    // Если есть координаты, создаем перемещаемый маркер
+    if (fromCoords && fromCoords.lat && fromCoords.lng) {
+      const coords = [fromCoords.lat, fromCoords.lng];
+      
+      // Создаем иконку для маркера "откуда" с изображением passenger.png
+      const fromIcon = L.divIcon({
+        className: "custom-from-marker",
+        html: `
+          <div style="
+            position: relative;
+            width: 50px;
+            height: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          ">
+            <div style="
+              width: 50px;
+              height: 50px;
+              border-radius: 50%;
+              background-color: #fbbf24;
+              border: 4px solid white;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              overflow: hidden;
+              padding: 4px;
+            ">
+              <img 
+                src="/passenger.png" 
+                alt="Откуда" 
+                style="
+                  width: 100%;
+                  height: 100%;
+                  object-fit: contain;
+                "
+                onerror="this.style.display='none'"
+              />
+            </div>
+            <div style="
+              position: relative;
+              width: 3px;
+              height: 18px;
+              background-color: #000000;
+              margin-top: -2px;
+              box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            ">
+              <div style="
+                position: absolute;
+                bottom: -6px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 0;
+                height: 0;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 7px solid #000000;
+              "></div>
+            </div>
+          </div>
+        `,
+        iconSize: [50, 70],
+        iconAnchor: [25, 70],
+        popupAnchor: [0, -70],
+      });
+
+      // Создаем перемещаемый маркер
+      const marker = L.marker(coords, {
+        icon: fromIcon,
+        draggable: true,
+        zIndexOffset: 1000, // Поверх других маркеров
+      }).addTo(mapInstanceRef.current);
+
+      // Обработчик перемещения маркера
+      marker.on("dragend", async (e) => {
+        const { lat, lng } = e.target.getLatLng();
+        const newCoords = { lat, lng };
+        
+        // Получаем адрес через reverse geocoding
+        const address = await reverseGeocode(lat, lng);
+        
+        // Обновляем координаты и адрес
+        onFromLocationChange(newCoords, address || "");
+      });
+
+      fromLocationMarkerRef.current = marker;
+    }
+
+    return () => {
+      if (fromLocationMarkerRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(fromLocationMarkerRef.current);
+        fromLocationMarkerRef.current = null;
+      }
+    };
+  }, [fromCoords, onFromLocationChange]);
+
+  // Обновляем маркер точки "куда" при изменении координат
+  useEffect(() => {
+    if (!mapInstanceRef.current || !onToLocationChange) return;
+
+    // Удаляем старый маркер
+    if (toLocationMarkerRef.current) {
+      mapInstanceRef.current.removeLayer(toLocationMarkerRef.current);
+      toLocationMarkerRef.current = null;
+    }
+
+    // Если есть координаты, создаем перемещаемый маркер
+    if (toCoords && toCoords.lat && toCoords.lng) {
+      const coords = [toCoords.lat, toCoords.lng];
+      
+      // Создаем иконку для маркера "куда" с изображением toAddress.png
+      const toIcon = L.divIcon({
+        className: "custom-to-marker",
+        html: `
+          <div style="
+            position: relative;
+            width: 50px;
+            height: 70px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+          ">
+            <div style="
+              width: 50px;
+              height: 50px;
+              border-radius: 50%;
+              background-color: #fbbf24;
+              border: 4px solid white;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              overflow: hidden;
+              padding: 4px;
+            ">
+              <img 
+                src="/toAddress.png" 
+                alt="Куда" 
+                style="
+                  width: 100%;
+                  height: 100%;
+                  object-fit: contain;
+                "
+                onerror="this.style.display='none'"
+              />
+            </div>
+            <div style="
+              position: relative;
+              width: 3px;
+              height: 18px;
+              background-color: #000000;
+              margin-top: -2px;
+              box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            ">
+              <div style="
+                position: absolute;
+                bottom: -6px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 0;
+                height: 0;
+                border-left: 5px solid transparent;
+                border-right: 5px solid transparent;
+                border-top: 7px solid #000000;
+              "></div>
+            </div>
+          </div>
+        `,
+        iconSize: [50, 70],
+        iconAnchor: [25, 70],
+        popupAnchor: [0, -70],
+      });
+
+      // Создаем перемещаемый маркер
+      const marker = L.marker(coords, {
+        icon: toIcon,
+        draggable: true,
+        zIndexOffset: 1000, // Поверх других маркеров
+      }).addTo(mapInstanceRef.current);
+
+      // Обработчик перемещения маркера
+      marker.on("dragend", async (e) => {
+        const { lat, lng } = e.target.getLatLng();
+        const newCoords = { lat, lng };
+        
+        // Получаем адрес через reverse geocoding
+        const address = await reverseGeocode(lat, lng);
+        
+        // Обновляем координаты и адрес
+        onToLocationChange(newCoords, address || "");
+      });
+
+      toLocationMarkerRef.current = marker;
+    }
+
+    return () => {
+      if (toLocationMarkerRef.current && mapInstanceRef.current) {
+        mapInstanceRef.current.removeLayer(toLocationMarkerRef.current);
+        toLocationMarkerRef.current = null;
+      }
+    };
+  }, [toCoords, onToLocationChange]);
 
   // Синхронизируем ref с состоянием
   useEffect(() => {
@@ -541,7 +805,7 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
     }
   };
 
-  const locateUser = () => {
+  const locateUser = async () => {
     if (!mapInstanceRef.current) return;
 
     setIsLocating(true);
@@ -553,36 +817,26 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
         const userLocation = [latitude, longitude];
+        const coords = { lat: latitude, lng: longitude };
+
+        // Получаем адрес через reverse geocoding
+        const address = await reverseGeocode(latitude, longitude);
+        
+        // Если точка "откуда" уже заполнена, устанавливаем "куда"
+        if (fromCoords && fromCoords.lat && fromCoords.lng && onToLocationChange) {
+          onToLocationChange(coords, address || "");
+        } else if (onFromLocationChange) {
+          // Иначе устанавливаем "откуда"
+          onFromLocationChange(coords, address || "");
+        }
 
         // Удаляем старый маркер местоположения
         if (userLocationMarkerRef.current) {
           mapInstanceRef.current.removeLayer(userLocationMarkerRef.current);
         }
-
-        // Создаем иконку для маркера текущего местоположения
-        const locationIcon = L.divIcon({
-          className: "custom-location-icon",
-          html: `
-            <div style="
-              width: 20px;
-              height: 20px;
-              border-radius: 50%;
-              background-color: #3b82f6;
-              border: 3px solid white;
-              box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-            "></div>
-          `,
-          iconSize: [20, 20],
-          iconAnchor: [10, 10],
-        });
-
-        // Добавляем маркер текущего местоположения
-        userLocationMarkerRef.current = L.marker(userLocation, { icon: locationIcon })
-          .bindPopup("Ваше местоположение")
-          .addTo(mapInstanceRef.current);
 
         // Перемещаем карту к местоположению пользователя
         mapInstanceRef.current.setView(userLocation, 15, {
@@ -670,36 +924,108 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
           console.log(`OrdersMap: Adding marker for order ${order.id || "unknown"}:`, fromAddress, "→", toAddress, "at", fromCoords);
 
           // Определяем цвет маркера в зависимости от статуса заказа
-          // Синий для active, красный для in_progress
-          const markerColor = order.status === "in_progress" ? "#ef4444" : "#3b82f6";
-          const selectedMarkerColor = order.status === "in_progress" ? "#dc2626" : "#22c55e";
+          // Синий для active, зеленый для in_progress
+          const circleColor = order.status === "active" ? "#3b82f6" : "#22c55e"; // Синий для active, зеленый для in_progress
 
           // Подсчитываем количество pending офферов
           const pendingOffersCount = order.driver_offers && Array.isArray(order.driver_offers)
             ? order.driver_offers.filter(offer => offer.status === "pending").length
             : 0;
 
-          // Создаем стандартную иконку маркера - используем divIcon для лучшего контроля
+          // Создаем иконку маркера в стиле указателя "откуда" (passenger.png)
+          // Для статуса "active" добавляем пульсирующие волны
+          const isActive = order.status === "active";
+          // Размер иконки уменьшен с 50px до 40px
+          const iconSize = 40;
+          const pulseWaves = isActive ? `
+            <div class="pulse-ring" style="
+              position: absolute;
+              top: ${iconSize / 2}px;
+              left: ${iconSize / 2}px;
+              width: ${iconSize}px;
+              height: ${iconSize}px;
+              border-color: ${circleColor};
+              animation-delay: 0s;
+              transform: translate(-50%, -50%);
+            "></div>
+            <div class="pulse-ring" style="
+              position: absolute;
+              top: ${iconSize / 2}px;
+              left: ${iconSize / 2}px;
+              width: ${iconSize}px;
+              height: ${iconSize}px;
+              border-color: ${circleColor};
+              animation-delay: 0.7s;
+              transform: translate(-50%, -50%);
+            "></div>
+            <div class="pulse-ring" style="
+              position: absolute;
+              top: ${iconSize / 2}px;
+              left: ${iconSize / 2}px;
+              width: ${iconSize}px;
+              height: ${iconSize}px;
+              border-color: ${circleColor};
+              animation-delay: 1.4s;
+              transform: translate(-50%, -50%);
+            "></div>
+          ` : '';
+
           const defaultIcon = L.divIcon({
             className: "custom-order-marker",
             html: `
-              <div style="position: relative; width: 30px; height: 30px;">
+              <div style="
+                position: relative;
+                width: ${iconSize}px;
+                height: ${iconSize + 20}px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+              ">
+                ${pulseWaves}
                 <div style="
-                  width: 30px;
-                  height: 30px;
-                  border-radius: 50% 50% 50% 0;
-                  transform: rotate(-45deg);
-                  background-color: ${markerColor};
+                  position: relative;
+                  z-index: 10;
+                  width: ${iconSize}px;
+                  height: ${iconSize}px;
+                  border-radius: 50%;
+                  background-color: ${circleColor};
                   border: 3px solid white;
                   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  overflow: hidden;
+                  padding: 3px;
+                ">
+                  <img 
+                    src="/passenger.png" 
+                    alt="Заказ" 
+                    style="
+                      width: 100%;
+                      height: 100%;
+                      object-fit: contain;
+                    "
+                    onerror="this.style.display='none'"
+                  />
+                </div>
+                <div style="
+                  position: relative;
+                  width: 2.5px;
+                  height: 15px;
+                  background-color: #000000;
+                  margin-top: -2px;
+                  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
                 ">
                   <div style="
-                    width: 100%;
-                    height: 100%;
-                    transform: rotate(45deg);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
+                    position: absolute;
+                    bottom: -5px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 0;
+                    height: 0;
+                    border-left: 4px solid transparent;
+                    border-right: 4px solid transparent;
+                    border-top: 6px solid #000000;
                   "></div>
                 </div>
                 ${pendingOffersCount > 0 ? `
@@ -729,32 +1055,66 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
                 ` : ''}
               </div>
             `,
-            iconSize: [30, 30],
-            iconAnchor: [15, 30],
-            popupAnchor: [0, -30],
+            iconSize: [40, 60],
+            iconAnchor: [20, 60],
+            popupAnchor: [0, -60],
           });
 
-          // Создаем иконку для выбранного маркера (зеленая для active, темно-красная для in_progress)
+          // Создаем иконку для выбранного маркера (увеличенная версия с более ярким цветом)
+          const selectedIconSize = 48;
           const selectedIcon = L.divIcon({
             className: "custom-order-marker selected",
             html: `
-              <div style="position: relative; width: 36px; height: 36px;">
+              <div style="
+                position: relative;
+                width: ${selectedIconSize}px;
+                height: ${selectedIconSize + 20}px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+              ">
                 <div style="
-                  width: 36px;
-                  height: 36px;
-                  border-radius: 50% 50% 50% 0;
-                  transform: rotate(-45deg);
-                  background-color: ${selectedMarkerColor};
-                  border: 3px solid white;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                  width: ${selectedIconSize}px;
+                  height: ${selectedIconSize}px;
+                  border-radius: 50%;
+                  background-color: ${circleColor};
+                  border: 4px solid white;
+                  box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  overflow: hidden;
+                  padding: 4px;
+                ">
+                  <img 
+                    src="/passenger.png" 
+                    alt="Заказ" 
+                    style="
+                      width: 100%;
+                      height: 100%;
+                      object-fit: contain;
+                    "
+                    onerror="this.style.display='none'"
+                  />
+                </div>
+                <div style="
+                  position: relative;
+                  width: 3px;
+                  height: 18px;
+                  background-color: #000000;
+                  margin-top: -2px;
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                 ">
                   <div style="
-                    width: 100%;
-                    height: 100%;
-                    transform: rotate(45deg);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
+                    position: absolute;
+                    bottom: -6px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 0;
+                    height: 0;
+                    border-left: 5px solid transparent;
+                    border-right: 5px solid transparent;
+                    border-top: 7px solid #000000;
                   "></div>
                 </div>
                 ${pendingOffersCount > 0 ? `
@@ -784,9 +1144,9 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
                 ` : ''}
               </div>
             `,
-            iconSize: [36, 36],
-            iconAnchor: [18, 36],
-            popupAnchor: [0, -36],
+            iconSize: [48, 68],
+            iconAnchor: [24, 68],
+            popupAnchor: [0, -68],
           });
 
           // Создаем маркер БЕЗ popup
@@ -880,7 +1240,7 @@ function OrdersMap({ orders = [], isLoading, onRefresh, mapHeight, onEditOrder, 
       <button
         onClick={locateUser}
         disabled={isLocating}
-        className="absolute bottom-4 right-4 z-[1000] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-full p-3 shadow-lg border border-gray-200 flex items-center justify-center transition-colors"
+        className="absolute bottom-[7.5rem] right-4 z-[1000] bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-full p-3 shadow-lg border border-gray-200 flex items-center justify-center transition-colors"
         aria-label="Определить моё местоположение"
         title="Определить моё местоположение"
       >

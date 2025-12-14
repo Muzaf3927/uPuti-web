@@ -80,14 +80,18 @@ function MainLayout() {
     refetch: userRefetch,
   } = useGetData("/user");
 
-  // Проверяем, есть ли у пользователя роль (обязательная проверка при каждой загрузке)
+  // Проверяем роль пользователя при первом заходе
+  // Если роль пустая (null, undefined, или не passenger/driver), показываем модальное окно выбора роли
+  // Модальное окно обязательное - нельзя закрыть без выбора роли
   React.useEffect(() => {
     if (userData && !userLoading) {
-      // Если у пользователя роль пустая (null, undefined, или не passenger/driver), показываем выбор роли
+      // Проверяем, есть ли валидная роль (passenger или driver)
       const hasValidRole = userData.role === "passenger" || userData.role === "driver";
       if (!hasValidRole) {
+        // Роль пустая - показываем модальное окно выбора роли
         setShowRoleSelection(true);
       } else {
+        // Роль выбрана - скрываем модальное окно
         setShowRoleSelection(false);
       }
     }

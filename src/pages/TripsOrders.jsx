@@ -1,56 +1,32 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Orders from "./Orders";
-import TelegramConnectModal from "@/components/TelegramConnectModal.jsx";
-import { useGetData } from "@/api/api";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useI18n } from "@/app/i18n.jsx";
 
 function TripsOrders() {
-  const [telegramModalOpen, setTelegramModalOpen] = useState(false);
-  
-  // Получаем данные пользователя для проверки telegram_chat_id
-  const { data: userData, refetch: refetchUser } = useGetData("/user");
-
-  // Проверка telegram_chat_id для всех пользователей при загрузке страницы
-  // Независимо от роли - если telegram_chat_id пустой, показываем модальное окно
-  useEffect(() => {
-    if (!userData) return;
-    
-    // Проверяем на null, undefined и пустую строку
-    const telegramChatId = userData.telegram_chat_id;
-    // Правильная проверка: если telegram_chat_id пустой (null, undefined, или пустая строка), то hasTelegram = false
-    const hasTelegram = Boolean(telegramChatId && String(telegramChatId).trim() !== "");
-    
-    console.log("TripsOrders: Checking telegram_chat_id", {
-      role: userData.role,
-      telegram_chat_id: telegramChatId,
-      type: typeof telegramChatId,
-      hasTelegram,
-      shouldShowModal: !hasTelegram
-    });
-    
-    if (!hasTelegram) {
-      console.log("TripsOrders: Opening Telegram modal - telegram_chat_id is empty");
-      setTelegramModalOpen(true);
-    }
-  }, [userData]);
-
-  // Обновляем данные пользователя при закрытии модального окна Telegram
-  useEffect(() => {
-    const handleFocus = () => {
-      if (!telegramModalOpen) {
-        refetchUser();
-      }
-    };
-    window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
-  }, [telegramModalOpen, refetchUser]);
+  const { t } = useI18n();
+  const [activeTab, setActiveTab] = useState("create");
 
   return (
-    <div>
-      <TelegramConnectModal
-        open={telegramModalOpen}
-        onOpenChange={setTelegramModalOpen}
-      />
-      <Orders />
+    <div className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="w-full mb-4">
+          <TabsTrigger value="create" className="flex-1">
+            Создать заказ
+          </TabsTrigger>
+          <TabsTrigger value="my-orders" className="flex-1">
+            Мои заказы
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="create" className="mt-0">
+          <Orders showCreateOrder={true} />
+        </TabsContent>
+        
+        <TabsContent value="my-orders" className="mt-0">
+          <Orders showCreateOrder={false} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "./button";
 
 const TimePicker = ({ id, value = "12:00", onChange, className = "", size = "md", dropdownMaxHeight }) => {
@@ -50,11 +49,10 @@ const TimePicker = ({ id, value = "12:00", onChange, className = "", size = "md"
         id={id}
         type="button"
         variant="outline"
-        className={`w-full justify-between ${size === "sm" ? "h-8 px-2 text-sm" : "h-9 px-3"} rounded-md border-input bg-white text-left focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:border-ring ${className}`}
+        className={`w-full ${size === "sm" ? "h-8 px-2 text-xs" : "h-9 px-3 text-sm"} rounded-md border-input bg-white text-left focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:border-ring ${className}`}
         onClick={() => setIsOpen(!isOpen)}
       >
         <span>{formatTime()}</span>
-        <ChevronDown className={`${size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} opacity-50`} />
       </Button>
 
       {isOpen && (
