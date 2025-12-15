@@ -35,7 +35,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState.jsx";
 import { useActiveTab } from "@/layout/MainLayout";
-import { usePostData, useGetData, deleteData, postData } from "@/api/api";
+import { usePostData, useGetData, deleteData, postData, putData } from "@/api/api";
 
 function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated, onBookingSuccess }) {
   const { t } = useI18n();
@@ -719,8 +719,14 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     if (!order?.id) return;
     
     try {
-      await postData(`/trips/${order.id}/complete`, {});
-      toast.success(t("orders.completeSuccess") || "Заказ успешно завершен");
+      const response = await putData(`/trips/${order.id}/completed`, {});
+      // Используем сообщение из ответа API, если есть, иначе стандартное из локализации
+      let successMessage = response?.message;
+      // Если API вернул сообщение, используем его, иначе используем локализацию
+      if (!successMessage) {
+        successMessage = t("orders.myOrderActions.completeSuccess") || "Заказ завершен";
+      }
+      toast.success(successMessage);
       
       // Обновляем данные
       queryClient.invalidateQueries({ queryKey: ["data", "/bookings/my/in-progress"] });
@@ -732,7 +738,8 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
       }
     } catch (error) {
       console.error("Ошибка при завершении заказа:", error);
-      toast.error(t("orders.completeError") || "Ошибка при завершении заказа");
+      const errorMessage = error?.response?.data?.message || t("orders.myOrderActions.completeError") || "Ошибка при завершении заказа";
+      toast.error(errorMessage);
     }
   };
 

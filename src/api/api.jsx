@@ -163,6 +163,15 @@ export const deleteData = async (url) => {
   return data;
 };
 
+export const putData = async (url, body) => {
+  try {
+    const { data } = await api.put(url, body);
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Example usage with TanStack Query
 export const useGetData = (url) => {
   return useQuery({ 

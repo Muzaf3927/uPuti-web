@@ -484,7 +484,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
 
         {/* Кнопки действий - для водителя в процессе (отменить брон, завершить) */}
         {isDriverInProgressOrder && (
-          <div className="px-3 pb-1.5 pt-1 border-t border-gray-100 flex-shrink-0 flex gap-2">
+          <div className="px-3 pb-6 sm:pb-4 pt-1 border-t border-gray-100 flex-shrink-0 flex gap-2">
             {onCancelBooking && (
               <Button
                 type="button"
@@ -505,7 +505,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
                   onComplete(order);
                   onClose();
                 }}
-                className="flex-1 h-9 rounded-xl bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm"
+                className="flex-1 h-9 rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm"
               >
                 <CircleCheck className="w-4 h-4" />
                 Завершить
