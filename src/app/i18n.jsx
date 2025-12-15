@@ -196,7 +196,7 @@ const dict = {
       },
       confirmation: {
         title: "Tasdiqlash",
-        message: "Sizning so'rovingiz haydovchi tomonidan qabul qilinganidan so'ng, siz haydovchi bilan  yoki haydovchi siz bilan bog'lanishi mumkin",
+        message: "Bron qilganingizdan so'ng siz haydovchi bilan  yoki haydovchi siz bilan bog'lanishi mumkin",
         continue: "Davom etish",
         cancel: "Bekor qilish"
       }
@@ -696,7 +696,7 @@ const dict = {
       },
       confirmation: {
         title: "Подтверждение",
-        message: "После того как водитель примет вашу заявку, сможете друг с другом созвониться",
+        message: "После бронирование сможете друг с другом созвониться",
         continue: "Продолжить",
         cancel: "Отмена"
       }

@@ -27,8 +27,11 @@ function OrdersMap({
   mapHeight, 
   onEditOrder, 
   onDeleteOrder, 
-  onCompleteOrder, 
+  onCompleteOrder,
+  onCancelBooking,
+  onBookingSuccess, // Callback после успешного бронирования
   showRoute = false,
+  useClassicMarkers = false, // Использовать классические маркеры Leaflet
   fromCoords = null, // Координаты точки "откуда"
   onFromLocationChange = null, // Callback для обновления координат "откуда"
   toCoords = null, // Координаты точки "куда"
@@ -925,6 +928,58 @@ function OrdersMap({
           
           console.log(`OrdersMap: Adding marker for order ${order.id || "unknown"}:`, fromAddress, "→", toAddress, "at", fromCoords);
 
+          // Если useClassicMarkers === true, используем классический маркер Leaflet
+          if (useClassicMarkers) {
+            // Создаем стандартный маркер Leaflet (обычный размер)
+            const defaultIcon = L.icon({
+              iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+              iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+              shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
+              popupAnchor: [0, -41],
+              shadowSize: [41, 41]
+            });
+
+            // Создаем увеличенный маркер для выбранного состояния
+            const selectedIcon = L.icon({
+              iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+              iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+              shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+              iconSize: [38, 62], // Увеличенный размер
+              iconAnchor: [19, 62],
+              popupAnchor: [0, -62],
+              shadowSize: [62, 62]
+            });
+
+            const marker = L.marker(fromCoords, { icon: defaultIcon });
+            marker._defaultIcon = defaultIcon;
+            marker._selectedIcon = selectedIcon;
+
+            marker.on("click", () => {
+              // Сбрасываем предыдущий выбранный маркер
+              if (selectedMarkerRef.current && selectedMarkerRef.current !== marker) {
+                selectedMarkerRef.current.setIcon(selectedMarkerRef.current._defaultIcon);
+              }
+              
+              // Устанавливаем текущий маркер как выбранный и увеличиваем его
+              selectedMarkerRef.current = marker;
+              marker.setIcon(selectedIcon);
+              
+              // Находим заказ и открываем bottom sheet
+              const clickedOrder = orders.find(o => o.id === order.id);
+              if (clickedOrder) {
+                setSelectedOrder(clickedOrder);
+                lastSelectedOrderIdRef.current = clickedOrder.id;
+              }
+            });
+
+            markerClusterGroupRef.current.addLayer(marker);
+            markersRef.current.push(marker);
+            bounds.extend(fromCoords);
+            continue; // Переходим к следующему заказу
+          }
+
           // Определяем цвет маркера в зависимости от статуса заказа
           // Синий для active, зеленый для in_progress
           const circleColor = order.status === "active" ? "#3b82f6" : "#22c55e"; // Синий для active, зеленый для in_progress
@@ -1371,6 +1426,7 @@ function OrdersMap({
           onEdit={onEditOrder}
           onDelete={onDeleteOrder}
           onComplete={onCompleteOrder}
+          onCancelBooking={onCancelBooking}
         />
       )}
 
@@ -1419,6 +1475,11 @@ function OrdersMap({
                       queryClient.invalidateQueries({ queryKey: ["data"] });
                       if (onRefresh) {
                         onRefresh();
+                      }
+                      
+                      // Вызываем callback для переключения таба (если передан)
+                      if (onBookingSuccess) {
+                        onBookingSuccess();
                       }
                     }
                   } catch (err) {

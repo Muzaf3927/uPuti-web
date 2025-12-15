@@ -68,7 +68,7 @@ function TripsCard({ trip }) {
   }, [trip?.driver?.phone]);
 
   const queryClient = useQueryClient();
-  const bookingPostMutation = usePostData("/bookings");
+  const bookingPostMutation = usePostData("/bookings/for/passenger");
 
   // По умолчанию карточки закрыты на всех устройствах
   React.useEffect(() => {
@@ -162,7 +162,7 @@ function TripsCard({ trip }) {
     if (!pendingRequest) return;
     
     try {
-      // Для бронирования используем новый API /bookings
+      // Для бронирования используем API /bookings/for/passenger
       if (pendingRequest.type === 'booking') {
         await bookingPostMutation.mutateAsync({
           trip_id: trip.id,

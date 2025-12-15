@@ -35,9 +35,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState.jsx";
 import { useActiveTab } from "@/layout/MainLayout";
-import { usePostData, useGetData, deleteData } from "@/api/api";
+import { usePostData, useGetData, deleteData, postData } from "@/api/api";
 
-function Orders({ showCreateOrder = true, showAllOrders = false }) {
+function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated, onBookingSuccess }) {
   const { t } = useI18n();
   const { keyboardInset } = useKeyboardInsets();
   const location = useLocation();
@@ -74,6 +74,12 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
     toCoords: null, // { lat, lng }
   });
   
+  // Состояния для автодополнения адресов
+  const [fromSuggestions, setFromSuggestions] = useState([]);
+  const [toSuggestions, setToSuggestions] = useState([]);
+  const [showFromSuggestions, setShowFromSuggestions] = useState(false);
+  const [showToSuggestions, setShowToSuggestions] = useState(false);
+  
   // Ref для поля "куда" для автоматического перехода фокуса
   const toInputRef = useRef(null);
   
@@ -103,6 +109,8 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
     from: "",
       fromCoords: null,
     }));
+    setFromSuggestions([]);
+    setShowFromSuggestions(false);
   };
 
   // Функция сброса поля "куда"
@@ -112,6 +120,8 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
     to: "",
       toCoords: null,
     }));
+    setToSuggestions([]);
+    setShowToSuggestions(false);
   };
 
   // Функция сброса обоих полей
@@ -122,6 +132,84 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
       fromCoords: null,
       toCoords: null,
     });
+    setFromSuggestions([]);
+    setToSuggestions([]);
+    setShowFromSuggestions(false);
+    setShowToSuggestions(false);
+  };
+
+  // Функция поиска адресов для автодополнения
+  const searchAddresses = async (query, countrycodes = "uz") => {
+    if (!query || query.length < 2) {
+      return [];
+    }
+    
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&accept-language=ru&countrycodes=${countrycodes}&addressdetails=1`
+      );
+      const data = await response.json();
+      return data.map(item => ({
+        display_name: item.display_name,
+        lat: parseFloat(item.lat),
+        lng: parseFloat(item.lon),
+      }));
+    } catch (error) {
+      console.error("Address search error:", error);
+      return [];
+    }
+  };
+
+  // Обработчик изменения поля "Откуда"
+  const handleFromInputChange = async (e) => {
+    const value = e.target.value;
+    setRouteData(prev => ({ ...prev, from: value }));
+    
+    if (value.length >= 2) {
+      const suggestions = await searchAddresses(value);
+      setFromSuggestions(suggestions);
+      setShowFromSuggestions(true);
+    } else {
+      setFromSuggestions([]);
+      setShowFromSuggestions(false);
+    }
+  };
+
+  // Обработчик выбора адреса "Откуда"
+  const handleFromSelect = (suggestion) => {
+    setRouteData(prev => ({
+      ...prev,
+      from: suggestion.display_name,
+      fromCoords: { lat: suggestion.lat, lng: suggestion.lng }
+    }));
+    setFromSuggestions([]);
+    setShowFromSuggestions(false);
+  };
+
+  // Обработчик изменения поля "Куда"
+  const handleToInputChange = async (e) => {
+    const value = e.target.value;
+    setRouteData(prev => ({ ...prev, to: value }));
+    
+    if (value.length >= 2) {
+      const suggestions = await searchAddresses(value);
+      setToSuggestions(suggestions);
+      setShowToSuggestions(true);
+    } else {
+      setToSuggestions([]);
+      setShowToSuggestions(false);
+    }
+  };
+
+  // Обработчик выбора адреса "Куда"
+  const handleToSelect = (suggestion) => {
+    setRouteData(prev => ({
+      ...prev,
+      to: suggestion.display_name,
+      toCoords: { lat: suggestion.lat, lng: suggestion.lng }
+    }));
+    setToSuggestions([]);
+    setShowToSuggestions(false);
   };
 
   // Функция для обрезки текста до 4 слов
@@ -159,9 +247,21 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
       return;
     }
 
+    // Валидация цены (обязательное поле)
+    if (!amountInput || amountInput.trim() === "") {
+      toast.error("Пожалуйста, укажите сумму заказа");
+      return;
+    }
+
+    const amountValue = parseInt(amountInput.replace(/\s/g, ""), 10);
+    if (isNaN(amountValue) || amountValue <= 0) {
+      toast.error("Пожалуйста, укажите корректную сумму заказа");
+      return;
+    }
+
     try {
       // Подготовка данных для отправки
-      const amount = amountInput ? parseInt(amountInput.replace(/\s/g, ""), 10) : null;
+      const amount = parseInt(amountInput.replace(/\s/g, ""), 10);
       const orderData = {
         from_lat: fromCoords.lat,
         from_lng: fromCoords.lng,
@@ -173,7 +273,7 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
         time: selectedTime,
         seats: passengerCount,
         comment: comment || null,
-        ...(amount && { amount }),
+        amount: amount,
         role: "passenger",
       };
 
@@ -199,6 +299,11 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
       
       // Обновляем список заказов
       queryClient.invalidateQueries({ queryKey: ["data"] });
+      
+      // Переключаем на таб "Мои заказы" для пассажиров
+      if (onOrderCreated && !isDriver) {
+        onOrderCreated();
+      }
     } catch (error) {
       console.error("Ошибка при создании заказа:", error);
       const errorMessage = error?.response?.data?.message || "Не удалось создать заказ. Попробуйте еще раз.";
@@ -232,11 +337,11 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
     refetch: allActiveTripsRefetch
   } = useGetData(isDriver && showAllOrders ? "/trips/active" : null);
 
-  // Получаем активные заказы пользователя для таба "Мои заказы"
-  // Для водителей используем /bookings/my/in-progress, для пассажиров - /trips/my
+  // Получаем активные заказы пользователя для таба "Мои брони" (для водителей) или "Мои заказы" (для пассажиров)
+  // Для водителей используем /bookings/my/in-progress, для пассажиров - /trips/for/passenger/my
   const myOrdersApiUrl = showCreateOrder 
     ? null 
-    : (isDriver ? "/bookings/my/in-progress" : "/trips/my");
+    : (isDriver ? "/bookings/my/in-progress" : "/trips/for/passenger/my");
   
   const {
     data: myTripsData, 
@@ -251,7 +356,7 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
 
   // Обрабатываем данные из API (мои заказы)
   // Для водителей: /bookings/my/in-progress возвращает массив бронирований с вложенным trip
-  // Для пассажиров: /trips/my возвращает массив поездок
+  // Для пассажиров: /trips/for/passenger/my возвращает массив поездок
   const myOrdersRaw = showCreateOrder ? null : (myTripsData?.data || myTripsData || []);
   const myOrders = Array.isArray(myOrdersRaw) ? myOrdersRaw : [];
   
@@ -278,7 +383,7 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
       })
     : myOrders;
   
-  // Для таба "Мои заказы" используем обработанные данные
+  // Для таба "Мои брони" (для водителей) или "Мои заказы" (для пассажиров) используем обработанные данные
   const myOrdersList = showCreateOrder ? [] : (Array.isArray(processedMyOrders) ? processedMyOrders : []);
 
   // Определяем, какие заказы показывать
@@ -292,10 +397,10 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
   
   // Для водителей:
   // - Таб "Все заказы" (showAllOrders === true): показываем все активные заказы из /trips/active
-  // - Таб "Мои заказы" (showAllOrders === false): показываем мои заказы в процессе из /bookings/my/in-progress
+  // - Таб "Мои брони" (showAllOrders === false): показываем мои заказы в процессе из /bookings/my/in-progress
   // Для пассажиров:
   // - Таб "Создать заказ" (showCreateOrder === true): показываем мои активные заказы
-  // - Таб "Мои заказы" (showCreateOrder === false): показываем мои активные заказы из /trips/my
+  // - Таб "Мои заказы" (showCreateOrder === false): показываем мои активные заказы из /trips/for/passenger/my
   const ordersToDisplay = isDriver 
     ? (showAllOrders ? allActiveOrders : activeMyOrders)
     : (showCreateOrder ? activeMyOrders : activeMyOrders);
@@ -520,20 +625,43 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
     if (!order?.id) return;
     
     try {
-      await deleteData(`/trips/${order.id}`);
-      toast.success(t("orders.deleteSuccess") || "Заказ удален");
+      const response = await deleteData(`/trips/${order.id}`);
+      // API возвращает { message: "Trip deleted" } при успехе (200)
+      let successMessage = response?.message || response?.data?.message;
+      // Переводим английское сообщение на русский
+      if (successMessage === "Trip deleted") {
+        successMessage = "Заказ отменен";
+      }
+      successMessage = successMessage || t("orders.myOrderActions.deleteSuccess") || "Заказ отменен";
+      toast.success(successMessage);
       
       // Обновляем данные
-      queryClient.invalidateQueries({ queryKey: ["data", "/trips/my"] });
+      queryClient.invalidateQueries({ queryKey: ["data", "/trips/for/passenger/my"] });
       queryClient.invalidateQueries({ queryKey: ["data"] });
       
       // Обновляем список заказов
-      if (myOrdersRefetch) {
-        myOrdersRefetch();
+      if (myTripsRefetch) {
+        myTripsRefetch();
       }
     } catch (error) {
       console.error("Ошибка при удалении заказа:", error);
-      toast.error(t("orders.deleteError") || "Ошибка при удалении заказа");
+      // Если это не ошибка сети, а успешный ответ с сообщением об ошибке
+      if (error?.response?.status === 200 && error?.response?.data?.message) {
+        let successMessage = error.response.data.message;
+        if (successMessage === "Trip deleted") {
+          successMessage = "Заказ отменен";
+        }
+        toast.success(successMessage);
+        // Обновляем данные даже если была "ошибка"
+        queryClient.invalidateQueries({ queryKey: ["data", "/trips/for/passenger/my"] });
+        queryClient.invalidateQueries({ queryKey: ["data"] });
+        if (myTripsRefetch) {
+          myTripsRefetch();
+        }
+        return;
+      }
+      const errorMessage = error?.response?.data?.message || t("orders.myOrderActions.deleteError") || "Ошибка при отмене заказа";
+      toast.error(errorMessage);
     }
   };
 
@@ -542,29 +670,96 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
     if (!orderToDelete?.id) return;
     
     try {
-      await deleteData(`/trips/${orderToDelete.id}`);
-      toast.success(t("orders.deleteSuccess") || "Заказ удален");
+      const response = await deleteData(`/trips/${orderToDelete.id}`);
+      // API возвращает { message: "Trip deleted" } при успехе (200)
+      let successMessage = response?.message || response?.data?.message;
+      // Переводим английское сообщение на русский
+      if (successMessage === "Trip deleted") {
+        successMessage = "Заказ отменен";
+      }
+      successMessage = successMessage || t("orders.myOrderActions.deleteSuccess") || "Заказ отменен";
+      toast.success(successMessage);
       setDeleteConfirmOpen(false);
       setOrderToDelete(null);
       
       // Обновляем данные
-      queryClient.invalidateQueries({ queryKey: ["data", "/trips/my"] });
+      queryClient.invalidateQueries({ queryKey: ["data", "/trips/for/passenger/my"] });
       queryClient.invalidateQueries({ queryKey: ["data"] });
       
       // Обновляем список заказов
-      if (myOrdersRefetch) {
-        myOrdersRefetch();
+      if (myTripsRefetch) {
+        myTripsRefetch();
       }
     } catch (error) {
       console.error("Ошибка при удалении заказа:", error);
-      toast.error(t("orders.deleteError") || "Ошибка при удалении заказа");
+      // Если это не ошибка сети, а успешный ответ с сообщением об ошибке
+      if (error?.response?.status === 200 && error?.response?.data?.message) {
+        let successMessage = error.response.data.message;
+        if (successMessage === "Trip deleted") {
+          successMessage = "Заказ отменен";
+        }
+        toast.success(successMessage);
+        setDeleteConfirmOpen(false);
+        setOrderToDelete(null);
+        // Обновляем данные даже если была "ошибка"
+        queryClient.invalidateQueries({ queryKey: ["data", "/trips/for/passenger/my"] });
+        queryClient.invalidateQueries({ queryKey: ["data"] });
+        if (myTripsRefetch) {
+          myTripsRefetch();
+        }
+        return;
+      }
+      const errorMessage = error?.response?.data?.message || t("orders.myOrderActions.deleteError") || "Ошибка при отмене заказа";
+      toast.error(errorMessage);
     }
   };
 
   // Обработчик завершения заказа
   const handleCompleteOrder = async (order) => {
-    // API /passenger-requests удален
-    toast.error("API удален");
+    if (!order?.id) return;
+    
+    try {
+      await postData(`/trips/${order.id}/complete`, {});
+      toast.success(t("orders.completeSuccess") || "Заказ успешно завершен");
+      
+      // Обновляем данные
+      queryClient.invalidateQueries({ queryKey: ["data", "/bookings/my/in-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["data"] });
+      
+      // Обновляем список заказов
+      if (myTripsRefetch) {
+        myTripsRefetch();
+      }
+    } catch (error) {
+      console.error("Ошибка при завершении заказа:", error);
+      toast.error(t("orders.completeError") || "Ошибка при завершении заказа");
+    }
+  };
+
+  // Обработчик отмены бронирования водителем
+  const handleCancelBooking = async (order) => {
+    if (!order?.booking_id) {
+      toast.error("ID бронирования не найден");
+      return;
+    }
+    
+    try {
+      const response = await postData(`/bookings/${order.booking_id}/cancel`, {});
+      toast.success(response?.message || "Бронь отменена");
+      
+      // Обновляем данные
+      queryClient.invalidateQueries({ queryKey: ["data", "/bookings/my/in-progress"] });
+      queryClient.invalidateQueries({ queryKey: ["data"] });
+      
+      // Обновляем список заказов
+      if (myTripsRefetch) {
+        myTripsRefetch();
+      }
+    } catch (error) {
+      console.error("Ошибка при отмене бронирования:", error);
+      const errorMessage = error?.response?.data?.message || "Не удалось отменить бронирование. Попробуйте еще раз.";
+      toast.error(errorMessage);
+    }
   };
 
   // Обработчик обновления заказа (при отправке формы редактирования)
@@ -655,46 +850,94 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
     <div className="w-full">
           {/* Поля "Откуда" и "Куда" над картой - только для таба "Создать заказ" (пассажиры) */}
           {showCreateOrder && !isDriver && (
-          <div className="px-2 pt-2 pb-3 flex flex-col gap-2">
+          <div className="px-2 pt-0 pb-2 flex flex-col gap-1.5">
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary z-10" />
+              <MapPin className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary z-10" />
               <Input
                 type="text"
                 placeholder={t("orders.form.fromPlaceholder") || "Откуда"}
                 value={selectedFrom}
-                onChange={(e) => setRouteData(prev => ({ ...prev, from: e.target.value }))}
-                className={`pl-10 ${selectedFrom ? 'pr-10' : ''} bg-white/90 backdrop-blur-sm border-border rounded-xl h-10 text-sm`}
+                onChange={handleFromInputChange}
+                onFocus={() => {
+                  if (fromSuggestions.length > 0) {
+                    setShowFromSuggestions(true);
+                  }
+                }}
+                onBlur={() => {
+                  // Задержка для обработки клика по варианту
+                  setTimeout(() => setShowFromSuggestions(false), 200);
+                }}
+                className={`pl-9 ${selectedFrom ? 'pr-9' : ''} bg-white/90 backdrop-blur-sm border-border rounded-lg h-8 text-xs`}
               />
               {selectedFrom && (
                 <button
                     type="button"
                   onClick={handleResetFrom}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors z-20"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors z-20"
                   aria-label="Сбросить поле откуда"
                 >
-                  <X className="h-4 w-4 text-gray-600" />
+                  <X className="h-3.5 w-3.5 text-gray-600" />
                 </button>
+              )}
+              {/* Выпадающий список вариантов для "Откуда" */}
+              {showFromSuggestions && fromSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-[5000] max-h-48 overflow-y-auto">
+                  {fromSuggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleFromSelect(suggestion)}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="text-sm text-gray-900 truncate">{suggestion.display_name}</div>
+                    </button>
+                  ))}
+                </div>
               )}
                 </div>
             <div className="relative">
-              <Route className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary z-10" />
+              <Route className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary z-10" />
                       <Input 
                 ref={toInputRef}
                 type="text"
                 placeholder={t("orders.form.toPlaceholder") || "Куда"}
                 value={selectedTo}
-                onChange={(e) => setRouteData(prev => ({ ...prev, to: e.target.value }))}
-                className={`pl-10 ${selectedTo ? 'pr-10' : ''} bg-white/90 backdrop-blur-sm border-border rounded-xl h-10 text-sm`}
+                onChange={handleToInputChange}
+                onFocus={() => {
+                  if (toSuggestions.length > 0) {
+                    setShowToSuggestions(true);
+                  }
+                }}
+                onBlur={() => {
+                  // Задержка для обработки клика по варианту
+                  setTimeout(() => setShowToSuggestions(false), 200);
+                }}
+                className={`pl-9 ${selectedTo ? 'pr-9' : ''} bg-white/90 backdrop-blur-sm border-border rounded-lg h-8 text-xs`}
               />
               {selectedTo && (
                 <button
                     type="button"
                   onClick={handleResetTo}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors z-20"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors z-20"
                   aria-label="Сбросить поле куда"
                 >
-                  <X className="h-4 w-4 text-gray-600" />
+                  <X className="h-3.5 w-3.5 text-gray-600" />
                 </button>
+              )}
+              {/* Выпадающий список вариантов для "Куда" */}
+              {showToSuggestions && toSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-[5000] max-h-48 overflow-y-auto">
+                  {toSuggestions.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleToSelect(suggestion)}
+                      className="w-full text-left px-3 py-2 hover:bg-gray-100 transition-colors border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="text-sm text-gray-900 truncate">{suggestion.display_name}</div>
+                    </button>
+                  ))}
+                </div>
               )}
                 </div>
       </div>
@@ -707,6 +950,7 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
                     isLoading={isLoadingOrders} 
                     mapHeight={showCreateOrder && !isDriver ? "h-[calc(100vh-264px)] sm:h-[70vh]" : "h-[calc(100vh-230px)] sm:h-[38vh]"}
               showRoute={showPassengerContent && showCreateOrder}
+                    useClassicMarkers={isDriver && showAllOrders}
                     fromCoords={showCreateOrder && !isDriver ? fromCoords : null}
                     onFromLocationChange={showCreateOrder && !isDriver ? ((coords, address) => {
                       setRouteData(prev => ({
@@ -736,6 +980,8 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
                     onEditOrder={handleEditOrder}
                     onDeleteOrder={handleDeleteOrder}
               onCompleteOrder={handleCompleteOrder}
+                    onCancelBooking={handleCancelBooking}
+                    onBookingSuccess={onBookingSuccess}
                   />
                   {/* Кнопка "Дальше" - только для таба "Создать заказ" (пассажиры) */}
                   {showCreateOrder && !isDriver && (
@@ -871,7 +1117,8 @@ function Orders({ showCreateOrder = true, showAllOrders = false }) {
                       const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
                       setAmountInput(formatted);
                     }}
-                    placeholder="0"
+                    placeholder="Введите сумму"
+                    required
                     className="w-full h-8 text-sm bg-white pr-10"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">сум</span>

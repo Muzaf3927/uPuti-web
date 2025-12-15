@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/app/i18n.jsx";
 import { sessionManager } from "@/lib/sessionManager";
 
-function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, onRejectOffer, onRefresh, onEdit, onDelete, onComplete }) {
+function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, onRejectOffer, onRefresh, onEdit, onDelete, onComplete, onCancelBooking }) {
   const { t } = useI18n();
 
   if (!order) return null;
@@ -178,7 +178,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
       />
       
       {/* Bottom Sheet - занимает половину экрана на мобильных */}
-      <div className={`bg-white rounded-t-3xl shadow-2xl border-t-2 border-gray-200 ${isDriverInProgressOrder || isDriverActiveOrder ? 'h-auto max-h-[50vh]' : !isMyOrder ? 'h-[55vh] max-h-[55vh]' : order.status === 'active' ? 'h-auto max-h-[45vh]' : 'h-[50vh] max-h-[50vh]'} flex flex-col`}>
+      <div className={`bg-white rounded-t-3xl shadow-2xl border-t-2 border-gray-200 ${isDriverInProgressOrder || isDriverActiveOrder ? 'h-auto max-h-[50vh]' : !isMyOrder ? 'h-[55vh] max-h-[55vh]' : order.status === 'active' ? 'h-auto max-h-[45vh]' : (isMyOrder && order.status === 'in_progress' ? 'h-auto max-h-[60vh]' : 'h-[50vh] max-h-[50vh]')} flex flex-col`}>
         {/* Handle bar */}
         <div className="flex justify-center pt-2 pb-1">
           <div className="w-12 h-1 bg-gray-300 rounded-full" />
@@ -194,7 +194,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
         </button>
 
         {/* Content */}
-        <div className={`px-2.5 ${isDriverInProgressOrder || isDriverActiveOrder ? 'pt-0.5 pb-0.5' : 'pt-0.5'} ${isDriverInProgressOrder || isDriverActiveOrder ? 'pb-0' : !isMyOrder ? 'pb-0' : order.status === 'in_progress' ? 'pb-0' : 'pb-0'} ${isDriverInProgressOrder || isDriverActiveOrder ? 'overflow-y-auto' : !isMyOrder ? '' : order.status === 'in_progress' ? '' : 'overflow-y-auto flex-1'}`}>
+        <div className={`px-2.5 ${isDriverInProgressOrder || isDriverActiveOrder ? 'pt-0.5 pb-0.5' : 'pt-0.5'} ${isDriverInProgressOrder || isDriverActiveOrder ? 'pb-0' : !isMyOrder ? 'pb-0' : order.status === 'in_progress' ? 'pb-1' : 'pb-0'} ${isDriverInProgressOrder || isDriverActiveOrder ? 'overflow-y-auto' : !isMyOrder ? '' : order.status === 'in_progress' ? 'overflow-y-auto flex-1' : 'overflow-y-auto flex-1'}`}>
           {/* Если это заказ водителя в процессе - показываем надпись "Пассажир ждет вас" в самом верху */}
           {isDriverInProgressOrder && (
             <div className="text-center mb-1.5 pt-0.5">
@@ -381,17 +381,17 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
 
           {/* Если это мой заказ со статусом in_progress - показываем данные водителя */}
           {isMyOrder && order.status === "in_progress" && !isDriverInProgressOrder && acceptedBooking && driver && (
-            <div className="mb-0 border-2 border-blue-200 rounded-xl p-3 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 shadow-sm">
+            <div className="mb-1 border-2 border-blue-200 rounded-xl p-2 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 shadow-sm">
               {/* Информация о водителе */}
-              <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center justify-between gap-2 mb-2">
                 <div className="flex-1 min-w-0">
-                  <div className="text-base font-bold text-gray-900 truncate mb-1">
+                  <div className="text-sm font-bold text-gray-900 truncate mb-0.5">
                     {driver.name || "Водитель"}
                   </div>
                   {driver.rating && (
                     <div className="flex items-center gap-1">
-                      <Star className="text-yellow-500" size={14} fill="currentColor" />
-                      <span className="text-sm font-semibold text-gray-700">
+                      <Star className="text-yellow-500" size={12} fill="currentColor" />
+                      <span className="text-xs font-semibold text-gray-700">
                         {driver.rating}
                         {driver.rating_count && (
                           <span className="text-gray-500 font-normal"> ({driver.rating_count})</span>
@@ -415,23 +415,23 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
               {/* Информация о машине */}
               {driver.car && (
                 <>
-                  <div className="grid grid-cols-2 gap-2 mb-2">
+                  <div className="grid grid-cols-2 gap-1.5 mb-1.5">
                     {driver.car.model && (
-                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/70 border border-gray-200">
-                        <Car className="text-gray-700 flex-shrink-0" size={16} />
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/70 border border-gray-200">
+                        <Car className="text-gray-700 flex-shrink-0" size={14} />
                         <div className="flex flex-col min-w-0">
-                          <span className="text-[10px] text-gray-500 leading-tight mb-0.5">Модель</span>
-                          <span className="text-sm font-semibold text-gray-900 truncate leading-tight">
+                          <span className="text-[9px] text-gray-500 leading-tight mb-0.5">Модель</span>
+                          <span className="text-xs font-semibold text-gray-900 truncate leading-tight">
                             {driver.car.model}
                           </span>
                         </div>
                       </div>
                     )}
                     {driver.car.color && (
-                      <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/70 border border-gray-200">
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/70 border border-gray-200">
                         <div className="flex flex-col min-w-0">
-                          <span className="text-[10px] text-gray-500 leading-tight mb-0.5">Цвет</span>
-                          <span className="text-sm font-semibold text-gray-900 truncate leading-tight">
+                          <span className="text-[9px] text-gray-500 leading-tight mb-0.5">Цвет</span>
+                          <span className="text-xs font-semibold text-gray-900 truncate leading-tight">
                             {driver.car.color}
                           </span>
                         </div>
@@ -440,7 +440,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
                   </div>
 
                   {driver.car.number && (
-                    <div className="text-sm text-gray-700 mb-2 px-2.5 py-1.5 bg-white/70 rounded-lg border border-gray-200">
+                    <div className="text-xs text-gray-700 mb-1 px-2 py-1 bg-white/70 rounded-lg border border-gray-200">
                       <span className="font-medium">Номер:</span> <span className="font-bold">{driver.car.number}</span>
                     </div>
                   )}
@@ -449,11 +449,11 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
 
               {/* Цена booking (если указана) */}
               {acceptedBooking.offered_price && (
-                <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-yellow-50/70 border border-yellow-200 mb-0">
-                  <DollarSign className="text-yellow-600 flex-shrink-0" size={16} />
+                <div className="flex items-center gap-2 px-2 py-1 rounded-lg bg-yellow-50/70 border border-yellow-200 mb-0">
+                  <DollarSign className="text-yellow-600 flex-shrink-0" size={14} />
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[10px] text-gray-500 leading-tight mb-0.5">{t("orders.popup.price")}</span>
-                    <span className="text-base font-bold text-gray-900 truncate leading-tight">
+                    <span className="text-[9px] text-gray-500 leading-tight mb-0.5">{t("orders.popup.price")}</span>
+                    <span className="text-sm font-bold text-gray-900 truncate leading-tight">
                       {Number(acceptedBooking.offered_price).toLocaleString()} сум
                     </span>
                   </div>
@@ -482,9 +482,22 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
           </div>
         )}
 
-        {/* Кнопки действий - для водителя в процессе (завершить заказ) */}
+        {/* Кнопки действий - для водителя в процессе (отменить брон, завершить) */}
         {isDriverInProgressOrder && (
-          <div className="px-3 pb-1.5 pt-1 border-t border-gray-100 flex-shrink-0">
+          <div className="px-3 pb-1.5 pt-1 border-t border-gray-100 flex-shrink-0 flex gap-2">
+            {onCancelBooking && (
+              <Button
+                type="button"
+                onClick={() => {
+                  onCancelBooking(order);
+                  onClose();
+                }}
+                className="flex-1 h-9 rounded-xl bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm"
+              >
+                <X className="w-4 h-4" />
+                Отменить
+              </Button>
+            )}
             {onComplete && (
               <Button
                 type="button"
@@ -492,10 +505,10 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
                   onComplete(order);
                   onClose();
                 }}
-                className="w-full h-9 rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm"
+                className="flex-1 h-9 rounded-xl bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm"
               >
                 <CircleCheck className="w-4 h-4" />
-                Завершить заказ
+                Завершить
               </Button>
             )}
           </div>
@@ -521,7 +534,7 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
         
         {/* Кнопки действий - для моих заказов (in_progress) - пассажир */}
         {isMyOrder && order.status === "in_progress" && !isDriverInProgressOrder && (
-          <div className="px-3 pb-2 pt-1 border-t border-gray-100">
+          <div className="px-3 pb-3 pt-2 border-t border-gray-100 flex-shrink-0">
             {onDelete && (
               <Button
                 type="button"
@@ -529,10 +542,10 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
                   onDelete(order);
                   onClose();
                 }}
-                className="w-full h-9 rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-1.5 text-xs"
+                className="w-full h-9 rounded-xl bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-1.5 text-xs font-semibold shadow-sm"
               >
                 <Trash2 className="w-4 h-4" />
-                Отменить
+                Отменить заказ
               </Button>
             )}
           </div>

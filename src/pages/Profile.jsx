@@ -37,20 +37,26 @@ import {
   Trash2,
   AlertTriangle,
   Pencil,
+  Car,
 } from "lucide-react";
 import { useGetData, useDeleteAccount, useUpdateProfile } from "@/api/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { useI18n } from "@/app/i18n.jsx";
+import AddCarModal from "@/components/AddCarModal";
 
 function Profile() {
   const { t } = useI18n();
-  const { data, isPending, error } = useGetData("/users/me");
+  const { data, isPending, error, refetch } = useGetData("/users/me");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ name: "", phone: "" });
+  const [showCarModal, setShowCarModal] = useState(false);
   const deleteAccountMutation = useDeleteAccount();
   const updateProfileMutation = useUpdateProfile();
+  
+  const isDriver = data?.role === "driver";
+  const car = data?.car;
 
   const handleDeleteAccount = async () => {
     try {
@@ -211,6 +217,61 @@ function Profile() {
                   </span>
                 </div>
               )}
+              
+              {/* Информация о машине для водителей */}
+              {isDriver && (
+                <div className="pt-3 border-t mt-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Car className="h-4 w-4 text-primary" />
+                      <span className="text-sm sm:text-base font-semibold text-gray-900">
+                        Информация о машине
+                      </span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowCarModal(true)}
+                      className="text-xs px-2 py-1 h-7 flex items-center gap-1"
+                    >
+                      <Pencil className="h-3 w-3" />
+                      <span>Изменить</span>
+                    </Button>
+                  </div>
+                  
+                  {car ? (
+                    <div className="space-y-2 text-sm">
+                      {car.model && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground min-w-[80px]">Модель:</span>
+                          <span className="text-gray-900">{car.model}</span>
+                        </div>
+                      )}
+                      {car.color && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground min-w-[80px]">Цвет:</span>
+                          <span className="text-gray-900">{car.color}</span>
+                        </div>
+                      )}
+                      {car.number && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground min-w-[80px]">Номер:</span>
+                          <span className="text-gray-900 font-semibold">{car.number}</span>
+                        </div>
+                      )}
+                      {!car.model && !car.color && !car.number && (
+                        <div className="text-sm text-muted-foreground">
+                          Информация о машине не указана
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      Информация о машине не указана
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
           
@@ -259,6 +320,21 @@ function Profile() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Модальное окно для редактирования машины */}
+      {showCarModal && (
+        <AddCarModal
+          userData={data}
+          onCarAdded={async (carData) => {
+            // Закрываем модальное окно в любом случае
+            setShowCarModal(false);
+            // Если данные сохранены (carData не null), обновляем профиль
+            if (carData) {
+              await refetch();
+            }
+          }}
+        />
+      )}
     </>
   );
 }

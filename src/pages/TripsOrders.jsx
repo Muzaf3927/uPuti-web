@@ -21,7 +21,7 @@ function TripsOrders({ type = "city" }) {
   const { data: userData } = useGetData("/user");
   const userRole = userData?.role || "passenger";
   
-  // Для водителей показываем табы "Все заказы" и "Мои заказы"
+  // Для водителей показываем табы "Все заказы" и "Мои брони"
   // Для пассажиров показываем табы "Создать заказ" и "Мои заказы"
   const isDriver = userRole === "driver";
   
@@ -39,13 +39,13 @@ function TripsOrders({ type = "city" }) {
 
   // Хуки должны вызываться на верхнем уровне, не условно
   // Для водителей: получаем мои поездки (только для межгорода)
-  // Отправляем role=driver в параметрах запроса
+  // API фильтрует по role=driver на бэкенде
   const {
     data: myTripsData,
     isLoading: myTripsLoading,
     error: myTripsError,
     refetch: myTripsRefetch,
-  } = useGetData(type === "intercity" && isDriver ? "/trips/my?role=driver&page=1&per_page=10" : null);
+  } = useGetData(type === "intercity" && isDriver ? "/trips/my?page=1&per_page=10" : null);
 
   // Для пассажиров в межгороде: получаем забронированные поездки
   const {
@@ -259,34 +259,37 @@ function TripsOrders({ type = "city" }) {
 
   // Для города показываем текущую логику с табами и картами
   return (
-    <div className="w-full">
+    <div className="w-full -mt-2 sm:-mt-3">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="w-full mb-4">
+        <TabsList className="w-full mb-4 fixed top-[calc(4rem+3.75rem+0.5rem+0.5rem)] sm:top-[calc(5rem+4.5rem+0.75rem+0.5rem)] left-0 right-0 max-w-[620px] mx-auto px-5 z-30 bg-transparent backdrop-blur-none border-0 shadow-none py-1 gap-2">
           {isDriver ? (
             <>
-              <TabsTrigger value="all-orders" className="flex-1">
+              <TabsTrigger value="all-orders" className="flex-1 border border-green-400/50 bg-gradient-to-tr from-white/80 to-green-50/60 text-black data-[state=active]:bg-gradient-to-tr data-[state=active]:from-primary data-[state=active]:to-cyan-400 data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:border-primary">
                 Все заказы
               </TabsTrigger>
-              <TabsTrigger value="my-orders" className="flex-1">
-                Мои заказы
+              <TabsTrigger value="my-orders" className="flex-1 border border-green-400/50 bg-gradient-to-tr from-white/80 to-green-50/60 text-black data-[state=active]:bg-gradient-to-tr data-[state=active]:from-primary data-[state=active]:to-cyan-400 data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:border-primary">
+                Мои брони
               </TabsTrigger>
             </>
           ) : (
             <>
-          <TabsTrigger value="create" className="flex-1">
+          <TabsTrigger value="create" className="flex-1 border border-green-400/50 bg-gradient-to-tr from-white/80 to-green-50/60 text-black data-[state=active]:bg-gradient-to-tr data-[state=active]:from-primary data-[state=active]:to-cyan-400 data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:border-primary">
             Создать заказ
           </TabsTrigger>
-          <TabsTrigger value="my-orders" className="flex-1">
+          <TabsTrigger value="my-orders" className="flex-1 border border-green-400/50 bg-gradient-to-tr from-white/80 to-green-50/60 text-black data-[state=active]:bg-gradient-to-tr data-[state=active]:from-primary data-[state=active]:to-cyan-400 data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:border-primary">
             Мои заказы
           </TabsTrigger>
             </>
           )}
         </TabsList>
         
+        {/* Отступ для закрепленных табов */}
+        <div className="h-[4rem] sm:h-[4.25rem]"></div>
+        
         {isDriver ? (
           <>
             <TabsContent value="all-orders" className="mt-0">
-              <Orders showCreateOrder={false} showAllOrders={true} />
+              <Orders showCreateOrder={false} showAllOrders={true} onBookingSuccess={() => setActiveTab("my-orders")} />
             </TabsContent>
             <TabsContent value="my-orders" className="mt-0">
               <Orders showCreateOrder={false} showAllOrders={false} />
@@ -294,8 +297,8 @@ function TripsOrders({ type = "city" }) {
           </>
         ) : (
           <>
-        <TabsContent value="create" className="mt-0">
-          <Orders showCreateOrder={true} />
+        <TabsContent value="create" className="mt-0 -mt-4">
+          <Orders showCreateOrder={true} onOrderCreated={() => setActiveTab("my-orders")} />
         </TabsContent>
         <TabsContent value="my-orders" className="mt-0">
           <Orders showCreateOrder={false} />

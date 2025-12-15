@@ -1,14 +1,17 @@
 import React, { useState } from "react";
-import { User, Car } from "lucide-react";
+import { User, Car, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/app/i18n.jsx";
 import { useUpdateRole } from "@/api/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import AddCarModal from "./AddCarModal";
 
-function RoleSelection({ onRoleSelected }) {
+function RoleSelection({ onRoleSelected, userData, canClose = false, onClose }) {
   const { t } = useI18n();
   const [selectedRole, setSelectedRole] = useState(null);
+  const [showAddCarModal, setShowAddCarModal] = useState(false);
+  const [pendingRole, setPendingRole] = useState(null);
   const updateRoleMutation = useUpdateRole();
 
   const handleSelectRole = async (role) => {
@@ -32,7 +35,22 @@ function RoleSelection({ onRoleSelected }) {
       toast.success(
         t("roleSelection.success") || "Роль успешно выбрана"
       );
-      // Обновляем страницу для применения изменений
+      
+      // Если выбрана роль водителя, проверяем наличие машины
+      if (role === "driver") {
+        // Проверяем, есть ли уже машина у пользователя
+        const hasCar = userData?.car && (userData.car.model || userData.car.number);
+        
+        if (!hasCar) {
+          // Нет машины - показываем модальное окно для добавления
+          setPendingRole(role);
+          setShowAddCarModal(true);
+          setSelectedRole(null);
+          return;
+        }
+      }
+      
+      // Для пассажиров или если у водителя уже есть машина - обновляем страницу
       setTimeout(() => {
         if (onRoleSelected) {
           onRoleSelected(role);
@@ -56,13 +74,21 @@ function RoleSelection({ onRoleSelected }) {
     <div 
       className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={(e) => {
-        // Предотвращаем закрытие при клике на backdrop
-        e.preventDefault();
-        e.stopPropagation();
+        // При редактировании можно закрыть кликом на backdrop, при первом входе - нельзя
+        if (!canClose && e.target === e.currentTarget) {
+          e.preventDefault();
+          e.stopPropagation();
+        } else if (canClose && e.target === e.currentTarget) {
+          // При редактировании закрываем модальное окно
+          e.preventDefault();
+          e.stopPropagation();
+          if (onClose) {
+            onClose();
+          }
+        }
       }}
       style={{ pointerEvents: 'auto' }}
     >
-      {/* Backdrop не закрывает модальное окно - выбор роли обязателен */}
       <div 
         className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-4 border border-gray-200 relative z-[100000]"
         onClick={(e) => {
@@ -71,6 +97,25 @@ function RoleSelection({ onRoleSelected }) {
         }}
         style={{ pointerEvents: 'auto' }}
       >
+        {/* Кнопка закрытия при редактировании */}
+        {canClose && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (onClose) {
+                onClose();
+              }
+            }}
+            className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 transition-colors z-[100001] cursor-pointer"
+            aria-label="Закрыть"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <X className="h-4 w-4 text-gray-500" />
+          </button>
+        )}
+        
         <div className="text-center mb-6">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
             {t("roleSelection.title") || "Выберите вашу роль"}
@@ -150,6 +195,23 @@ function RoleSelection({ onRoleSelected }) {
           </div>
         )}
       </div>
+      
+      {/* Модальное окно для добавления машины */}
+      {showAddCarModal && (
+        <AddCarModal
+          userData={userData}
+          onCarAdded={(carData) => {
+            setShowAddCarModal(false);
+            // После добавления машины обновляем страницу
+            setTimeout(() => {
+              if (onRoleSelected) {
+                onRoleSelected(pendingRole);
+              }
+              window.location.reload();
+            }, 500);
+          }}
+        />
+      )}
     </div>
   );
 }

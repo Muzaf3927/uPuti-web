@@ -11,6 +11,7 @@ import {
   Headphones,
   User,
   X,
+  Pencil,
 } from "lucide-react";
 import { useI18n } from "@/app/i18n.jsx";
 import { useDispatch } from "react-redux";
@@ -20,6 +21,7 @@ import Onboarding from "@/components/Onboarding";
 import { getInitials } from "@/lib/utils";
 import { useKeyboardInsets } from "@/hooks/useKeyboardInsets.jsx";
 import RoleSelection from "@/components/RoleSelection";
+import AddCarModal from "@/components/AddCarModal";
 import GeolocationPermissionModal from "@/components/GeolocationPermissionModal";
 
 // others
@@ -53,6 +55,8 @@ function MainLayout() {
   const [showOnboarding, setShowOnboarding] = React.useState(false);
   const [supportOpen, setSupportOpen] = React.useState(false);
   const [showRoleSelection, setShowRoleSelection] = React.useState(false);
+  const [roleSelectionCanClose, setRoleSelectionCanClose] = React.useState(false);
+  const [showAddCarModal, setShowAddCarModal] = React.useState(false);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = React.useState(false);
   const [geolocationModalOpen, setGeolocationModalOpen] = React.useState(false);
   const { keyboardInset } = useKeyboardInsets();
@@ -88,11 +92,26 @@ function MainLayout() {
       // Проверяем, есть ли валидная роль (passenger или driver)
       const hasValidRole = userData.role === "passenger" || userData.role === "driver";
       if (!hasValidRole) {
-        // Роль пустая - показываем модальное окно выбора роли
+        // Роль пустая - показываем модальное окно выбора роли (обязательное, нельзя закрыть)
         setShowRoleSelection(true);
+        setRoleSelectionCanClose(false);
+        setShowAddCarModal(false);
       } else {
-        // Роль выбрана - скрываем модальное окно
+        // Роль выбрана - скрываем модальное окно выбора роли
         setShowRoleSelection(false);
+        
+        // Если роль водителя, проверяем наличие машины
+        if (userData.role === "driver") {
+          const hasCar = userData.car && (userData.car.model || userData.car.number);
+          if (!hasCar) {
+            // Нет машины - показываем модальное окно для добавления
+            setShowAddCarModal(true);
+          } else {
+            setShowAddCarModal(false);
+          }
+        } else {
+          setShowAddCarModal(false);
+        }
       }
     }
   }, [userData, userLoading]);
@@ -177,7 +196,10 @@ function MainLayout() {
   // Обработчик выбора роли
   const handleRoleSelected = () => {
     setShowRoleSelection(false);
-    userRefetch(); // Обновляем данные пользователя
+    // Обновляем данные пользователя и проверяем наличие машины
+    userRefetch().then(() => {
+      // Проверка произойдет автоматически в useEffect при обновлении userData
+    });
   };
 
   // Обработчик изменения роли из профиля
@@ -272,7 +294,7 @@ function MainLayout() {
       <div className="custom-container mb-2 sm:mb-3 sticky top-16 sm:top-20 z-40">
         <Navbar />
       </div>
-      <main className="grow custom-container mb-6 sm:mb-10 overflow-auto">
+      <main className="grow custom-container mb-6 sm:mb-10">
         <ActiveTabContext.Provider value={{ activeTab: userRole, setActiveTab: () => {} }}>
           <Outlet />
         </ActiveTabContext.Provider>
@@ -280,7 +302,31 @@ function MainLayout() {
       
       {/* Role Selection Modal */}
       {showRoleSelection && (
-        <RoleSelection onRoleSelected={handleRoleSelected} />
+        <RoleSelection 
+          onRoleSelected={handleRoleSelected} 
+          userData={userData}
+          canClose={roleSelectionCanClose}
+          onClose={() => {
+            setShowRoleSelection(false);
+            setRoleSelectionCanClose(false);
+          }}
+        />
+      )}
+      
+      {/* Add Car Modal - показываем если роль водителя, но нет машины */}
+      {showAddCarModal && !showRoleSelection && (
+        <AddCarModal
+          userData={userData}
+          onCarAdded={async (carData) => {
+            // Закрываем модальное окно в любом случае
+            setShowAddCarModal(false);
+            // Если данные сохранены (carData не null), обновляем данные пользователя
+            if (carData) {
+              await userRefetch();
+              // После обновления данных проверка произойдет автоматически в useEffect
+            }
+          }}
+        />
       )}
       {/* Right Panel Profile */}
       {profileOpen && (
@@ -352,28 +398,78 @@ function MainLayout() {
                         {getRoleLabel(userData?.role)}
                       </span>
                     </div>
-                    {/* Кнопка смены роли временно закомментирована */}
-                    {/* <button
-                      onClick={() => setIsRoleDialogOpen(true)}
+                    <button
+                      onClick={() => {
+                        setProfileOpen(false);
+                        setRoleSelectionCanClose(true); // Разрешаем закрытие при редактировании
+                        setShowRoleSelection(true);
+                      }}
                       className="text-xs text-primary hover:underline flex items-center gap-1"
-                      disabled={updateRoleMutation.isPending}
                     >
-                      {t("profilePage.changeRole")}
-                    </button> */}
+                      <Pencil className="w-3 h-3" />
+                      <span>Изменить</span>
+                    </button>
                   </div>
                 </div>
               </div>
+              
+              {/* Информация о машине для водителей */}
+              {userData?.role === "driver" && (
+                <div className="border rounded-2xl p-3 sm:p-4 bg-white/70 w-full">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Car className="w-4 h-4 text-primary" />
+                      <span className="text-xs sm:text-sm font-semibold text-gray-900">
+                        Машина
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setProfileOpen(false);
+                        setShowAddCarModal(true);
+                      }}
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      <span>Изменить</span>
+                    </button>
+                  </div>
+                  
+                  {userData?.car ? (
+                    <div className="space-y-2 text-xs sm:text-sm">
+                      {userData.car.model && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 min-w-[60px]">Модель:</span>
+                          <span className="font-medium text-gray-900">{userData.car.model}</span>
+                        </div>
+                      )}
+                      {userData.car.color && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 min-w-[60px]">Цвет:</span>
+                          <span className="font-medium text-gray-900">{userData.car.color}</span>
+                        </div>
+                      )}
+                      {userData.car.number && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 min-w-[60px]">Номер:</span>
+                          <span className="font-medium text-gray-900 font-semibold">{userData.car.number}</span>
+                        </div>
+                      )}
+                      {!userData.car.model && !userData.car.color && !userData.car.number && (
+                        <div className="text-xs text-gray-500">
+                          Информация о машине не указана
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500">
+                      Информация о машине не указана
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <div className="border rounded-2xl p-3 sm:p-4 bg-white/70 w-full">
-                <Link
-                  to="/profile"
-                  onClick={() => setProfileOpen(false)}
-                  className="w-full flex items-center gap-2 hover:bg-accent/50 rounded-lg p-2 transition-colors"
-                >
-                  <User className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-semibold text-gray-700">
-                    {t("profilePanel.myProfile")}
-                  </span>
-                </Link>
                 <button
                   onClick={() => setSupportOpen(true)}
                   className="w-full flex items-center gap-2 hover:bg-accent/50 rounded-lg p-2 transition-colors"
