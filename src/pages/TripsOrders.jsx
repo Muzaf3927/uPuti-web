@@ -412,19 +412,19 @@ function TripsOrders({ type = "city" }) {
           {isDriver ? (
             <>
               <TabsTrigger value="all-orders" className="flex-1 border border-green-400/50 bg-gradient-to-tr from-white/80 to-green-50/60 text-black data-[state=active]:bg-gradient-to-tr data-[state=active]:from-primary data-[state=active]:to-cyan-400 data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:border-primary">
-                Все заказы
+                {t("orders.all")}
               </TabsTrigger>
               <TabsTrigger value="my-orders" className="flex-1 border border-green-400/50 bg-gradient-to-tr from-white/80 to-green-50/60 text-black data-[state=active]:bg-gradient-to-tr data-[state=active]:from-primary data-[state=active]:to-cyan-400 data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:border-primary">
-                Мои брони
+                {t("booking.myBookings")}
               </TabsTrigger>
             </>
           ) : (
             <>
           <TabsTrigger value="create" className="flex-1 border border-green-400/50 bg-gradient-to-tr from-white/80 to-green-50/60 text-black data-[state=active]:bg-gradient-to-tr data-[state=active]:from-primary data-[state=active]:to-cyan-400 data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:border-primary">
-            Создать заказ
+            {t("orders.create")}
           </TabsTrigger>
           <TabsTrigger value="my-orders" className="flex-1 border border-green-400/50 bg-gradient-to-tr from-white/80 to-green-50/60 text-black data-[state=active]:bg-gradient-to-tr data-[state=active]:from-primary data-[state=active]:to-cyan-400 data-[state=active]:text-white data-[state=active]:font-bold data-[state=active]:border-primary">
-            Мои заказы
+            {t("orders.mine")}
           </TabsTrigger>
             </>
           )}

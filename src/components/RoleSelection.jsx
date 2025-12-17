@@ -24,6 +24,12 @@ function RoleSelection({ onRoleSelected, userData, canClose = false, onClose }) 
     console.log("RoleSelection: telegramModalOpen changed to:", telegramModalOpen);
   }, [telegramModalOpen]);
 
+  useEffect(() => {
+    if(!updatedUserData?.telegram_chat_id){
+      setTelegramModalOpen(true)
+    }
+  }, [updatedUserData])
+
   const handleSelectRole = async (role) => {
     if (!role) {
       console.log("RoleSelection: No role provided");
@@ -59,39 +65,7 @@ function RoleSelection({ onRoleSelected, userData, canClose = false, onClose }) 
           return;
         }
       }
-      
-      // Для пассажиров - проверяем telegram_chat_id
-      if (role === "passenger") {
-        // Используем актуальные данные пользователя (из пропса или из хука)
-        const currentUserData = userData || updatedUserData;
-        const telegramChatId = currentUserData?.telegram_chat_id;
-        
-        // Явная проверка: если telegram_chat_id отсутствует, null, undefined или пустая строка
-        // Если telegram_chat_id равен null, undefined или пустой строке - показываем модальное окно
-        const hasTelegram = telegramChatId !== null && telegramChatId !== undefined && telegramChatId !== "" && String(telegramChatId).trim() !== "";
-        
-        // Для отладки
-        console.log("=== RoleSelection: Checking Telegram for passenger ===");
-        console.log("RoleSelection: currentUserData:", currentUserData);
-        console.log("RoleSelection: telegramChatId:", telegramChatId);
-        console.log("RoleSelection: telegramChatId type:", typeof telegramChatId);
-        console.log("RoleSelection: telegramChatId === null:", telegramChatId === null);
-        console.log("RoleSelection: hasTelegram:", hasTelegram);
-        console.log("RoleSelection: Will open modal:", !hasTelegram);
-        
-        // Если нет telegram_chat_id, открываем модальное окно
-        if (!hasTelegram) {
-          console.log("RoleSelection: No Telegram chat_id found, opening modal NOW");
-          setTelegramModalOpen(true);
-          console.log("RoleSelection: setTelegramModalOpen(true) called, telegramModalOpen should be true");
-          // НЕ перезагружаем страницу, модальное окно откроется
-          // ВАЖНО: return здесь останавливает выполнение функции, перезагрузка не произойдет
-          return;
-        } else {
-          console.log("RoleSelection: User has Telegram, proceeding with page reload");
-        }
-      }
-      
+
       // Для пассажиров (если есть telegram) или если у водителя уже есть машина - обновляем страницу
       // Этот код выполнится только если мы НЕ вернулись раньше (т.е. если есть telegram или это не пассажир)
       setTimeout(() => {

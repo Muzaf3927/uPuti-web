@@ -6,7 +6,7 @@ import { useGetData } from "@/api/api";
 
 function Navbar() {
   const location = useLocation();
-  const { t, isReady } = useI18n();
+  const { t, isReady, lang } = useI18n();
   const { data: userData } = useGetData("/user");
   const userRole = userData?.role || "passenger";
   const isDriver = userRole === "driver";
@@ -27,7 +27,7 @@ function Navbar() {
       intercityLink,
       { path: "/history", name: t("nav.history"), icon: <History size={20} /> },
     ];
-  }, [t, isDriver]);
+  }, [t, isDriver, lang]);
 
   if (!isReady) {
     return (
