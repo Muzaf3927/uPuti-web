@@ -40,6 +40,7 @@ import EmptyState from "@/components/EmptyState.jsx";
 import { sessionManager } from "@/lib/sessionManager.js";
 import { useActiveTab } from "@/layout/MainLayout";
 import { Plus } from "lucide-react";
+import { useTripsWebSocket } from "@/hooks/useWebSocket";
  
 
 function Trips() {
@@ -127,6 +128,42 @@ function Trips() {
       myTripsRefetch();
     }
   }, [location.pathname, refetch, myTripsRefetch]);
+
+  // WebSocket подписка на события трипов
+  useTripsWebSocket(
+    (trip) => {
+      // Новый трип создан - обновляем список
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/") {
+        refetch();
+        myTripsRefetch();
+      }
+    },
+    (trip) => {
+      // Трип обновлен - обновляем список
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/") {
+        refetch();
+        myTripsRefetch();
+      }
+    },
+    (trip) => {
+      // Трип завершен - обновляем список
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/") {
+        refetch();
+        myTripsRefetch();
+      }
+    },
+    (trip) => {
+      // Трип отменен - обновляем список
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/") {
+        refetch();
+        myTripsRefetch();
+      }
+    }
+  );
 
 
   // Закомментировано: проверка telegram_chat_id после логина

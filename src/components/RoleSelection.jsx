@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import AddCarModal from "./AddCarModal";
 import TelegramConnectModal from "./TelegramConnectModal";
+import { useUserUpdateWebSocket } from "@/hooks/useWebSocket";
 
 function RoleSelection({ onRoleSelected, userData, canClose = false, onClose }) {
   const { t } = useI18n();
@@ -27,8 +28,21 @@ function RoleSelection({ onRoleSelected, userData, canClose = false, onClose }) 
   useEffect(() => {
     if(!updatedUserData?.telegram_chat_id){
       setTelegramModalOpen(true)
+    } else {
+      // Если telegram_chat_id появился, закрываем модальное окно
+      setTelegramModalOpen(false)
     }
   }, [updatedUserData])
+
+  // WebSocket подписка на обновление пользователя
+  useUserUpdateWebSocket(updatedUserData?.id, (user) => {
+    // Когда пользователь обновлен через WebSocket, проверяем telegram_chat_id
+    if (user?.telegram_chat_id) {
+      setTelegramModalOpen(false);
+      // Обновляем данные пользователя
+      refetchUser();
+    }
+  });
 
   const handleSelectRole = async (role) => {
     if (!role) {

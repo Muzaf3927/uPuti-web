@@ -8,12 +8,23 @@ import { postData, useGetData } from "@/api/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import TelegramConnectModal from "./TelegramConnectModal";
+import { useUserUpdateWebSocket } from "@/hooks/useWebSocket";
 
 function AddCarModal({ onCarAdded, userData }) {
   const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [telegramModalOpen, setTelegramModalOpen] = useState(false);
   const { data: updatedUserData, refetch: refetchUser } = useGetData("/user");
+  
+  // WebSocket подписка на обновление пользователя
+  useUserUpdateWebSocket(updatedUserData?.id, (user) => {
+    // Когда пользователь обновлен через WebSocket, проверяем telegram_chat_id
+    if (user?.telegram_chat_id) {
+      setTelegramModalOpen(false);
+      // Обновляем данные пользователя
+      refetchUser();
+    }
+  });
   
   // Проверяем, есть ли уже машина у пользователя
   const hasCar = userData?.car && (userData.car.model || userData.car.number);

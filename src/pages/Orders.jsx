@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState.jsx";
 import { useActiveTab } from "@/layout/MainLayout";
 import { usePostData, useGetData, deleteData, postData, putData } from "@/api/api";
+import { useTripsWebSocket, useBookingsWebSocket } from "@/hooks/useWebSocket";
 
 function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated, onBookingSuccess }) {
   const { t } = useI18n();
@@ -406,6 +407,63 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     : (showCreateOrder ? (() => {}) : (myTripsRefetch || (() => {})));
 
   // Логирование для отладки (опционально, можно закомментировать в продакшене)
+  // WebSocket подписки для обновления данных в реальном времени
+  useTripsWebSocket(
+    (trip) => {
+      // Новый трип создан - обновляем список
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/orders") {
+        allActiveTripsRefetch?.();
+        myTripsRefetch?.();
+      }
+    },
+    (trip) => {
+      // Трип обновлен - обновляем список
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/orders") {
+        allActiveTripsRefetch?.();
+        myTripsRefetch?.();
+      }
+    }
+  );
+
+  useBookingsWebSocket(
+    (booking) => {
+      // Новое бронирование создано - обновляем список
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/orders") {
+        allActiveTripsRefetch?.();
+        myTripsRefetch?.();
+      }
+      // Показываем уведомление
+      toast.success(t("Новое бронирование"));
+    },
+    (booking) => {
+      // Бронирование обновлено - обновляем список
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/orders") {
+        allActiveTripsRefetch?.();
+        myTripsRefetch?.();
+      }
+    },
+    (booking) => {
+      // Бронирование завершено - обновляем список
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/orders") {
+        allActiveTripsRefetch?.();
+        myTripsRefetch?.();
+      }
+    },
+    (booking) => {
+      // Бронирование отменено - обновляем список
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/orders") {
+        allActiveTripsRefetch?.();
+        myTripsRefetch?.();
+      }
+    }
+  );
+
   useEffect(() => {
     console.log("=== ORDERS DEBUG ===");
     console.log("isDriver:", isDriver);
