@@ -45,7 +45,7 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
   const { activeTab: activeRoleTab } = useActiveTab();
   
   // Получаем данные пользователя для определения роли
-  const { data: userData } = useGetData("/user");
+  const { data: userData, refetch: refetchUser } = useGetData("/user");
   const userRole = userData?.role || "passenger";
   const isDriver = userRole === "driver";
   const [dialog, setDialog] = useState(false);
@@ -80,8 +80,7 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
   const [showFromSuggestions, setShowFromSuggestions] = useState(false);
   const [showToSuggestions, setShowToSuggestions] = useState(false);
   
-  // Ref для поля "куда" для автоматического перехода фокуса
-  const toInputRef = useRef(null);
+  // Ref больше не нужен, так как убрали автоматический фокус
   
   // Для обратной совместимости
   const selectedFrom = routeData.from;
@@ -92,15 +91,8 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
   // Хук для создания поездки
   const createTripMutation = usePostData("/trips");
   
-  // Автоматический переход фокуса на поле "куда" после заполнения "откуда"
-  useEffect(() => {
-    if (fromCoords && fromCoords.lat && fromCoords.lng && selectedFrom && !selectedTo && toInputRef.current) {
-      // Небольшая задержка для плавности
-      setTimeout(() => {
-        toInputRef.current?.focus();
-      }, 100);
-    }
-  }, [fromCoords, selectedFrom, selectedTo]);
+  // Убрали автоматический переход фокуса, чтобы не открывалась клавиатура
+  // Пользователь сам нажмет на поле "куда", когда будет готов
 
   // Функция сброса поля "откуда"
   const handleResetFrom = () => {
@@ -905,7 +897,6 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
             <div className="relative">
               <Route className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-primary z-10" />
                       <Input 
-                ref={toInputRef}
                 type="text"
                 placeholder={t("orders.form.toPlaceholder") || "Куда"}
                 value={selectedTo}

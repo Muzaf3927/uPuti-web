@@ -15,7 +15,7 @@ import {
 import { useI18n } from "@/app/i18n.jsx";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
-import { postData } from "@/api/api";
+import { putData } from "@/api/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { CircleCheck } from "lucide-react";
 
@@ -57,13 +57,17 @@ function MyTripsCardIntercity({ trip }) {
     
     setIsCompleting(true);
     try {
-      await postData(`/trips/${trip.id}/complete`, {});
-      toast.success("Поездка завершена");
+      const response = await putData(`/trips/${trip.id}/completedIntercity`, {});
+      // Используем сообщение из ответа API, если есть, иначе стандартное
+      const successMessage = response?.message || "Поездка завершена";
+      toast.success(successMessage);
       // Обновляем список поездок
+      queryClient.invalidateQueries({ queryKey: ["data", "/trips/my"] });
       queryClient.invalidateQueries({ queryKey: ["data"] });
     } catch (err) {
       console.error("Ошибка при завершении поездки:", err);
-      toast.error("Не удалось завершить поездку");
+      const errorMessage = err?.response?.data?.message || "Не удалось завершить поездку";
+      toast.error(errorMessage);
     } finally {
       setIsCompleting(false);
     }

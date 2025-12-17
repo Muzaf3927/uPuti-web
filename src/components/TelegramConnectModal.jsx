@@ -28,6 +28,11 @@ function TelegramConnectModal({ open, onOpenChange, onCloseParent }) {
     // Бот обработает эту команду и сохранит telegram_chat_id в базу
     const botUrl = `https://t.me/uputi_xabarnoma_bot?start=user_${userData.id}`;
     
+    // Логируем для отладки
+    console.log("Opening Telegram bot with URL:", botUrl);
+    console.log("User ID:", userData.id);
+    console.log("Expected command format: /start user_" + userData.id);
+    
     // Открываем бота напрямую
     window.open(botUrl, '_blank');
     

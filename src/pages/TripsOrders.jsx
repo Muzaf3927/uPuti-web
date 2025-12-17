@@ -6,12 +6,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/app/i18n.jsx";
 import { useGetData } from "@/api/api";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import TripsCard from "@/components/TripsCard";
 import MyTripsCard from "@/components/MyTripsCard";
 import MyTripsCardIntercity from "@/components/MyTripsCardIntercity";
 import TripsCardSkeleton from "@/components/TripsCardSkeleton";
 import EmptyState from "@/components/EmptyState";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function TripsOrders({ type = "city" }) {
   const { t } = useI18n();
@@ -62,6 +73,35 @@ function TripsOrders({ type = "city" }) {
     error: allTripsError,
     refetch: allTripsRefetch,
   } = useGetData(type === "intercity" && !isDriver ? "/trips/for/passenger/active" : null);
+
+  // Состояния для поиска поездок
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [searchFilters, setSearchFilters] = useState({
+    from: "",
+    to: "",
+    date: "",
+  });
+  const [activeSearchFilters, setActiveSearchFilters] = useState({
+    from: "",
+    to: "",
+    date: "",
+  });
+
+  // Формируем URL для поиска
+  const searchUrl = type === "intercity" && !isDriver && (activeSearchFilters.from || activeSearchFilters.to || activeSearchFilters.date)
+    ? `/trips/search?${Object.entries(activeSearchFilters)
+        .filter(([_, value]) => value && value.trim() !== "")
+        .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+        .join("&")}`
+    : null;
+
+  // Получаем результаты поиска
+  const {
+    data: searchResultsData,
+    isLoading: searchResultsLoading,
+    error: searchResultsError,
+    refetch: searchResultsRefetch,
+  } = useGetData(searchUrl);
 
   // Для межгорода показываем кнопки и список поездок
   if (type === "intercity") {
@@ -134,15 +174,29 @@ function TripsOrders({ type = "city" }) {
       : (allTripsData?.data || []);
 
     // Преобразуем поля для совместимости с TripsCard
-    // API уже фильтрует по status != 'completed', поэтому дополнительная фильтрация не нужна
-    const filteredAllTrips = Array.isArray(allTripsList)
-      ? allTripsList.map((trip) => {
+    // Используем результаты поиска, если есть активные фильтры, иначе все поездки
+    const tripsToDisplay = (activeSearchFilters.from || activeSearchFilters.to || activeSearchFilters.date)
+      ? (Array.isArray(searchResultsData) ? searchResultsData : (searchResultsData?.data || []))
+      : allTripsList;
+
+    const filteredAllTrips = Array.isArray(tripsToDisplay)
+      ? tripsToDisplay.map((trip) => {
           // Информация о водителе и машине может быть в trip.user и trip.user.car
           const driver = trip.user || trip.driver;
           const car = trip.user?.car || trip.car || {};
           
+          // Находим бронирование текущего пользователя в массиве bookings
+          const currentUserId = userData?.id;
+          const myBooking = trip.bookings?.find(
+            (booking) => booking.user_id === currentUserId && booking.role === "passenger"
+          );
+          
           return {
             ...trip,
+            // Добавляем информацию о бронировании, если оно есть
+            my_booking: myBooking || trip.my_booking || null,
+            booking_id: myBooking?.id || trip.booking_id || null,
+            booking_seats: myBooking?.seats || trip.booking_seats || null,
             // Преобразуем поля для совместимости с TripsCard
             from_city: trip.from_address || trip.from_city || "",
             to_city: trip.to_address || trip.to_city || "",
@@ -172,6 +226,7 @@ function TripsOrders({ type = "city" }) {
             </Button>
           ) : (
             <Button
+              onClick={() => setSearchDialogOpen(true)}
               className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-lg py-2 h-12 text-base font-medium hover:brightness-110 transition-all"
             >
               <Search size={20} />
@@ -230,21 +285,36 @@ function TripsOrders({ type = "city" }) {
               </div>
 
               {/* Раздел "Все поездки" для пассажиров */}
-              <div className="pt-2 pb-1">
-                <h3 className="text-xs sm:text-sm font-bold text-primary">Все поездки</h3>
+              <div className="pt-2 pb-1 flex items-center justify-between">
+                <h3 className="text-xs sm:text-sm font-bold text-primary">
+                  {(activeSearchFilters.from || activeSearchFilters.to || activeSearchFilters.date) ? "Результаты поиска" : "Все поездки"}
+                </h3>
+                {(activeSearchFilters.from || activeSearchFilters.to || activeSearchFilters.date) && (
+                  <button
+                    onClick={() => {
+                      setActiveSearchFilters({ from: "", to: "", date: "" });
+                      setSearchFilters({ from: "", to: "", date: "" });
+                    }}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Очистить
+                  </button>
+                )}
               </div>
               <div className="space-y-3">
-                {allTripsLoading ? (
+                {(allTripsLoading || searchResultsLoading) ? (
                   Array(2)
                     .fill(1)
                     .map((_, index) => <TripsCardSkeleton key={index} />)
-                ) : allTripsError ? (
+                ) : (allTripsError || searchResultsError) ? (
                   <div className="text-center text-xs text-red-600 py-2">
                     Ошибка загрузки поездок
                   </div>
                 ) : filteredAllTrips.length === 0 ? (
                   <div className="text-center text-xs text-gray-500 py-2">
-                    Нет доступных поездок
+                    {(activeSearchFilters.from || activeSearchFilters.to || activeSearchFilters.date) 
+                      ? "По вашему запросу ничего не найдено" 
+                      : "Нет доступных поездок"}
                   </div>
                 ) : (
                   filteredAllTrips.map((trip) => <TripsCard trip={trip} key={trip.id} />)
@@ -253,6 +323,83 @@ function TripsOrders({ type = "city" }) {
             </>
           )}
         </div>
+
+        {/* Модальное окно поиска поездок */}
+        <Dialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen}>
+        <DialogContent className="max-w-md p-6 rounded-2xl relative" showCloseButton={false}>
+          <DialogHeader className="relative pr-8">
+            <DialogTitle className="text-center text-lg font-semibold mb-2">
+              Искать поездку
+            </DialogTitle>
+            <DialogDescription className="text-center text-sm text-gray-600">
+              Укажите параметры поиска
+            </DialogDescription>
+            <DialogClose asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute top-0 right-0 h-6 w-6 p-0 hover:bg-accent/50 rounded-full"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogClose>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              // Применяем фильтры только если хотя бы одно поле заполнено
+              if (searchFilters.from.trim() || searchFilters.to.trim() || searchFilters.date) {
+                setActiveSearchFilters({ ...searchFilters });
+                setSearchDialogOpen(false);
+              }
+            }}
+            className="flex flex-col gap-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="search-from">Откуда</Label>
+              <Input
+                id="search-from"
+                type="text"
+                placeholder="Например: Ташкент"
+                value={searchFilters.from}
+                onChange={(e) => setSearchFilters({ ...searchFilters, from: e.target.value })}
+                className="bg-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="search-to">Куда</Label>
+              <Input
+                id="search-to"
+                type="text"
+                placeholder="Например: Самарканд"
+                value={searchFilters.to}
+                onChange={(e) => setSearchFilters({ ...searchFilters, to: e.target.value })}
+                className="bg-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="search-date">Дата</Label>
+                <Input
+                  id="search-date"
+                  type="date"
+                  value={searchFilters.date}
+                  onChange={(e) => setSearchFilters({ ...searchFilters, date: e.target.value })}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="bg-white"
+                />
+            </div>
+            <div className="flex gap-2 mt-2">
+              <Button 
+                type="submit" 
+                className="flex-1 bg-primary text-primary-foreground"
+                disabled={!searchFilters.from.trim() && !searchFilters.to.trim() && !searchFilters.date}
+              >
+                Искать
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
       </div>
     );
   }

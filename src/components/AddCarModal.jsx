@@ -4,13 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/app/i18n.jsx";
-import { postData } from "@/api/api";
+import { postData, useGetData } from "@/api/api";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import TelegramConnectModal from "./TelegramConnectModal";
 
 function AddCarModal({ onCarAdded, userData }) {
   const { t } = useI18n();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [telegramModalOpen, setTelegramModalOpen] = useState(false);
+  const { data: updatedUserData, refetch: refetchUser } = useGetData("/user");
   
   // Проверяем, есть ли уже машина у пользователя
   const hasCar = userData?.car && (userData.car.model || userData.car.number);
@@ -64,6 +67,22 @@ function AddCarModal({ onCarAdded, userData }) {
 
       toast.success("Машина успешно добавлена");
       
+      // После успешного добавления машины проверяем telegram_chat_id для водителей
+      // Обновляем данные пользователя перед проверкой
+      const { data: freshUserData } = await refetchUser();
+      
+      // Проверяем наличие telegram_chat_id
+      const hasTelegram = freshUserData?.telegram_chat_id && freshUserData.telegram_chat_id.trim() !== "";
+      
+      if (!hasTelegram) {
+        // Если нет telegram_chat_id, открываем модальное окно Telegram
+        setTelegramModalOpen(true);
+        // Не закрываем модальное окно добавления машины, пока не закроется Telegram модальное окно
+        // Модальное окно добавления машины закроется в обработчике закрытия Telegram модального окна
+        return;
+      }
+      
+      // Если есть telegram_chat_id, закрываем модальное окно добавления машины
       if (onCarAdded) {
         onCarAdded(response);
       }
@@ -91,7 +110,7 @@ function AddCarModal({ onCarAdded, userData }) {
 
   return (
     <div 
-      className="fixed inset-0 z-[99999] flex items-start justify-center bg-black/50 backdrop-blur-sm pt-8 sm:pt-12 overflow-y-auto"
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-gradient-to-br from-white via-green-50/40 to-green-100/30 backdrop-blur-sm p-4 overflow-y-auto"
       onClick={(e) => {
         // При редактировании можно закрыть кликом на backdrop, при первом добавлении - нельзя
         if (!hasCar && e.target === e.currentTarget) {
@@ -109,11 +128,15 @@ function AddCarModal({ onCarAdded, userData }) {
       style={{ pointerEvents: 'auto' }}
     >
       <div 
-        className="bg-white rounded-xl shadow-2xl p-4 sm:p-5 max-w-sm w-full mx-4 my-4 border border-gray-200 relative z-[100000]"
+        className="bg-gradient-to-br from-white via-green-50/50 to-green-100/30 rounded-3xl shadow-2xl p-6 sm:p-8 max-w-md w-full mx-4 border border-green-200/60 relative z-[100000] backdrop-blur-sm"
+        style={{
+          backgroundImage: "linear-gradient(135deg, rgba(34,197,94,0.08), rgba(16,185,129,0.05))",
+          boxShadow: "0 20px 60px rgba(34,197,94,0.15), 0 0 0 1px rgba(34,197,94,0.1)",
+          pointerEvents: 'auto'
+        }}
         onClick={(e) => {
           e.stopPropagation();
         }}
-        style={{ pointerEvents: 'auto' }}
       >
         {/* Кнопка закрытия при редактировании */}
         {hasCar && (
@@ -126,22 +149,19 @@ function AddCarModal({ onCarAdded, userData }) {
                 onCarAdded(null); // Закрываем без сохранения
               }
             }}
-            className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-gray-100 transition-colors z-[100001] cursor-pointer"
+            className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/80 transition-all z-[100001] cursor-pointer shadow-sm border border-gray-200/50"
             aria-label="Закрыть"
             style={{ pointerEvents: 'auto' }}
           >
-            <X className="h-4 w-4 text-gray-500" />
+            <X className="h-4 w-4 text-gray-600" />
           </button>
         )}
         
-        <div className="text-center mb-4">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-primary/10 flex items-center justify-center">
-            <Car className="w-6 h-6 text-primary" />
-          </div>
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1.5">
+        <div className="text-center mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
             {hasCar ? "Обновить информацию о машине" : "Добавить машину"}
           </h2>
-          <p className="text-xs sm:text-sm text-gray-600">
+          <p className="text-sm text-gray-700 leading-relaxed max-w-sm mx-auto">
             {hasCar 
               ? "Обновите информацию о вашей машине"
               : "Для работы водителем необходимо добавить информацию о машине"
@@ -151,7 +171,10 @@ function AddCarModal({ onCarAdded, userData }) {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="model" className="text-xs sm:text-sm">Модель машины</Label>
+            <Label htmlFor="model" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <span className="w-1 h-4 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></span>
+              Модель машины
+            </Label>
             <Input
               id="model"
               type="text"
@@ -159,15 +182,20 @@ function AddCarModal({ onCarAdded, userData }) {
               value={formData.model}
               onChange={(e) => handleChange("model", e.target.value)}
               disabled={isSubmitting}
-              className={`h-9 text-sm ${errors.model ? "border-red-500" : ""}`}
+              className={`h-11 text-sm bg-white/90 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all ${errors.model ? "border-red-500 focus:ring-red-500/20" : ""}`}
             />
             {errors.model && (
-              <p className="text-xs text-red-500">{errors.model}</p>
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <span>⚠</span> {errors.model}
+              </p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="color" className="text-xs sm:text-sm">Цвет</Label>
+            <Label htmlFor="color" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <span className="w-1 h-4 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></span>
+              Цвет
+            </Label>
             <Input
               id="color"
               type="text"
@@ -175,16 +203,19 @@ function AddCarModal({ onCarAdded, userData }) {
               value={formData.color}
               onChange={(e) => handleChange("color", e.target.value)}
               disabled={isSubmitting}
-              className={`h-9 text-sm ${errors.color ? "border-red-500" : ""}`}
+              className={`h-11 text-sm bg-white/90 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all ${errors.color ? "border-red-500 focus:ring-red-500/20" : ""}`}
             />
             {errors.color && (
-              <p className="text-xs text-red-500">{errors.color}</p>
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <span>⚠</span> {errors.color}
+              </p>
             )}
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="number" className="text-xs sm:text-sm">
-              Номер машины <span className="text-red-500">*</span>
+            <Label htmlFor="number" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <span className="w-1 h-4 bg-gradient-to-b from-green-500 to-green-600 rounded-full"></span>
+              Номер машины <span className="text-red-500 font-bold">*</span>
             </Label>
             <Input
               id="number"
@@ -193,32 +224,54 @@ function AddCarModal({ onCarAdded, userData }) {
               value={formData.number}
               onChange={(e) => handleChange("number", e.target.value.toUpperCase())}
               disabled={isSubmitting}
-              className={`h-9 text-sm ${errors.number ? "border-red-500" : ""}`}
+              className={`h-11 text-sm bg-white/90 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 transition-all uppercase font-semibold tracking-wider ${errors.number ? "border-red-500 focus:ring-red-500/20" : ""}`}
               required
             />
             {errors.number && (
-              <p className="text-xs text-red-500">{errors.number}</p>
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <span>⚠</span> {errors.number}
+              </p>
             )}
           </div>
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-3 pt-3">
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 h-9 bg-primary hover:bg-primary/90 text-white text-sm"
+              className="flex-1 h-12 bg-gradient-to-r from-green-500 via-green-600 to-green-500 hover:from-green-600 hover:via-green-700 hover:to-green-600 text-white text-sm font-semibold rounded-xl shadow-lg shadow-green-500/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {isSubmitting ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   Сохранение...
-                </>
+                </span>
               ) : (
-                hasCar ? "Обновить" : "Добавить"
+                <span className="flex items-center justify-center gap-2">
+                  <Car className="w-4 h-4" />
+                  {hasCar ? "Обновить" : "Добавить"}
+                </span>
               )}
             </Button>
           </div>
         </form>
       </div>
+      
+      {/* Модальное окно для подключения Telegram */}
+      <TelegramConnectModal 
+        open={telegramModalOpen} 
+        onOpenChange={async (open) => {
+          if (!open) {
+            setTelegramModalOpen(false);
+            // Обновляем данные пользователя после закрытия модального окна
+            await refetchUser();
+            // Закрываем модальное окно добавления машины
+            if (onCarAdded) {
+              onCarAdded(null);
+            }
+          }
+        }}
+        onCloseParent={() => setTelegramModalOpen(false)}
+      />
     </div>
   );
 }

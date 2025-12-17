@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import TripsCard from "@/components/TripsCard";
 
 // icons
-import { Car, MapPin, Search, ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
+import { Car, MapPin, Search, ChevronLeft, ChevronRight, Loader2, X, ArrowLeft } from "lucide-react";
 
 // router
 import { useLocation } from "react-router-dom";
@@ -472,18 +472,8 @@ function Trips() {
             showCloseButton={false}
             autoFocusScroll
           >
-            <DialogHeader className="relative">
-              <DialogTitle className="text-center text-primary font-bold pr-8">{t("trips.create")}</DialogTitle>
-            <DialogDescription className="sr-only">Create trip dialog</DialogDescription>
-              <DialogClose asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute top-0 right-0 h-6 w-6 p-0 hover:bg-accent/50 rounded-full"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </DialogClose>
+            <DialogHeader>
+              <DialogDescription className="sr-only">Create trip dialog</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="flex flex-col gap-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4 overflow-y-auto overflow-x-hidden pr-1 touch-pan-y overscroll-contain max-h-[60svh]"

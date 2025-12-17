@@ -17,6 +17,10 @@ const dict = {
       driverTab: "Haydovchi",
       city: "Shahar ichida",
       intercity: "Shaharlararo",
+      cityPassenger: "Safar yaratish",
+      cityDriver: "Yaqin safarlar",
+      intercityPassenger: "Safar topish",
+      intercityDriver: "Safarga yaratish",
     },
     roleSelection: {
       title: "Rolingizni tanlang",
@@ -517,6 +521,10 @@ const dict = {
       driverTab: "Водитель",
       city: "По городу",
       intercity: "Межгород",
+      cityPassenger: "Создать поездку",
+      cityDriver: "Поездки рядом",
+      intercityPassenger: "Найти поездку",
+      intercityDriver: "Создать поездку",
     },
     roleSelection: {
       title: "Выберите вашу роль",
