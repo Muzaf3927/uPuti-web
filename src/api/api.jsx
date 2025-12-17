@@ -6,12 +6,12 @@ const { VITE_API_BASE } = import.meta.env;
 
 // Локальный API для тестирования
 const LOCAL_API_BASE = "http://localhost:8000/api";
-// const PRODUCTION_API_BASE = "https://api.uputi.net/api";
+const PRODUCTION_API_BASE = "https://api.uputi.net/api";
 
-// Используем локальный API для тестирования
+// Используем продакшн API
 const api = axios.create({
-  // baseURL: VITE_API_BASE || PRODUCTION_API_BASE, // Основной API (закомментирован)
-  baseURL: LOCAL_API_BASE, // Локальный API для теста
+  baseURL: VITE_API_BASE || PRODUCTION_API_BASE, // Основной API
+  // baseURL: LOCAL_API_BASE, // Локальный API для теста (закомментирован)
   headers: {
     "Content-Type": "application/json",
   },
@@ -33,9 +33,9 @@ const refreshAccessToken = async () => {
   const refreshToken = safeLocalStorage.getItem("reFreshToken");
   if (!refreshToken) throw new Error("No refresh token available");
 
-  // Используем локальный API для тестирования
-  // const API_BASE = VITE_API_BASE || PRODUCTION_API_BASE; // Основной API (закомментирован)
-  const API_BASE = LOCAL_API_BASE; // Локальный API для теста
+  // Используем продакшн API
+  const API_BASE = VITE_API_BASE || PRODUCTION_API_BASE; // Основной API
+  // const API_BASE = LOCAL_API_BASE; // Локальный API для теста (закомментирован)
   
   const { data } = await axios.post(
     `${API_BASE}/refresh-token`,
