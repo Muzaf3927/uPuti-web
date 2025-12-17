@@ -6,13 +6,17 @@ import { safeLocalStorage } from './localStorage';
 window.Pusher = Pusher;
 
 // Получаем переменные окружения
-const REVERB_APP_KEY = import.meta.env.VITE_REVERB_APP_KEY || 'yerhxxguhoccbizaiivc';
-const REVERB_HOST = import.meta.env.VITE_REVERB_HOST || 'localhost';
-const REVERB_PORT = import.meta.env.VITE_REVERB_PORT || 8080;
-const REVERB_SCHEME = import.meta.env.VITE_REVERB_SCHEME || 'http';
+// Значения по умолчанию соответствуют продакшн настройкам бекенда
+const REVERB_APP_KEY = import.meta.env.VITE_REVERB_APP_KEY || 'Ch1q03StfKvXs9tZVmLm';
+// Laravel Cloud Reverb host
+const REVERB_HOST = import.meta.env.VITE_REVERB_HOST || 'ws-a09d837c-dc24-4d84-add2-3ce2dca3e47e-reverb.laravel.cloud';
+const REVERB_PORT = import.meta.env.VITE_REVERB_PORT || 443;
+const REVERB_SCHEME = import.meta.env.VITE_REVERB_SCHEME || 'https';
 
 // Получаем базовый URL API для авторизации
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api';
+const PRODUCTION_API_BASE = 'https://api.uputi.net/api';
+const LOCAL_API_BASE = 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE || PRODUCTION_API_BASE;
 // Убираем /api из конца для получения базового URL
 const BASE_URL = API_BASE.replace('/api', '');
 
@@ -49,7 +53,7 @@ export const initializeEcho = () => {
   // Обновляем токен при изменении
   const updateToken = () => {
     const newToken = safeLocalStorage.getItem('token');
-    if (newToken && echoInstance) {
+    if (newToken && echoInstance?.connector?.pusher?.config?.auth?.headers) {
       echoInstance.connector.pusher.config.auth.headers.Authorization = `Bearer ${newToken}`;
     }
   };
@@ -83,7 +87,7 @@ export const disconnectEcho = () => {
 // Обновить токен авторизации
 export const updateEchoToken = () => {
   const token = safeLocalStorage.getItem('token');
-  if (echoInstance && token) {
+  if (echoInstance?.connector?.pusher?.config?.auth?.headers && token) {
     echoInstance.connector.pusher.config.auth.headers.Authorization = `Bearer ${token}`;
   }
 };
