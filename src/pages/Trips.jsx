@@ -130,9 +130,11 @@ function Trips() {
   }, [location.pathname, refetch, myTripsRefetch]);
 
   // WebSocket подписка на события трипов (публичный канал для всех)
+  // Этот канал получает события о всех новых поездках
   useTripsWebSocket(
     (trip) => {
-      // Новый трип создан - обновляем список
+      // Новый трип создан - обновляем список для всех
+      console.log('WebSocket: Новый трип создан', trip);
       queryClient.invalidateQueries({ queryKey: ['data'] });
       if (location.pathname === "/") {
         refetch();
@@ -141,6 +143,7 @@ function Trips() {
     },
     (trip) => {
       // Трип обновлен - обновляем список
+      console.log('WebSocket: Трип обновлен', trip);
       queryClient.invalidateQueries({ queryKey: ['data'] });
       if (location.pathname === "/") {
         refetch();
@@ -149,6 +152,7 @@ function Trips() {
     },
     (trip) => {
       // Трип завершен - обновляем список
+      console.log('WebSocket: Трип завершен', trip);
       queryClient.invalidateQueries({ queryKey: ['data'] });
       if (location.pathname === "/") {
         refetch();
@@ -157,6 +161,7 @@ function Trips() {
     },
     (trip) => {
       // Трип отменен - обновляем список
+      console.log('WebSocket: Трип отменен', trip);
       queryClient.invalidateQueries({ queryKey: ['data'] });
       if (location.pathname === "/") {
         refetch();
@@ -166,11 +171,13 @@ function Trips() {
   );
 
   // WebSocket подписка на канал user.{id} для пассажиров (новые поездки от водителей)
+  // Этот канал получает персональные уведомления для пользователя
   const userId = userData?.id;
   useUserTripsWebSocket(
     userId,
     // Новый трип создан водителем - обновляем список для пассажиров
     (trip) => {
+      console.log('WebSocket user channel: Новый трип создан', trip);
       if (userRole === "passenger" && location.pathname === "/") {
         queryClient.invalidateQueries({ queryKey: ['data'] });
         refetch();
@@ -178,6 +185,7 @@ function Trips() {
     },
     // Трип обновлен - обновляем список
     (trip) => {
+      console.log('WebSocket user channel: Трип обновлен', trip);
       if (userRole === "passenger" && location.pathname === "/") {
         queryClient.invalidateQueries({ queryKey: ['data'] });
         refetch();
@@ -185,6 +193,7 @@ function Trips() {
     },
     // Новое бронирование создано - обновляем список
     (booking) => {
+      console.log('WebSocket user channel: Новое бронирование', booking);
       if (location.pathname === "/") {
         queryClient.invalidateQueries({ queryKey: ['data'] });
         myTripsRefetch();
@@ -192,6 +201,7 @@ function Trips() {
     },
     // Бронирование обновлено - обновляем список
     (booking) => {
+      console.log('WebSocket user channel: Бронирование обновлено', booking);
       if (location.pathname === "/") {
         queryClient.invalidateQueries({ queryKey: ['data'] });
         myTripsRefetch();
@@ -199,6 +209,7 @@ function Trips() {
     },
     // Бронирование отменено - обновляем список
     (booking) => {
+      console.log('WebSocket user channel: Бронирование отменено', booking);
       if (location.pathname === "/") {
         queryClient.invalidateQueries({ queryKey: ['data'] });
         myTripsRefetch();

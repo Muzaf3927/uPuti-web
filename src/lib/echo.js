@@ -35,6 +35,15 @@ export const initializeEcho = () => {
   // Убираем протокол если он есть (ws:// или wss://)
   const cleanHost = REVERB_HOST.replace(/^(wss?:\/\/)?/, '');
   
+  console.log('Echo config:', {
+    REVERB_APP_KEY,
+    cleanHost,
+    REVERB_PORT,
+    REVERB_SCHEME,
+    BASE_URL
+  });
+  
+  // Для Laravel Reverb конфигурация
   echoInstance = new Echo({
     broadcaster: 'reverb',
     key: REVERB_APP_KEY,
@@ -43,16 +52,17 @@ export const initializeEcho = () => {
     wssPort: REVERB_PORT,
     forceTLS: REVERB_SCHEME === 'https',
     enabledTransports: ['ws', 'wss'],
-    // Отключаем автоматическое определение хоста
     disableStats: true,
+    // Отключаем автоматическое определение хоста
+    cluster: null,
     authEndpoint: `${BASE_URL}/broadcasting/auth`,
     auth: {
       headers: {
         Authorization: token ? `Bearer ${token}` : '',
       },
     },
-    // Дополнительные опции для отладки
-    // enableLogging: true,
+    // Включаем логирование для отладки
+    enableLogging: true,
   });
 
   // Обновляем токен при изменении
