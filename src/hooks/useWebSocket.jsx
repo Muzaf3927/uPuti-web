@@ -73,6 +73,24 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
       channel.subscribed(() => {
         console.log(`[WebSocket] ✅✅✅ Успешно подписан на канал: ${channelName}`);
         console.log(`[WebSocket] Готов к получению событий в канале: ${channelName}`);
+        
+        // После подписки настраиваем глобальный слушатель
+        try {
+          const pusherChannelName = isPrivate ? `private-${channelName}` : channelName;
+          const pusherChannel = echo.connector.pusher.channel(pusherChannelName);
+          if (pusherChannel && pusherChannel.bind_global) {
+            pusherChannel.bind_global((eventName, data) => {
+              console.log(`[WebSocket] 🔔🔔🔔 СОБЫТИЕ ПОЛУЧЕНО в канале ${channelName}:`, {
+                eventName,
+                data,
+                timestamp: new Date().toISOString()
+              });
+            });
+            console.log(`[WebSocket] ✅ Глобальный слушатель активен для: ${channelName}`);
+          }
+        } catch (e) {
+          console.warn(`[WebSocket] Не удалось настроить глобальный слушатель после подписки:`, e);
+        }
       });
 
       channel.error((error) => {
@@ -90,8 +108,10 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
 
       // Универсальный слушатель всех событий для отладки через Pusher напрямую
       try {
-        // Получаем pusher канал напрямую для глобального прослушивания
-        const pusherChannel = echo.connector.pusher.channel(channelName);
+        // Для приватных каналов нужно использовать префикс private-
+        const pusherChannelName = isPrivate ? `private-${channelName}` : channelName;
+        const pusherChannel = echo.connector.pusher.channel(pusherChannelName);
+        
         if (pusherChannel) {
           // Слушаем все события через bind_global
           pusherChannel.bind_global((eventName, data) => {
@@ -99,11 +119,25 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
               eventName,
               data,
               timestamp: new Date().toISOString(),
-              channel: channelName
+              channel: channelName,
+              pusherChannelName: pusherChannelName
             });
           });
+          console.log(`[WebSocket] ✅ Глобальный слушатель настроен для канала: ${channelName} (${pusherChannelName})`);
         } else {
-          console.warn(`[WebSocket] Pusher канал ${channelName} не найден`);
+          // Пробуем получить канал после подписки
+          channel.subscribed(() => {
+            const subscribedChannel = echo.connector.pusher.channel(pusherChannelName);
+            if (subscribedChannel) {
+              subscribedChannel.bind_global((eventName, data) => {
+                console.log(`[WebSocket] 🔔🔔🔔 ВСЕ события в канале ${channelName}:`, {
+                  eventName,
+                  data,
+                  timestamp: new Date().toISOString()
+                });
+              });
+            }
+          });
         }
       } catch (e) {
         console.warn(`[WebSocket] Глобальный слушатель недоступен для ${channelName}:`, e);
