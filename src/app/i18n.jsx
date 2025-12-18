@@ -6,15 +6,15 @@ const I18nContext = createContext({ lang: "uz", t: (k) => k, setLang: () => {} }
 const dict = {
   uz: {
     nav: {
-      booking: "Yaratilgan",
+      booking: "Topilgan",
       history: "Tarix",
-      orders: "Olingan",
+      orders: "Yaratilgan",
       passengerTab: "Yo'lovchi",
       driverTab: "Haydovchi",
       cityPassenger: "Zakaz yaratish",
-      cityDriver: "Zakazlar olish",
+      cityDriver: "Yaqin zakazlar",
       intercityPassenger: "Haydovchi topish",
-      intercityDriver: "Zakaz yaratish",
+      intercityDriver: "Safar yaratish",
     },
     roleSelection: {
       title: "Rolingizni tanlang",
@@ -25,7 +25,7 @@ const dict = {
       saving: "Saqlanmoqda...",
     },
     booking: {
-      myBookings: "Mening bronlarim",
+      myBookings: "Olganlarim",
       loading: "Yuklanmoqda...",
       none: "Sizda bonlar yo'q.",
       myTripsNone: "Sizda zarzalar yo'q.",
@@ -214,8 +214,8 @@ const dict = {
       declineError: "Bekor qilishda xatolik.",
     },
     orders: {
-      all: "Barcha buyurtmalar",
-      mine: "Mening buyurtmalarim",
+      all: "Zakazlar",
+      mine: "Qabul qilindi",
       create: "Zakaz berish",
       loading: "Yuklanmoqda...",
       history: {
@@ -279,7 +279,11 @@ const dict = {
       }
     },
     profilePanel: {
+      name: "Ism",
+      phone: "Telefon",
+      rating: "Reyting",
       support: "Texnik yordam",
+      logout: "Chiqish",
     },
     support: {
       title: "Savollar va takliflar uchun",
@@ -339,7 +343,7 @@ const dict = {
     nav: {
       booking: "Брони",
       history: "История",
-      orders: "Заказы",
+      orders: "Принятие",
       passengerTab: "Пассажир",
       driverTab: "Водитель",
       cityPassenger: "Создать поездку",
@@ -610,7 +614,11 @@ const dict = {
       }
     },
     profilePanel: {
+      name: "Имя",
+      phone: "Телефон",
+      rating: "Рейтинг",
       support: "Техподдержка",
+      logout: "Выйти",
     },
     support: {
       title: "Вопросы и предложения",
