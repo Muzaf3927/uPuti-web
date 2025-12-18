@@ -426,29 +426,56 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
 
   // Канал drivers.trips для водителей (новые заказы от пассажиров)
   // Бэкенд отправляет TripCreated в этот канал когда пассажир создает заказ
+  // ВАЖНО: Этот канал должен быть подписан для ВСЕХ пользователей (и водителей, и пассажиров)
+  // потому что пассажиры тоже могут создавать заказы, которые должны видеть водители
+  console.log('🔌 [Orders] Инициализация useDriversTripsWebSocket, isDriver:', isDriver);
   useDriversTripsWebSocket(
     (trip) => {
-      console.log('🎉 [Orders] drivers.trips: Новый заказ от пассажира!', trip);
-      // Обновляем для водителей - новые заказы от пассажиров
-      if (isDriver) {
+      console.log('🎉🎉🎉 [Orders] drivers.trips: Новый заказ от пассажира получен!', trip);
+      console.log('🎉 [Orders] Данные трипа:', {
+        id: trip?.id,
+        role: trip?.role,
+        from_address: trip?.from_address,
+        to_address: trip?.to_address
+      });
+      
+      // ВАЖНО: Обновляем данные для водителей (новые заказы от пассажиров)
+      // Фильтруем только заказы от пассажиров (role === 'passenger')
+      if (trip?.role === 'passenger' && isDriver) {
+        console.log('🔄 [Orders] Обновление данных для водителя - новый заказ от пассажира');
+        
+        // Инвалидируем кэш
         queryClient.invalidateQueries({ queryKey: ['data'] });
-        allActiveTripsRefetch?.();
+        queryClient.invalidateQueries({ queryKey: ['data', '/trips/active'] });
+        
+        // Принудительно обновляем данные
+        if (allActiveTripsRefetch) {
+          console.log('🔄 [Orders] Вызов allActiveTripsRefetch...');
+          allActiveTripsRefetch().then(() => {
+            console.log('✅ [Orders] allActiveTripsRefetch завершен');
+          }).catch((error) => {
+            console.error('❌ [Orders] Ошибка allActiveTripsRefetch:', error);
+          });
+        }
+        
+        if (myTripsRefetch) {
+          myTripsRefetch();
+        }
+        
         toast.success(t("Новый заказ от пассажира") || "Новый заказ от пассажира");
       }
     },
     (trip) => {
       console.log('🔄 [Orders] drivers.trips: Заказ обновлен', trip);
-      if (isDriver) {
-        queryClient.invalidateQueries({ queryKey: ['data'] });
-        allActiveTripsRefetch?.();
-      }
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      allActiveTripsRefetch?.();
+      myTripsRefetch?.();
     },
     (trip) => {
       console.log('❌ [Orders] drivers.trips: Заказ отменен', trip);
-      if (isDriver) {
-        queryClient.invalidateQueries({ queryKey: ['data'] });
-        allActiveTripsRefetch?.();
-      }
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      allActiveTripsRefetch?.();
+      myTripsRefetch?.();
     }
   );
 

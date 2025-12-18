@@ -35,6 +35,23 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
 
     const echo = getEcho();
     echoRef.current = echo;
+    
+    // Проверяем, что Echo подключен
+    const pusherConnection = echo?.connector?.pusher?.connection;
+    if (pusherConnection) {
+      const connectionState = pusherConnection.state;
+      console.log(`[WebSocket] Состояние подключения перед подпиской на ${channels}: ${connectionState}`);
+      
+      if (connectionState !== 'connected' && connectionState !== 'connecting') {
+        console.warn(`[WebSocket] ⚠️ WebSocket не подключен! Состояние: ${connectionState}`);
+        console.warn(`[WebSocket] Попытка переподключения...`);
+        try {
+          pusherConnection.connect();
+        } catch (e) {
+          console.error(`[WebSocket] Ошибка переподключения:`, e);
+        }
+      }
+    }
 
     // Нормализуем каналы в массив и фильтруем null/undefined
     const channelsArray = Array.isArray(channels) 
@@ -54,16 +71,27 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
         ? echo.private(channelName)
         : echo.channel(channelName);
 
-      console.log(`[WebSocket] Подписка на канал: ${isPrivate ? 'private' : 'public'}.${channelName}`);
+      console.log(`[WebSocket] 🔌🔌🔌 Подписка на канал: ${isPrivate ? 'private' : 'public'}.${channelName}`);
+      console.log(`[WebSocket] Канал создан, состояние:`, {
+        channelName,
+        isPrivate,
+        channelExists: !!channel
+      });
 
       // Подписываемся на все события из handlers
       Object.entries(handlers).forEach(([eventName, handler]) => {
         console.log(`[WebSocket] Подписка на событие: ${eventName} в канале ${channelName}`);
         
         const listener = channel.listen(eventName, (data) => {
-          console.log(`[WebSocket] Событие получено: ${eventName} в канале ${channelName}`, data);
+          console.log(`[WebSocket] 🔔🔔🔔 Событие получено: ${eventName} в канале ${channelName}`, data);
+          console.log(`[WebSocket] Данные события:`, JSON.stringify(data, null, 2));
           // Вызываем обработчик с данными и queryClient для обновления кэша
-          handler(data, queryClient);
+          try {
+            handler(data, queryClient);
+            console.log(`[WebSocket] ✅ Обработчик успешно вызван для события ${eventName}`);
+          } catch (error) {
+            console.error(`[WebSocket] ❌ Ошибка в обработчике события ${eventName}:`, error);
+          }
         });
         
         listenersRef.current.push({ channel, listener, eventName });
@@ -316,8 +344,11 @@ export const useUserUpdateWebSocket = (userId, onUserUpdated) => {
  * Данные приходят напрямую из broadcastWith(), без обертки в trip
  */
 export const useDriversTripsWebSocket = (onTripCreated, onTripUpdated, onTripCancelled) => {
+  console.log('🔌 [useDriversTripsWebSocket] Инициализация подписки на drivers.trips');
+  
   const handleTripCreated = (data, queryClient) => {
-    console.log('🎉 [useDriversTripsWebSocket] Trip created event получено!', data);
+    console.log('🎉🎉🎉 [useDriversTripsWebSocket] Trip created event получено!', data);
+    console.log('🎉 [useDriversTripsWebSocket] Данные события:', JSON.stringify(data, null, 2));
     // Данные приходят напрямую из broadcastWith(), не в data.trip
     queryClient.invalidateQueries({ queryKey: ['data'] });
     if (onTripCreated) {
@@ -332,7 +363,7 @@ export const useDriversTripsWebSocket = (onTripCreated, onTripUpdated, onTripCan
       onTripUpdated(data);
     }
   };
-
+  
   return useWebSocket(
     'drivers.trips',
     {
