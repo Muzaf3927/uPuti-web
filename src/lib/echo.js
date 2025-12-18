@@ -41,7 +41,9 @@ export const initializeEcho = () => {
     REVERB_SCHEME,
     BASE_URL,
     authEndpoint: `${BASE_URL}/broadcasting/auth`,
-    hasToken: !!token
+    hasToken: !!token,
+    tokenLength: token ? token.length : 0,
+    tokenPreview: token ? `${token.substring(0, 20)}...` : 'нет токена'
   });
   
   // Проверяем, работаем ли в WebView
@@ -54,29 +56,32 @@ export const initializeEcho = () => {
   // Для Laravel Cloud Reverb конфигурация
   // Laravel Cloud использует wss (WebSocket Secure) на порту 443
   const echoConfig = {
-    broadcaster: 'reverb',
+    broadcaster: 'pusher', // 🔥 ВАЖНО
+
     key: REVERB_APP_KEY,
+
     wsHost: cleanHost,
-    wsPort: REVERB_PORT,
     wssPort: REVERB_PORT,
-    forceTLS: true, // Всегда true для Laravel Cloud
-    enabledTransports: ['ws', 'wss'], // Пробуем оба транспорта для совместимости
+    forceTLS: true,
+
+    enabledTransports: ['wss'],
     disableStats: true,
-    cluster: null,
+
     authEndpoint: `${BASE_URL}/broadcasting/auth`,
     auth: {
       headers: {
         Authorization: token ? `Bearer ${token}` : '',
         Accept: 'application/json',
         'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
       },
     },
-    enableLogging: true,
-    // Дополнительные настройки для стабильности
-    activityTimeout: 30000, // 30 секунд
-    pongTimeout: 6000, // 6 секунд
-    unavailableTimeout: 10000, // 10 секунд
+
+    activityTimeout: 30000,
+    pongTimeout: 6000,
+    unavailableTimeout: 10000,
   };
+
 
   console.log('🔌 [Echo] Полная конфигурация:', echoConfig);
   console.log('🔌 [Echo] Попытка подключения к:', `wss://${cleanHost}:${REVERB_PORT}`);
