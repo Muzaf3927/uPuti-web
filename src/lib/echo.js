@@ -44,8 +44,16 @@ export const initializeEcho = () => {
     hasToken: !!token
   });
   
+  // Проверяем, работаем ли в WebView
+  const isWebView = /AndroidUPuti|UputiIOS/i.test(navigator.userAgent || '');
+  console.log('🔌 [Echo] Окружение:', {
+    isWebView,
+    userAgent: navigator.userAgent?.substring(0, 100)
+  });
+
   // Для Laravel Cloud Reverb конфигурация
   // Laravel Cloud использует wss (WebSocket Secure) на порту 443
+  // В WebView добавляем дополнительные настройки для стабильности
   const echoConfig = {
     broadcaster: 'reverb',
     key: REVERB_APP_KEY,
@@ -64,6 +72,13 @@ export const initializeEcho = () => {
       },
     },
     enableLogging: true,
+    // Дополнительные настройки для WebView
+    ...(isWebView && {
+      // Увеличиваем таймауты для WebView
+      activityTimeout: 30000, // 30 секунд
+      pongTimeout: 6000, // 6 секунд
+      unavailableTimeout: 10000, // 10 секунд
+    }),
   };
 
   console.log('🔌 [Echo] Полная конфигурация:', echoConfig);
@@ -83,6 +98,20 @@ export const initializeEcho = () => {
 
   echoInstance.connector.pusher.connection.bind('disconnected', () => {
     console.log('🔌 [WebSocket] ❌ Отключено от Reverb сервера');
+    
+    // В WebView автоматически переподключаемся
+    if (isWebView) {
+      console.log('🔌 [WebSocket] WebView: Попытка переподключения...');
+      setTimeout(() => {
+        if (echoInstance && echoInstance.connector.pusher.connection.state === 'disconnected') {
+          try {
+            echoInstance.connector.pusher.connect();
+          } catch (e) {
+            console.error('🔌 [WebSocket] Ошибка переподключения:', e);
+          }
+        }
+      }, 2000); // Переподключение через 2 секунды
+    }
   });
 
   echoInstance.connector.pusher.connection.bind('error', (error) => {
@@ -159,6 +188,64 @@ export const initializeEcho = () => {
         updateToken();
       }
     });
+
+    // В WebView обрабатываем видимость страницы для переподключения
+    if (isWebView) {
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          console.log('🔌 [WebSocket] WebView: Страница видна, проверяем подключение...');
+          // Если отключено, переподключаемся
+          if (echoInstance && echoInstance.connector.pusher.connection.state === 'disconnected') {
+            setTimeout(() => {
+              try {
+                echoInstance.connector.pusher.connect();
+                console.log('🔌 [WebSocket] WebView: Переподключение инициировано');
+              } catch (e) {
+                console.error('🔌 [WebSocket] WebView: Ошибка переподключения:', e);
+              }
+            }, 500);
+          }
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      
+      // Также слушаем focus для переподключения
+      window.addEventListener('focus', () => {
+        if (echoInstance && echoInstance.connector.pusher.connection.state === 'disconnected') {
+          setTimeout(() => {
+            try {
+              echoInstance.connector.pusher.connect();
+            } catch (e) {
+              console.error('🔌 [WebSocket] WebView: Ошибка переподключения при focus:', e);
+            }
+          }, 500);
+        }
+      });
+
+      // Периодическая проверка подключения в WebView (каждые 30 секунд)
+      const connectionCheckInterval = setInterval(() => {
+        if (echoInstance) {
+          const state = echoInstance.connector.pusher.connection.state;
+          if (state === 'disconnected' || state === 'failed' || state === 'unavailable') {
+            console.log('🔌 [WebSocket] WebView: Обнаружено отключение, переподключаемся...');
+            try {
+              echoInstance.connector.pusher.connect();
+            } catch (e) {
+              console.error('🔌 [WebSocket] WebView: Ошибка периодического переподключения:', e);
+            }
+          } else if (state === 'connected') {
+            // Подключение активно, ничего не делаем
+            console.log('🔌 [WebSocket] WebView: Подключение активно');
+          }
+        }
+      }, 30000); // Проверка каждые 30 секунд
+
+      // Очищаем интервал при размонтировании (если будет функция очистки)
+      if (typeof window !== 'undefined') {
+        window._echoConnectionCheckInterval = connectionCheckInterval;
+      }
+    }
   }
 
   return echoInstance;
@@ -172,6 +259,12 @@ export const getEcho = () => {
 };
 
 export const disconnectEcho = () => {
+  // Очищаем интервал проверки подключения
+  if (typeof window !== 'undefined' && window._echoConnectionCheckInterval) {
+    clearInterval(window._echoConnectionCheckInterval);
+    window._echoConnectionCheckInterval = null;
+  }
+
   if (echoInstance) {
     echoInstance.disconnect();
     echoInstance = null;
