@@ -52,7 +52,6 @@ export default defineConfig({
           ],
           'map-vendor': ['leaflet', 'react-leaflet', 'leaflet-routing-machine'],
           'query-vendor': ['@tanstack/react-query'],
-          'websocket-vendor': ['laravel-echo', 'pusher-js'],
         },
       },
     },
