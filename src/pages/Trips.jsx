@@ -388,8 +388,12 @@ function Trips() {
     };
 
     try {
+      console.log('🚀 [Trips] Отправка запроса на создание поездки:', resultData);
       const res = await tripPostMutation.mutateAsync(resultData);
+      console.log('✅ [Trips] Поездка успешно создана, ответ от сервера:', res);
+      
       if (res.message === "Trip created!") {
+        console.log('📢 [Trips] Поездка создана! Ожидаем WebSocket событие для обновления списка...');
         toast.success(t("trips.form.successMessage"));
         setDialog(false);
         

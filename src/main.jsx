@@ -16,7 +16,9 @@ import { initializeEcho } from "./lib/echo";
 
 // Инициализируем Echo при загрузке приложения
 if (typeof window !== 'undefined') {
-  initializeEcho();
+  console.log('🚀 [App] Инициализация WebSocket (Echo)...');
+  const echo = initializeEcho();
+  console.log('🚀 [App] Echo инициализирован:', echo ? '✅' : '❌');
 }
 
 const queryClient = new QueryClient({

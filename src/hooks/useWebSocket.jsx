@@ -78,19 +78,23 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
         console.error(`[WebSocket] ❌ Ошибка в канале ${channelName}:`, error);
       });
 
-      // Универсальный слушатель всех событий для отладки
-      // Это поможет увидеть, какие события вообще приходят
-      const wildcardListener = channel.listen('.', (data) => {
-        console.log(`[WebSocket] 🔔 Получено событие в канале ${channelName}:`, data);
-      });
-      
-      // Также слушаем события без точки
+      // Универсальный слушатель всех событий для отладки через Pusher напрямую
       try {
-        const wildcardListener2 = channel.listen('*', (eventName, data) => {
-          console.log(`[WebSocket] 🔔 Получено событие * в канале ${channelName}:`, eventName, data);
-        });
+        // Получаем pusher канал напрямую для глобального прослушивания
+        const pusherChannel = echo.connector.pusher.channel(channelName);
+        if (pusherChannel) {
+          // Слушаем все события через bind_global
+          pusherChannel.bind_global((eventName, data) => {
+            console.log(`[WebSocket] 🔔 ВСЕ события в канале ${channelName}:`, {
+              eventName,
+              data,
+              timestamp: new Date().toISOString()
+            });
+          });
+        }
       } catch (e) {
-        // Игнорируем ошибку, если wildcard не поддерживается
+        // Игнорируем ошибку, если не удалось настроить
+        console.warn(`[WebSocket] Глобальный слушатель недоступен для ${channelName}`);
       }
     });
 
@@ -262,30 +266,40 @@ export const useUserUpdateWebSocket = (userId, onUserUpdated) => {
 
 /**
  * Хук для подписки на канал drivers.trips (для водителей - новые заказы от пассажиров)
+ * Бэкенд отправляет TripCreated в канал drivers.trips с событием trip.created (БЕЗ точки!)
  */
 export const useDriversTripsWebSocket = (onTripCreated, onTripUpdated, onTripCancelled) => {
   return useWebSocket(
     'drivers.trips',
     {
-      '.trip.created': (data, queryClient) => {
-        // Инвалидируем кэш трипов для обновления списка
+      // Бэкенд отправляет БЕЗ точки в начале!
+      'trip.created': (data, queryClient) => {
+        console.log('[useDriversTripsWebSocket] Trip created:', data);
         queryClient.invalidateQueries({ queryKey: ['data'] });
         if (onTripCreated) {
           onTripCreated(data.trip || data);
         }
       },
-      '.trip.updated': (data, queryClient) => {
-        // Инвалидируем кэш трипов для обновления списка
+      // Также слушаем с точкой на всякий случай
+      '.trip.created': (data, queryClient) => {
+        console.log('[useDriversTripsWebSocket] Trip created (with dot):', data);
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        if (onTripCreated) {
+          onTripCreated(data.trip || data);
+        }
+      },
+      'trip.updated': (data, queryClient) => {
+        console.log('[useDriversTripsWebSocket] Trip updated:', data);
         queryClient.invalidateQueries({ queryKey: ['data'] });
         if (onTripUpdated) {
           onTripUpdated(data.trip || data);
         }
       },
-      '.trip.cancelled': (data, queryClient) => {
-        // Инвалидируем кэш трипов для обновления списка
+      '.trip.updated': (data, queryClient) => {
+        console.log('[useDriversTripsWebSocket] Trip updated (with dot):', data);
         queryClient.invalidateQueries({ queryKey: ['data'] });
-        if (onTripCancelled) {
-          onTripCancelled(data.trip || data);
+        if (onTripUpdated) {
+          onTripUpdated(data.trip || data);
         }
       },
     },
@@ -295,43 +309,50 @@ export const useDriversTripsWebSocket = (onTripCreated, onTripUpdated, onTripCan
 
 /**
  * Хук для подписки на события поездок через канал user.{id} (для пассажиров)
+ * Бэкенд отправляет:
+ * - trip.updated (БЕЗ точки) через TripUpdated
+ * - trip.booked (БЕЗ точки) через TripBooked (это НЕ booking.created!)
  */
 export const useUserTripsWebSocket = (userId, onTripCreated, onTripUpdated, onBookingCreated, onBookingUpdated, onBookingCancelled) => {
   // Всегда вызываем хук, даже если userId отсутствует
   return useUserWebSocket(userId, {
-    '.trip.created': (data, queryClient) => {
-      // Инвалидируем кэш трипов для обновления списка
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (onTripCreated) {
-        onTripCreated(data.trip || data);
-      }
-    },
-    '.trip.updated': (data, queryClient) => {
-      // Инвалидируем кэш трипов для обновления списка
+    // События БЕЗ точки (как отправляет бэкенд)
+    'trip.updated': (data, queryClient) => {
+      console.log('[useUserTripsWebSocket] Trip updated:', data);
       queryClient.invalidateQueries({ queryKey: ['data'] });
       if (onTripUpdated) {
         onTripUpdated(data.trip || data);
       }
     },
-    '.booking.created': (data, queryClient) => {
-      // Инвалидируем кэш бронирований
+    'trip.booked': (data, queryClient) => {
+      // Бэкенд отправляет trip.booked, а не booking.created!
+      console.log('[useUserTripsWebSocket] Trip booked:', data);
       queryClient.invalidateQueries({ queryKey: ['data'] });
       if (onBookingCreated) {
         onBookingCreated(data.booking || data);
       }
     },
-    '.booking.updated': (data, queryClient) => {
-      // Инвалидируем кэш бронирований
+    // Также слушаем с точкой на всякий случай
+    '.trip.updated': (data, queryClient) => {
+      console.log('[useUserTripsWebSocket] Trip updated (with dot):', data);
       queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (onBookingUpdated) {
-        onBookingUpdated(data.booking || data);
+      if (onTripUpdated) {
+        onTripUpdated(data.trip || data);
       }
     },
-    '.booking.cancelled': (data, queryClient) => {
-      // Инвалидируем кэш бронирований
+    '.trip.booked': (data, queryClient) => {
+      console.log('[useUserTripsWebSocket] Trip booked (with dot):', data);
       queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (onBookingCancelled) {
-        onBookingCancelled(data.booking || data);
+      if (onBookingCreated) {
+        onBookingCreated(data.booking || data);
+      }
+    },
+    // Старые названия для обратной совместимости
+    '.booking.created': (data, queryClient) => {
+      console.log('[useUserTripsWebSocket] Booking created (legacy):', data);
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (onBookingCreated) {
+        onBookingCreated(data.booking || data);
       }
     },
   });

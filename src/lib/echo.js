@@ -23,9 +23,11 @@ let echoInstance = null;
 export const initializeEcho = () => {
   // Если уже инициализирован, возвращаем существующий экземпляр
   if (echoInstance) {
+    console.log('🔌 [Echo] Используется существующий экземпляр Echo');
     return echoInstance;
   }
 
+  console.log('🔌 [Echo] Инициализация нового экземпляра Echo...');
   const token = safeLocalStorage.getItem('token');
 
   // Формируем правильный host для WebSocket
@@ -60,6 +62,23 @@ export const initializeEcho = () => {
     },
     // Включаем логирование для отладки
     enableLogging: true,
+  });
+
+  // Логируем события подключения
+  echoInstance.connector.pusher.connection.bind('connected', () => {
+    console.log('🔌 [WebSocket] ✅ Подключено к Reverb серверу');
+  });
+
+  echoInstance.connector.pusher.connection.bind('disconnected', () => {
+    console.log('🔌 [WebSocket] ❌ Отключено от Reverb сервера');
+  });
+
+  echoInstance.connector.pusher.connection.bind('error', (error) => {
+    console.error('🔌 [WebSocket] ❌ Ошибка подключения:', error);
+  });
+
+  echoInstance.connector.pusher.connection.bind('state_change', (states) => {
+    console.log('🔌 [WebSocket] 📡 Изменение состояния:', states.previous, '→', states.current);
   });
 
   // Обновляем токен при изменении
