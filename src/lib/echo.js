@@ -34,35 +34,47 @@ export const initializeEcho = () => {
   // Убираем протокол если он есть (ws:// или wss://)
   const cleanHost = REVERB_HOST.replace(/^(wss?:\/\/)?/, '');
   
-  console.log('Echo config (hardcoded values):', {
+  console.log('🔌 [Echo] Конфигурация:', {
     REVERB_APP_KEY,
     cleanHost,
     REVERB_PORT,
     REVERB_SCHEME,
-    BASE_URL
+    BASE_URL,
+    authEndpoint: `${BASE_URL}/broadcasting/auth`,
+    hasToken: !!token
   });
   
-  // Для Laravel Reverb конфигурация
-  echoInstance = new Echo({
+  // Для Laravel Cloud Reverb конфигурация
+  // Laravel Cloud использует wss (WebSocket Secure) на порту 443
+  const echoConfig = {
     broadcaster: 'reverb',
     key: REVERB_APP_KEY,
     wsHost: cleanHost,
     wsPort: REVERB_PORT,
     wssPort: REVERB_PORT,
-    forceTLS: REVERB_SCHEME === 'https',
-    enabledTransports: ['ws', 'wss'],
+    forceTLS: true, // Всегда true для Laravel Cloud
+    enabledTransports: ['wss'], // Используем только wss для Laravel Cloud
     disableStats: true,
-    // Отключаем автоматическое определение хоста
     cluster: null,
     authEndpoint: `${BASE_URL}/broadcasting/auth`,
     auth: {
       headers: {
         Authorization: token ? `Bearer ${token}` : '',
+        Accept: 'application/json',
       },
     },
-    // Включаем логирование для отладки
     enableLogging: true,
-  });
+  };
+
+  console.log('🔌 [Echo] Полная конфигурация:', echoConfig);
+  console.log('🔌 [Echo] Попытка подключения к:', `wss://${cleanHost}:${REVERB_PORT}`);
+  
+  try {
+    echoInstance = new Echo(echoConfig);
+  } catch (error) {
+    console.error('🔌 [Echo] Ошибка при создании экземпляра Echo:', error);
+    throw error;
+  }
 
   // Логируем события подключения
   echoInstance.connector.pusher.connection.bind('connected', () => {
@@ -74,11 +86,62 @@ export const initializeEcho = () => {
   });
 
   echoInstance.connector.pusher.connection.bind('error', (error) => {
-    console.error('🔌 [WebSocket] ❌ Ошибка подключения:', error);
+    console.error('🔌 [WebSocket] ❌ Ошибка подключения:', {
+      error,
+      type: error?.type,
+      errorData: error?.error,
+      message: error?.error?.message || error?.message,
+      code: error?.error?.code,
+      host: cleanHost,
+      port: REVERB_PORT,
+      scheme: REVERB_SCHEME,
+      authEndpoint: `${BASE_URL}/broadcasting/auth`,
+      fullError: JSON.stringify(error, null, 2)
+    });
   });
 
   echoInstance.connector.pusher.connection.bind('state_change', (states) => {
     console.log('🔌 [WebSocket] 📡 Изменение состояния:', states.previous, '→', states.current);
+    if (states.current === 'failed' || states.current === 'unavailable') {
+      console.error('🔌 [WebSocket] ❌ Не удалось подключиться. Проверьте:');
+      console.error('  1. Запущен ли Reverb сервер на бэкенде? (php artisan reverb:start)');
+      console.error('  2. Правильный ли хост:', cleanHost);
+      console.error('  3. Правильный ли порт:', REVERB_PORT);
+      console.error('  4. Правильный ли ключ:', REVERB_APP_KEY);
+      console.error('  5. Доступен ли сервер по адресу:', `${REVERB_SCHEME}://${cleanHost}:${REVERB_PORT}`);
+      console.error('  6. Проверьте CORS настройки на бэкенде');
+      console.error('  7. Проверьте, что BROADCAST_CONNECTION=reverb в .env бэкенда');
+      console.error('  8. Проверьте маршрут /broadcasting/auth на бэкенде');
+    }
+  });
+
+  // Дополнительное логирование для Pusher
+  echoInstance.connector.pusher.bind('pusher:error', (error) => {
+    console.error('🔌 [Pusher] Ошибка:', {
+      error,
+      type: error?.type,
+      data: error?.data,
+      message: error?.message
+    });
+  });
+
+  echoInstance.connector.pusher.bind('pusher:connection_error', (error) => {
+    console.error('🔌 [Pusher] Ошибка соединения:', {
+      error,
+      type: error?.type,
+      message: error?.error?.message || error?.message,
+      code: error?.error?.code,
+      data: error?.data,
+      fullError: JSON.stringify(error, null, 2)
+    });
+    
+    // Дополнительная диагностика
+    console.error('🔌 [Диагностика] Проверьте:');
+    console.error('  1. Доступен ли Reverb сервер:', `wss://${cleanHost}:${REVERB_PORT}`);
+    console.error('  2. Правильный ли ключ:', REVERB_APP_KEY);
+    console.error('  3. Проверьте маршрут авторизации:', `${BASE_URL}/broadcasting/auth`);
+    console.error('  4. Проверьте CORS настройки на бэкенде');
+    console.error('  5. Проверьте, что BROADCAST_CONNECTION=reverb в .env бэкенда');
   });
 
   // Обновляем токен при изменении
