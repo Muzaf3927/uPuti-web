@@ -40,7 +40,7 @@ import EmptyState from "@/components/EmptyState.jsx";
 import { sessionManager } from "@/lib/sessionManager.js";
 import { useActiveTab } from "@/layout/MainLayout";
 import { Plus } from "lucide-react";
-import { useTripsWebSocket, useUserTripsWebSocket } from "@/hooks/useWebSocket";
+import { useTripsWebSocket, useUserTripsWebSocket, useDriversTripsWebSocket } from "@/hooks/useWebSocket";
  
 
 function Trips() {
@@ -134,38 +134,58 @@ function Trips() {
   useTripsWebSocket(
     (trip) => {
       // Новый трип создан - обновляем список для всех
-      console.log('WebSocket: Новый трип создан', trip);
+      console.log('[Trips] WebSocket: Новый трип создан', trip);
+      // Инвалидируем все запросы
       queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/") {
-        refetch();
-        myTripsRefetch();
-      }
+      // Всегда обновляем данные, независимо от пути
+      refetch();
+      myTripsRefetch();
     },
     (trip) => {
       // Трип обновлен - обновляем список
-      console.log('WebSocket: Трип обновлен', trip);
+      console.log('[Trips] WebSocket: Трип обновлен', trip);
       queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/") {
-        refetch();
-        myTripsRefetch();
-      }
+      refetch();
+      myTripsRefetch();
     },
     (trip) => {
       // Трип завершен - обновляем список
-      console.log('WebSocket: Трип завершен', trip);
+      console.log('[Trips] WebSocket: Трип завершен', trip);
       queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/") {
-        refetch();
-        myTripsRefetch();
-      }
+      refetch();
+      myTripsRefetch();
     },
     (trip) => {
       // Трип отменен - обновляем список
-      console.log('WebSocket: Трип отменен', trip);
+      console.log('[Trips] WebSocket: Трип отменен', trip);
       queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/") {
+      refetch();
+      myTripsRefetch();
+    }
+  );
+
+  // WebSocket подписка на канал drivers.trips для пассажиров (новые поездки от водителей)
+  // Бэкенд может отправлять события в этот канал
+  useDriversTripsWebSocket(
+    (trip) => {
+      console.log('[Trips] WebSocket drivers.trips: Новый трип создан', trip);
+      if (userRole === "passenger") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
         refetch();
-        myTripsRefetch();
+      }
+    },
+    (trip) => {
+      console.log('[Trips] WebSocket drivers.trips: Трип обновлен', trip);
+      if (userRole === "passenger") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        refetch();
+      }
+    },
+    (trip) => {
+      console.log('[Trips] WebSocket drivers.trips: Трип отменен', trip);
+      if (userRole === "passenger") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        refetch();
       }
     }
   );

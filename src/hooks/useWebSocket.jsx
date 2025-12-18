@@ -54,15 +54,44 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
         ? echo.private(channelName)
         : echo.channel(channelName);
 
+      console.log(`[WebSocket] Подписка на канал: ${isPrivate ? 'private' : 'public'}.${channelName}`);
+
       // Подписываемся на все события из handlers
       Object.entries(handlers).forEach(([eventName, handler]) => {
+        console.log(`[WebSocket] Подписка на событие: ${eventName} в канале ${channelName}`);
+        
         const listener = channel.listen(eventName, (data) => {
+          console.log(`[WebSocket] Событие получено: ${eventName} в канале ${channelName}`, data);
           // Вызываем обработчик с данными и queryClient для обновления кэша
           handler(data, queryClient);
         });
         
         listenersRef.current.push({ channel, listener, eventName });
       });
+
+      // Также слушаем все события для отладки
+      channel.subscribed(() => {
+        console.log(`[WebSocket] ✅ Успешно подписан на канал: ${channelName}`);
+      });
+
+      channel.error((error) => {
+        console.error(`[WebSocket] ❌ Ошибка в канале ${channelName}:`, error);
+      });
+
+      // Универсальный слушатель всех событий для отладки
+      // Это поможет увидеть, какие события вообще приходят
+      const wildcardListener = channel.listen('.', (data) => {
+        console.log(`[WebSocket] 🔔 Получено событие в канале ${channelName}:`, data);
+      });
+      
+      // Также слушаем события без точки
+      try {
+        const wildcardListener2 = channel.listen('*', (eventName, data) => {
+          console.log(`[WebSocket] 🔔 Получено событие * в канале ${channelName}:`, eventName, data);
+        });
+      } catch (e) {
+        // Игнорируем ошибку, если wildcard не поддерживается
+      }
     });
 
     // Очистка при размонтировании
@@ -85,37 +114,59 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
  * Хук для подписки на события трипов
  */
 export const useTripsWebSocket = (onTripCreated, onTripUpdated, onTripCompleted, onTripCancelled) => {
+  // Обработчик для события создания трипа (поддерживаем разные форматы)
+  const handleTripCreated = (data, queryClient) => {
+    console.log('[useTripsWebSocket] Trip created event:', data);
+    queryClient.invalidateQueries({ queryKey: ['data'] });
+    if (onTripCreated) {
+      onTripCreated(data.trip || data);
+    }
+  };
+
+  // Обработчик для события обновления трипа
+  const handleTripUpdated = (data, queryClient) => {
+    console.log('[useTripsWebSocket] Trip updated event:', data);
+    queryClient.invalidateQueries({ queryKey: ['data'] });
+    if (onTripUpdated) {
+      onTripUpdated(data.trip || data);
+    }
+  };
+
+  // Обработчик для события завершения трипа
+  const handleTripCompleted = (data, queryClient) => {
+    console.log('[useTripsWebSocket] Trip completed event:', data);
+    queryClient.invalidateQueries({ queryKey: ['data'] });
+    if (onTripCompleted) {
+      onTripCompleted(data.trip || data);
+    }
+  };
+
+  // Обработчик для события отмены трипа
+  const handleTripCancelled = (data, queryClient) => {
+    console.log('[useTripsWebSocket] Trip cancelled event:', data);
+    queryClient.invalidateQueries({ queryKey: ['data'] });
+    if (onTripCancelled) {
+      onTripCancelled(data.trip || data);
+    }
+  };
+
   return useWebSocket(
     'trips',
     {
-      '.trip.created': (data, queryClient) => {
-        // Инвалидируем кэш трипов для обновления списка
-        queryClient.invalidateQueries({ queryKey: ['data'] });
-        if (onTripCreated) {
-          onTripCreated(data.trip);
-        }
-      },
-      '.trip.updated': (data, queryClient) => {
-        // Инвалидируем кэш трипов для обновления списка
-        queryClient.invalidateQueries({ queryKey: ['data'] });
-        if (onTripUpdated) {
-          onTripUpdated(data.trip);
-        }
-      },
-      '.trip.completed': (data, queryClient) => {
-        // Инвалидируем кэш трипов для обновления списка
-        queryClient.invalidateQueries({ queryKey: ['data'] });
-        if (onTripCompleted) {
-          onTripCompleted(data.trip);
-        }
-      },
-      '.trip.cancelled': (data, queryClient) => {
-        // Инвалидируем кэш трипов для обновления списка
-        queryClient.invalidateQueries({ queryKey: ['data'] });
-        if (onTripCancelled) {
-          onTripCancelled(data.trip);
-        }
-      },
+      // Laravel формат с точкой
+      '.trip.created': handleTripCreated,
+      '.trip.updated': handleTripUpdated,
+      '.trip.completed': handleTripCompleted,
+      '.trip.cancelled': handleTripCancelled,
+      // Альтернативные форматы (без точки, с заглавными буквами)
+      'TripCreated': handleTripCreated,
+      'TripUpdated': handleTripUpdated,
+      'TripCompleted': handleTripCompleted,
+      'TripCancelled': handleTripCancelled,
+      'trip.created': handleTripCreated,
+      'trip.updated': handleTripUpdated,
+      'trip.completed': handleTripCompleted,
+      'trip.cancelled': handleTripCancelled,
     },
     false
   );

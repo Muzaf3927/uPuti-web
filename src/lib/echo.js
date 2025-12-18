@@ -13,15 +13,9 @@ const REVERB_PORT = 443;
 const REVERB_SCHEME = 'https';
 
 // Получаем базовый URL API для авторизации
+// Используем правильный URL напрямую
 const PRODUCTION_API_BASE = 'https://api.uputi.net/api';
-const LOCAL_API_BASE = 'http://localhost:8000/api';
-const envApiBase = import.meta.env.VITE_API_BASE;
-// Проверяем, что API_BASE не содержит опечаток (например, https:/.uputi.net)
-const API_BASE = (envApiBase && !envApiBase.includes('https:/.') && envApiBase.includes('api.uputi.net')) 
-  ? envApiBase 
-  : PRODUCTION_API_BASE;
-// Убираем /api из конца для получения базового URL
-const BASE_URL = API_BASE.replace('/api', '');
+const BASE_URL = 'https://api.uputi.net';
 
 // Создаем экземпляр Echo
 let echoInstance = null;
