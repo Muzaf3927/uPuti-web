@@ -71,12 +71,22 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
 
       // Также слушаем все события для отладки
       channel.subscribed(() => {
-        console.log(`[WebSocket] ✅ Успешно подписан на канал: ${channelName}`);
+        console.log(`[WebSocket] ✅✅✅ Успешно подписан на канал: ${channelName}`);
+        console.log(`[WebSocket] Готов к получению событий в канале: ${channelName}`);
       });
 
       channel.error((error) => {
         console.error(`[WebSocket] ❌ Ошибка в канале ${channelName}:`, error);
       });
+
+      // Проверяем состояние канала
+      if (channel.subscription_pending) {
+        console.log(`[WebSocket] ⏳ Ожидание подписки на канал: ${channelName}`);
+      }
+      
+      if (channel.subscribed) {
+        console.log(`[WebSocket] ✅ Канал ${channelName} уже подписан`);
+      }
 
       // Универсальный слушатель всех событий для отладки через Pusher напрямую
       try {
@@ -85,16 +95,18 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
         if (pusherChannel) {
           // Слушаем все события через bind_global
           pusherChannel.bind_global((eventName, data) => {
-            console.log(`[WebSocket] 🔔 ВСЕ события в канале ${channelName}:`, {
+            console.log(`[WebSocket] 🔔🔔🔔 ВСЕ события в канале ${channelName}:`, {
               eventName,
               data,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              channel: channelName
             });
           });
+        } else {
+          console.warn(`[WebSocket] Pusher канал ${channelName} не найден`);
         }
       } catch (e) {
-        // Игнорируем ошибку, если не удалось настроить
-        console.warn(`[WebSocket] Глобальный слушатель недоступен для ${channelName}`);
+        console.warn(`[WebSocket] Глобальный слушатель недоступен для ${channelName}:`, e);
       }
     });
 
@@ -267,41 +279,35 @@ export const useUserUpdateWebSocket = (userId, onUserUpdated) => {
 /**
  * Хук для подписки на канал drivers.trips (для водителей - новые заказы от пассажиров)
  * Бэкенд отправляет TripCreated в канал drivers.trips с событием trip.created (БЕЗ точки!)
+ * Данные приходят напрямую из broadcastWith(), без обертки в trip
  */
 export const useDriversTripsWebSocket = (onTripCreated, onTripUpdated, onTripCancelled) => {
+  const handleTripCreated = (data, queryClient) => {
+    console.log('🎉 [useDriversTripsWebSocket] Trip created event получено!', data);
+    // Данные приходят напрямую из broadcastWith(), не в data.trip
+    queryClient.invalidateQueries({ queryKey: ['data'] });
+    if (onTripCreated) {
+      onTripCreated(data); // Данные уже содержат все поля трипа
+    }
+  };
+
+  const handleTripUpdated = (data, queryClient) => {
+    console.log('🔄 [useDriversTripsWebSocket] Trip updated event получено!', data);
+    queryClient.invalidateQueries({ queryKey: ['data'] });
+    if (onTripUpdated) {
+      onTripUpdated(data);
+    }
+  };
+
   return useWebSocket(
     'drivers.trips',
     {
       // Бэкенд отправляет БЕЗ точки в начале!
-      'trip.created': (data, queryClient) => {
-        console.log('[useDriversTripsWebSocket] Trip created:', data);
-        queryClient.invalidateQueries({ queryKey: ['data'] });
-        if (onTripCreated) {
-          onTripCreated(data.trip || data);
-        }
-      },
+      'trip.created': handleTripCreated,
       // Также слушаем с точкой на всякий случай
-      '.trip.created': (data, queryClient) => {
-        console.log('[useDriversTripsWebSocket] Trip created (with dot):', data);
-        queryClient.invalidateQueries({ queryKey: ['data'] });
-        if (onTripCreated) {
-          onTripCreated(data.trip || data);
-        }
-      },
-      'trip.updated': (data, queryClient) => {
-        console.log('[useDriversTripsWebSocket] Trip updated:', data);
-        queryClient.invalidateQueries({ queryKey: ['data'] });
-        if (onTripUpdated) {
-          onTripUpdated(data.trip || data);
-        }
-      },
-      '.trip.updated': (data, queryClient) => {
-        console.log('[useDriversTripsWebSocket] Trip updated (with dot):', data);
-        queryClient.invalidateQueries({ queryKey: ['data'] });
-        if (onTripUpdated) {
-          onTripUpdated(data.trip || data);
-        }
-      },
+      '.trip.created': handleTripCreated,
+      'trip.updated': handleTripUpdated,
+      '.trip.updated': handleTripUpdated,
     },
     false // Публичный канал
   );

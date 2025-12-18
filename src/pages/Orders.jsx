@@ -408,96 +408,92 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
 
   // WebSocket подписки для обновления данных в реальном времени
   
-  // Публичный канал для всех событий трипов
+  // Публичный канал для всех событий трипов (резервный, основной - drivers.trips)
   useTripsWebSocket(
     (trip) => {
-      // Новый трип создан - обновляем список
+      console.log('🎉 [Orders] trips channel: Новый трип создан', trip);
       queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/orders") {
-        allActiveTripsRefetch?.();
-        myTripsRefetch?.();
-      }
+      allActiveTripsRefetch?.();
+      myTripsRefetch?.();
     },
     (trip) => {
-      // Трип обновлен - обновляем список
+      console.log('🔄 [Orders] trips channel: Трип обновлен', trip);
       queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/orders") {
-        allActiveTripsRefetch?.();
-        myTripsRefetch?.();
-      }
+      allActiveTripsRefetch?.();
+      myTripsRefetch?.();
     }
   );
 
   // Канал drivers.trips для водителей (новые заказы от пассажиров)
+  // Бэкенд отправляет TripCreated в этот канал когда пассажир создает заказ
   useDriversTripsWebSocket(
     (trip) => {
-      // Новый заказ от пассажира - обновляем список для водителей
-      if (isDriver && location.pathname === "/orders") {
+      console.log('🎉 [Orders] drivers.trips: Новый заказ от пассажира!', trip);
+      // Обновляем для водителей - новые заказы от пассажиров
+      if (isDriver) {
         queryClient.invalidateQueries({ queryKey: ['data'] });
         allActiveTripsRefetch?.();
         toast.success(t("Новый заказ от пассажира") || "Новый заказ от пассажира");
       }
     },
     (trip) => {
-      // Заказ обновлен - обновляем список
-      if (isDriver && location.pathname === "/orders") {
+      console.log('🔄 [Orders] drivers.trips: Заказ обновлен', trip);
+      if (isDriver) {
         queryClient.invalidateQueries({ queryKey: ['data'] });
         allActiveTripsRefetch?.();
       }
     },
     (trip) => {
-      // Заказ отменен - обновляем список
-      if (isDriver && location.pathname === "/orders") {
+      console.log('❌ [Orders] drivers.trips: Заказ отменен', trip);
+      if (isDriver) {
         queryClient.invalidateQueries({ queryKey: ['data'] });
         allActiveTripsRefetch?.();
       }
     }
   );
 
-  // Канал user.{id} для пассажиров (обновления о своих заказах и бронированиях)
+  // Канал user.{id} для получения персональных уведомлений (TripUpdated, TripBooked)
   const userId = userData?.id;
   useUserTripsWebSocket(
     userId,
     // Новый трип создан водителем - обновляем список для пассажиров
     (trip) => {
-      if (!isDriver && location.pathname === "/orders") {
+      console.log('🎉 [Orders] user channel: Новый трип создан', trip);
+      if (!isDriver) {
         queryClient.invalidateQueries({ queryKey: ['data'] });
         myTripsRefetch?.();
       }
     },
-    // Трип обновлен - обновляем список
+    // Трип обновлен - обновляем список (TripUpdated)
     (trip) => {
-      if (location.pathname === "/orders") {
-        queryClient.invalidateQueries({ queryKey: ['data'] });
-        myTripsRefetch?.();
-      }
-    },
-    // Новое бронирование создано - обновляем список
-    (booking) => {
+      console.log('🔄 [Orders] user channel: Трип обновлен', trip);
       queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/orders") {
-        allActiveTripsRefetch?.();
-        myTripsRefetch?.();
-      }
+      allActiveTripsRefetch?.();
+      myTripsRefetch?.();
+    },
+    // Новое бронирование создано - обновляем список (TripBooked)
+    (booking) => {
+      console.log('🎫 [Orders] user channel: Новое бронирование (trip.booked)', booking);
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      allActiveTripsRefetch?.();
+      myTripsRefetch?.();
       if (isDriver) {
         toast.success(t("Новое бронирование") || "Новое бронирование");
       }
     },
     // Бронирование обновлено - обновляем список
     (booking) => {
+      console.log('🔄 [Orders] user channel: Бронирование обновлено', booking);
       queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/orders") {
-        allActiveTripsRefetch?.();
-        myTripsRefetch?.();
-      }
+      allActiveTripsRefetch?.();
+      myTripsRefetch?.();
     },
     // Бронирование отменено - обновляем список
     (booking) => {
+      console.log('❌ [Orders] user channel: Бронирование отменено', booking);
       queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/orders") {
-        allActiveTripsRefetch?.();
-        myTripsRefetch?.();
-      }
+      allActiveTripsRefetch?.();
+      myTripsRefetch?.();
     }
   );
 
