@@ -40,7 +40,6 @@ import EmptyState from "@/components/EmptyState.jsx";
 import { sessionManager } from "@/lib/sessionManager.js";
 import { useActiveTab } from "@/layout/MainLayout";
 import { Plus } from "lucide-react";
-import { useTripsWebSocket, useUserTripsWebSocket, useDriversTripsWebSocket } from "@/hooks/useWebSocket";
  
 
 function Trips() {
@@ -129,76 +128,6 @@ function Trips() {
     }
   }, [location.pathname, refetch, myTripsRefetch]);
 
-  // WebSocket подписка на канал drivers.trips (ОСНОВНОЙ канал для новых поездок)
-  // Бэкенд отправляет TripCreated в канал drivers.trips
-  // Это работает для ВСЕХ пользователей (и пассажиров, и водителей)
-  useDriversTripsWebSocket(
-    (trip) => {
-      console.log('🎉 [Trips] drivers.trips: Новый трип создан!', trip);
-      // Обновляем для ВСЕХ пользователей
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      refetch();
-      myTripsRefetch();
-      // Показываем уведомление для пассажиров
-      if (userRole === "passenger") {
-        toast.success("Новая поездка доступна!");
-      }
-    },
-    (trip) => {
-      console.log('[Trips] drivers.trips: Трип обновлен', trip);
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      refetch();
-      myTripsRefetch();
-    },
-    (trip) => {
-      console.log('[Trips] drivers.trips: Трип отменен', trip);
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      refetch();
-      myTripsRefetch();
-    }
-  );
-
-  // WebSocket подписка на канал user.{id} для получения персональных уведомлений
-  // Бэкенд отправляет TripUpdated и TripBooked в этот канал
-  const userId = userData?.id;
-  useUserTripsWebSocket(
-    userId,
-    // Новый трип создан водителем - обновляем список для пассажиров
-    (trip) => {
-      console.log('🎉 [Trips] user channel: Новый трип создан', trip);
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      refetch();
-    },
-    // Трип обновлен - обновляем список (TripUpdated)
-    (trip) => {
-      console.log('🔄 [Trips] user channel: Трип обновлен', trip);
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      refetch();
-      myTripsRefetch();
-    },
-    // Новое бронирование создано - обновляем список (TripBooked)
-    (booking) => {
-      console.log('🎫 [Trips] user channel: Новое бронирование (trip.booked)', booking);
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      refetch();
-      myTripsRefetch();
-      toast.success("Новое бронирование!");
-    },
-    // Бронирование обновлено - обновляем список
-    (booking) => {
-      console.log('🔄 [Trips] user channel: Бронирование обновлено', booking);
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      refetch();
-      myTripsRefetch();
-    },
-    // Бронирование отменено - обновляем список
-    (booking) => {
-      console.log('❌ [Trips] user channel: Бронирование отменено', booking);
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      refetch();
-      myTripsRefetch();
-    }
-  );
 
 
   // Закомментировано: проверка telegram_chat_id после логина
@@ -356,7 +285,7 @@ function Trips() {
       console.log('✅ [Trips] Поездка успешно создана, ответ от сервера:', res);
       
       if (res.message === "Trip created!") {
-        console.log('📢 [Trips] Поездка создана! Ожидаем WebSocket событие для обновления списка...');
+        console.log('📢 [Trips] Поездка создана!');
         toast.success(t("trips.form.successMessage"));
         setDialog(false);
         

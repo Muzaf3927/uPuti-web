@@ -11,16 +11,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { I18nProvider } from "./app/i18n.jsx";
 
-// Initialize Echo for WebSocket connections
-import { initializeEcho } from "./lib/echo";
-
-// Инициализируем Echo при загрузке приложения
-if (typeof window !== 'undefined') {
-  console.log('🚀 [App] Инициализация WebSocket (Echo)...');
-  const echo = initializeEcho();
-  console.log('🚀 [App] Echo инициализирован:', echo ? '✅' : '❌');
-}
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

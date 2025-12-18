@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { useActiveTab } from "@/layout/MainLayout";
-import { useBookingsWebSocket } from "@/hooks/useWebSocket";
 
 function Requests() {
   const { t } = useI18n();
@@ -50,42 +49,6 @@ function Requests() {
     }
   }, [location.pathname, refetchMine, refetchToMe]);
 
-  // WebSocket подписка на события бронирований
-  useBookingsWebSocket(
-    (booking) => {
-      // Новое бронирование создано - обновляем список
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/requests") {
-        refetchMine();
-        refetchToMe();
-      }
-      toast.success("Новое бронирование получено");
-    },
-    (booking) => {
-      // Бронирование обновлено - обновляем список
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/requests") {
-        refetchMine();
-        refetchToMe();
-      }
-    },
-    (booking) => {
-      // Бронирование завершено - обновляем список
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/requests") {
-        refetchMine();
-        refetchToMe();
-      }
-    },
-    (booking) => {
-      // Бронирование отменено - обновляем список
-      queryClient.invalidateQueries({ queryKey: ['data'] });
-      if (location.pathname === "/requests") {
-        refetchMine();
-        refetchToMe();
-      }
-    }
-  );
 
   const handleConfirm = async (bookingId) => {
     try {
