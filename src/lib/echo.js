@@ -5,18 +5,21 @@ import { safeLocalStorage } from './localStorage';
 // Инициализируем Pusher
 window.Pusher = Pusher;
 
-// Получаем переменные окружения
-// Значения по умолчанию соответствуют продакшн настройкам бекенда
-const REVERB_APP_KEY = import.meta.env.VITE_REVERB_APP_KEY || 'Ch1q03StfKvXs9tZVmLm';
-// Laravel Cloud Reverb host
-const REVERB_HOST = import.meta.env.VITE_REVERB_HOST || 'ws-a09d837c-dc24-4d84-add2-3ce2dca3e47e-reverb.laravel.cloud';
-const REVERB_PORT = import.meta.env.VITE_REVERB_PORT || 443;
-const REVERB_SCHEME = import.meta.env.VITE_REVERB_SCHEME || 'https';
+// Используем значения напрямую из вашего бэкенда
+// НЕ используем переменные окружения, чтобы избежать проблем с неправильными настройками на сервере
+const REVERB_APP_KEY = 'Ch1q03StfKvXs9tZVmLm';
+const REVERB_HOST = 'ws-a09d837c-dc24-4d84-add2-3ce2dca3e47e-reverb.laravel.cloud';
+const REVERB_PORT = 443;
+const REVERB_SCHEME = 'https';
 
 // Получаем базовый URL API для авторизации
 const PRODUCTION_API_BASE = 'https://api.uputi.net/api';
 const LOCAL_API_BASE = 'http://localhost:8000/api';
-const API_BASE = import.meta.env.VITE_API_BASE || PRODUCTION_API_BASE;
+const envApiBase = import.meta.env.VITE_API_BASE;
+// Проверяем, что API_BASE не содержит опечаток (например, https:/.uputi.net)
+const API_BASE = (envApiBase && !envApiBase.includes('https:/.') && envApiBase.includes('api.uputi.net')) 
+  ? envApiBase 
+  : PRODUCTION_API_BASE;
 // Убираем /api из конца для получения базового URL
 const BASE_URL = API_BASE.replace('/api', '');
 
@@ -35,7 +38,7 @@ export const initializeEcho = () => {
   // Убираем протокол если он есть (ws:// или wss://)
   const cleanHost = REVERB_HOST.replace(/^(wss?:\/\/)?/, '');
   
-  console.log('Echo config:', {
+  console.log('Echo config (hardcoded values):', {
     REVERB_APP_KEY,
     cleanHost,
     REVERB_PORT,
