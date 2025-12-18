@@ -47,9 +47,20 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
         console.warn(`[WebSocket] Попытка переподключения...`);
         try {
           pusherConnection.connect();
+          // Ждем немного и проверяем снова
+          setTimeout(() => {
+            const newState = pusherConnection.state;
+            if (newState === 'connected') {
+              console.log(`[WebSocket] ✅ Переподключение успешно!`);
+            } else {
+              console.warn(`[WebSocket] ⚠️ Переподключение не удалось, состояние: ${newState}`);
+            }
+          }, 2000);
         } catch (e) {
           console.error(`[WebSocket] Ошибка переподключения:`, e);
         }
+      } else if (connectionState === 'connected') {
+        console.log(`[WebSocket] ✅ WebSocket подключен, можно подписываться на каналы`);
       }
     }
 

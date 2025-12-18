@@ -93,7 +93,8 @@ export const initializeEcho = () => {
 
   // Логируем события подключения
   echoInstance.connector.pusher.connection.bind('connected', () => {
-    console.log('🔌 [WebSocket] ✅ Подключено к Reverb серверу');
+    console.log('🔌 [WebSocket] ✅✅✅ ПОДКЛЮЧЕНО К REVERB СЕРВЕРУ!');
+    console.log('🔌 [WebSocket] Готов к подписке на каналы');
   });
 
   echoInstance.connector.pusher.connection.bind('disconnected', () => {
@@ -127,6 +128,18 @@ export const initializeEcho = () => {
       authEndpoint: `${BASE_URL}/broadcasting/auth`,
       fullError: JSON.stringify(error, null, 2)
     });
+    
+    // Переподключение при ошибке
+    setTimeout(() => {
+      try {
+        if (echoInstance && echoInstance.connector.pusher.connection.state !== 'connected') {
+          console.log('🔌 [WebSocket] Попытка переподключения после ошибки...');
+          echoInstance.connector.pusher.connect();
+        }
+      } catch (e) {
+        console.error('🔌 [WebSocket] Ошибка переподключения:', e);
+      }
+    }, 2000);
   });
 
   echoInstance.connector.pusher.connection.bind('state_change', (states) => {
@@ -141,6 +154,21 @@ export const initializeEcho = () => {
       console.error('  6. Проверьте CORS настройки на бэкенде');
       console.error('  7. Проверьте, что BROADCAST_CONNECTION=reverb в .env бэкенда');
       console.error('  8. Проверьте маршрут /broadcasting/auth на бэкенде');
+      
+      // Агрессивное переподключение при ошибке
+      console.log('🔌 [WebSocket] Попытка переподключения через 3 секунды...');
+      setTimeout(() => {
+        try {
+          if (echoInstance && echoInstance.connector.pusher.connection.state !== 'connected') {
+            console.log('🔌 [WebSocket] Переподключение...');
+            echoInstance.connector.pusher.connect();
+          }
+        } catch (e) {
+          console.error('🔌 [WebSocket] Ошибка переподключения:', e);
+        }
+      }, 3000);
+    } else if (states.current === 'connected') {
+      console.log('🔌 [WebSocket] ✅✅✅ УСПЕШНО ПОДКЛЮЧЕНО!');
     }
   });
 
@@ -171,6 +199,18 @@ export const initializeEcho = () => {
     console.error('  3. Проверьте маршрут авторизации:', `${BASE_URL}/broadcasting/auth`);
     console.error('  4. Проверьте CORS настройки на бэкенде');
     console.error('  5. Проверьте, что BROADCAST_CONNECTION=reverb в .env бэкенда');
+    
+    // Переподключение при ошибке соединения
+    setTimeout(() => {
+      try {
+        if (echoInstance && echoInstance.connector.pusher.connection.state !== 'connected') {
+          console.log('🔌 [Pusher] Попытка переподключения после ошибки соединения...');
+          echoInstance.connector.pusher.connect();
+        }
+      } catch (e) {
+        console.error('🔌 [Pusher] Ошибка переподключения:', e);
+      }
+    }, 3000);
   });
 
   // Обновляем токен при изменении
