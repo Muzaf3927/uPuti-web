@@ -40,7 +40,7 @@ import EmptyState from "@/components/EmptyState.jsx";
 import { sessionManager } from "@/lib/sessionManager.js";
 import { useActiveTab } from "@/layout/MainLayout";
 import { Plus } from "lucide-react";
-import { useTripsWebSocket } from "@/hooks/useWebSocket";
+import { useTripsWebSocket, useUserTripsWebSocket } from "@/hooks/useWebSocket";
  
 
 function Trips() {
@@ -129,7 +129,7 @@ function Trips() {
     }
   }, [location.pathname, refetch, myTripsRefetch]);
 
-  // WebSocket подписка на события трипов
+  // WebSocket подписка на события трипов (публичный канал для всех)
   useTripsWebSocket(
     (trip) => {
       // Новый трип создан - обновляем список
@@ -160,6 +160,47 @@ function Trips() {
       queryClient.invalidateQueries({ queryKey: ['data'] });
       if (location.pathname === "/") {
         refetch();
+        myTripsRefetch();
+      }
+    }
+  );
+
+  // WebSocket подписка на канал user.{id} для пассажиров (новые поездки от водителей)
+  const userId = userData?.id;
+  useUserTripsWebSocket(
+    userId,
+    // Новый трип создан водителем - обновляем список для пассажиров
+    (trip) => {
+      if (userRole === "passenger" && location.pathname === "/") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        refetch();
+      }
+    },
+    // Трип обновлен - обновляем список
+    (trip) => {
+      if (userRole === "passenger" && location.pathname === "/") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        refetch();
+      }
+    },
+    // Новое бронирование создано - обновляем список
+    (booking) => {
+      if (location.pathname === "/") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        myTripsRefetch();
+      }
+    },
+    // Бронирование обновлено - обновляем список
+    (booking) => {
+      if (location.pathname === "/") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        myTripsRefetch();
+      }
+    },
+    // Бронирование отменено - обновляем список
+    (booking) => {
+      if (location.pathname === "/") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
         myTripsRefetch();
       }
     }

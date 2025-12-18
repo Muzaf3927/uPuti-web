@@ -36,7 +36,7 @@ import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState.jsx";
 import { useActiveTab } from "@/layout/MainLayout";
 import { usePostData, useGetData, deleteData, postData, putData } from "@/api/api";
-import { useTripsWebSocket, useBookingsWebSocket } from "@/hooks/useWebSocket";
+import { useTripsWebSocket, useBookingsWebSocket, useDriversTripsWebSocket, useUserTripsWebSocket } from "@/hooks/useWebSocket";
 
 function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated, onBookingSuccess }) {
   const { t } = useI18n();
@@ -406,8 +406,9 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     ? (showAllOrders ? (allActiveTripsRefetch || (() => {})) : (myTripsRefetch || (() => {})))
     : (showCreateOrder ? (() => {}) : (myTripsRefetch || (() => {})));
 
-  // Логирование для отладки (опционально, можно закомментировать в продакшене)
   // WebSocket подписки для обновления данных в реальном времени
+  
+  // Публичный канал для всех событий трипов
   useTripsWebSocket(
     (trip) => {
       // Новый трип создан - обновляем список
@@ -427,6 +428,80 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     }
   );
 
+  // Канал drivers.trips для водителей (новые заказы от пассажиров)
+  useDriversTripsWebSocket(
+    (trip) => {
+      // Новый заказ от пассажира - обновляем список для водителей
+      if (isDriver && location.pathname === "/orders") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        allActiveTripsRefetch?.();
+        toast.success(t("Новый заказ от пассажира") || "Новый заказ от пассажира");
+      }
+    },
+    (trip) => {
+      // Заказ обновлен - обновляем список
+      if (isDriver && location.pathname === "/orders") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        allActiveTripsRefetch?.();
+      }
+    },
+    (trip) => {
+      // Заказ отменен - обновляем список
+      if (isDriver && location.pathname === "/orders") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        allActiveTripsRefetch?.();
+      }
+    }
+  );
+
+  // Канал user.{id} для пассажиров (обновления о своих заказах и бронированиях)
+  const userId = userData?.id;
+  useUserTripsWebSocket(
+    userId,
+    // Новый трип создан водителем - обновляем список для пассажиров
+    (trip) => {
+      if (!isDriver && location.pathname === "/orders") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        myTripsRefetch?.();
+      }
+    },
+    // Трип обновлен - обновляем список
+    (trip) => {
+      if (location.pathname === "/orders") {
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        myTripsRefetch?.();
+      }
+    },
+    // Новое бронирование создано - обновляем список
+    (booking) => {
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/orders") {
+        allActiveTripsRefetch?.();
+        myTripsRefetch?.();
+      }
+      if (isDriver) {
+        toast.success(t("Новое бронирование") || "Новое бронирование");
+      }
+    },
+    // Бронирование обновлено - обновляем список
+    (booking) => {
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/orders") {
+        allActiveTripsRefetch?.();
+        myTripsRefetch?.();
+      }
+    },
+    // Бронирование отменено - обновляем список
+    (booking) => {
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (location.pathname === "/orders") {
+        allActiveTripsRefetch?.();
+        myTripsRefetch?.();
+      }
+    }
+  );
+
+  // Публичный канал для событий бронирований
   useBookingsWebSocket(
     (booking) => {
       // Новое бронирование создано - обновляем список
@@ -435,8 +510,9 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
         allActiveTripsRefetch?.();
         myTripsRefetch?.();
       }
-      // Показываем уведомление
-      toast.success(t("Новое бронирование"));
+      if (isDriver) {
+        toast.success(t("Новое бронирование") || "Новое бронирование");
+      }
     },
     (booking) => {
       // Бронирование обновлено - обновляем список

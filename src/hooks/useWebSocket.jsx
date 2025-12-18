@@ -197,3 +197,81 @@ export const useUserUpdateWebSocket = (userId, onUserUpdated) => {
   });
 };
 
+/**
+ * Хук для подписки на канал drivers.trips (для водителей - новые заказы от пассажиров)
+ */
+export const useDriversTripsWebSocket = (onTripCreated, onTripUpdated, onTripCancelled) => {
+  return useWebSocket(
+    'drivers.trips',
+    {
+      '.trip.created': (data, queryClient) => {
+        // Инвалидируем кэш трипов для обновления списка
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        if (onTripCreated) {
+          onTripCreated(data.trip || data);
+        }
+      },
+      '.trip.updated': (data, queryClient) => {
+        // Инвалидируем кэш трипов для обновления списка
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        if (onTripUpdated) {
+          onTripUpdated(data.trip || data);
+        }
+      },
+      '.trip.cancelled': (data, queryClient) => {
+        // Инвалидируем кэш трипов для обновления списка
+        queryClient.invalidateQueries({ queryKey: ['data'] });
+        if (onTripCancelled) {
+          onTripCancelled(data.trip || data);
+        }
+      },
+    },
+    false // Публичный канал
+  );
+};
+
+/**
+ * Хук для подписки на события поездок через канал user.{id} (для пассажиров)
+ */
+export const useUserTripsWebSocket = (userId, onTripCreated, onTripUpdated, onBookingCreated, onBookingUpdated, onBookingCancelled) => {
+  if (!userId) return null;
+
+  return useUserWebSocket(userId, {
+    '.trip.created': (data, queryClient) => {
+      // Инвалидируем кэш трипов для обновления списка
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (onTripCreated) {
+        onTripCreated(data.trip || data);
+      }
+    },
+    '.trip.updated': (data, queryClient) => {
+      // Инвалидируем кэш трипов для обновления списка
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (onTripUpdated) {
+        onTripUpdated(data.trip || data);
+      }
+    },
+    '.booking.created': (data, queryClient) => {
+      // Инвалидируем кэш бронирований
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (onBookingCreated) {
+        onBookingCreated(data.booking || data);
+      }
+    },
+    '.booking.updated': (data, queryClient) => {
+      // Инвалидируем кэш бронирований
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (onBookingUpdated) {
+        onBookingUpdated(data.booking || data);
+      }
+    },
+    '.booking.cancelled': (data, queryClient) => {
+      // Инвалидируем кэш бронирований
+      queryClient.invalidateQueries({ queryKey: ['data'] });
+      if (onBookingCancelled) {
+        onBookingCancelled(data.booking || data);
+      }
+    },
+  });
+};
+

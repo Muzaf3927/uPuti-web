@@ -138,3 +138,5 @@ enableLogging: true,
 
 3. Проверьте правила доступа в `routes/channels.php` на бэкенде
 
+
+
