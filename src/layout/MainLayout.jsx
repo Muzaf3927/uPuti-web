@@ -343,10 +343,7 @@ function MainLayout() {
                 </div>
                 <div className="flex flex-col">
                   <span className="font-semibold text-sm sm:text-base">
-                    {userData?.name}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {userData?.phone}
+                    {userData?.name || "User"}
                   </span>
                 </div>
               </div>
@@ -398,7 +395,8 @@ function MainLayout() {
                         {getRoleLabel(userData?.role)}
                       </span>
                     </div>
-                    <button
+                    {/* Кнопка изменения роли закомментирована */}
+                    {/* <button
                       onClick={() => {
                         setProfileOpen(false);
                         setRoleSelectionCanClose(true); // Разрешаем закрытие при редактировании
@@ -408,7 +406,7 @@ function MainLayout() {
                     >
                       <Pencil className="w-3 h-3" />
                       <span>Изменить</span>
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               </div>

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useI18n } from "@/app/i18n.jsx";
 import { useGetData } from "@/api/api";
+import { useActivePage } from "@/hooks/useActivePage";
 import { Plus, Search, X } from "lucide-react";
 import TripsCard from "@/components/TripsCard";
 import MyTripsCard from "@/components/MyTripsCard";
@@ -27,6 +28,7 @@ import { Label } from "@/components/ui/label";
 function TripsOrders({ type = "city" }) {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const { isActivePage } = useActivePage();
   
   // Получаем данные пользователя для определения роли
   const { data: userData } = useGetData("/user");
@@ -51,35 +53,38 @@ function TripsOrders({ type = "city" }) {
   // Хуки должны вызываться на верхнем уровне, не условно
   // Для водителей: получаем мои поездки (только для межгорода)
   // API фильтрует по role=driver на бэкенде
+  // Автообновление только если страница активна
   const {
     data: myTripsData,
     isLoading: myTripsLoading,
     error: myTripsError,
     refetch: myTripsRefetch,
   } = useGetData(type === "intercity" && isDriver ? "/trips/my?page=1&per_page=10" : null, {
-    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchInterval: isActivePage(["city", "intercity"]) ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
     refetchOnWindowFocus: true,
   });
 
   // Для пассажиров в межгороде: получаем забронированные поездки
+  // Автообновление только если страница активна
   const {
     data: myBookingsData,
     isLoading: myBookingsLoading,
     error: myBookingsError,
     refetch: myBookingsRefetch,
   } = useGetData(type === "intercity" && !isDriver ? "/bookings/my/for/passenger/in-progress" : null, {
-    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchInterval: isActivePage(["city", "intercity"]) ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
     refetchOnWindowFocus: true,
   });
 
   // Для пассажиров в межгороде: получаем все активные поездки водителей
+  // Автообновление только если страница активна
   const {
     data: allTripsData,
     isLoading: allTripsLoading,
     error: allTripsError,
     refetch: allTripsRefetch,
   } = useGetData(type === "intercity" && !isDriver ? "/trips/for/passenger/active" : null, {
-    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchInterval: isActivePage(["city", "intercity"]) ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
     refetchOnWindowFocus: true,
   });
 

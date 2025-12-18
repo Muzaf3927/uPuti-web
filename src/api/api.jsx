@@ -174,11 +174,20 @@ export const putData = async (url, body) => {
 
 // Example usage with TanStack Query
 export const useGetData = (url, options = {}) => {
+  // Создаем финальные опции, копируя все из options
+  const finalOptions = { ...options };
+  
+  // Если refetchInterval === false, удаляем его (чтобы не передавать false в React Query)
+  // React Query понимает отсутствие refetchInterval как отключение автообновления
+  if (finalOptions.refetchInterval === false) {
+    delete finalOptions.refetchInterval;
+  }
+  
   return useQuery({ 
     queryKey: ["data", url], 
     queryFn: () => getData(url),
     enabled: !!url, // Запрос выполняется только если url не null/undefined/пустая строка
-    ...options, // Позволяет передавать дополнительные опции, например refetchInterval
+    ...finalOptions, // Позволяет передавать дополнительные опции, например refetchInterval
   });
 };
 

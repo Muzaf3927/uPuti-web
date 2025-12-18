@@ -35,6 +35,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState.jsx";
 import { useActiveTab } from "@/layout/MainLayout";
+import { useActivePage } from "@/hooks/useActivePage";
 import { usePostData, useGetData, deleteData, postData, putData } from "@/api/api";
 
 function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated, onBookingSuccess }) {
@@ -43,6 +44,7 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
   const location = useLocation();
   const queryClient = useQueryClient();
   const { activeTab: activeRoleTab } = useActiveTab();
+  const { isActivePage } = useActivePage();
   
   // Получаем данные пользователя для определения роли
   const { data: userData, refetch: refetchUser } = useGetData("/user");
@@ -322,13 +324,14 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
   });
 
   // Для водителей в табе "Все заказы" используем API /trips/active
+  // Автообновление только если страница активна (city или intercity)
   const {
     data: allActiveTripsData,
     isLoading: allActiveTripsLoading,
     error: allActiveTripsError,
     refetch: allActiveTripsRefetch
   } = useGetData(isDriver && showAllOrders ? "/trips/active" : null, {
-    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchInterval: isActivePage(["city", "intercity"]) ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
     refetchOnWindowFocus: true, // Обновление при фокусе на окне
   });
 
@@ -344,7 +347,7 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     error: myTripsError, 
     refetch: myTripsRefetch 
   } = useGetData(myOrdersApiUrl, {
-    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchInterval: isActivePage(["city", "intercity"]) ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
     refetchOnWindowFocus: true, // Обновление при фокусе на окне
   });
 

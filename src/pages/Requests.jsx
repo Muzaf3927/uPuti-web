@@ -15,27 +15,31 @@ import { toast } from "sonner";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useLocation } from "react-router-dom";
 import { useActiveTab } from "@/layout/MainLayout";
+import { useActivePage } from "@/hooks/useActivePage";
 
 function Requests() {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const location = useLocation();
   const { activeTab } = useActiveTab();
+  const { isActivePage } = useActivePage();
   
   // API для моих pending запросов (где я пассажир)
+  // Автообновление только если страница активна
   const { data: mineRes, isPending: mineLoading, error: mineError, refetch: refetchMine } = useGetData(
     "/bookings/my/pending",
     {
-      refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+      refetchInterval: isActivePage("requests") ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
       refetchOnWindowFocus: true, // Обновление при фокусе на окне
     }
   );
   
   // API для pending запросов на мои поездки (где я водитель)
+  // Автообновление только если страница активна
   const { data: toMeRes, isPending: toMeLoading, error: toMeError, refetch: refetchToMe } = useGetData(
     "/bookings/to-my-trips/pending",
     {
-      refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+      refetchInterval: isActivePage("requests") ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
       refetchOnWindowFocus: true, // Обновление при фокусе на окне
     }
   );
@@ -51,11 +55,11 @@ function Requests() {
 
   // Автоматическое обновление данных при переходе на страницу и переключении табов
   useEffect(() => {
-    if (location.pathname === "/requests") {
+    if (isActivePage("requests")) {
       refetchMine();
       refetchToMe();
     }
-  }, [location.pathname, activeTab, refetchMine, refetchToMe]);
+  }, [location.pathname, activeTab, refetchMine, refetchToMe, isActivePage]);
 
 
   const handleConfirm = async (bookingId) => {

@@ -39,6 +39,7 @@ import EmptyState from "@/components/EmptyState.jsx";
 // import TelegramConnectModal from "@/components/TelegramConnectModal.jsx";
 import { sessionManager } from "@/lib/sessionManager.js";
 import { useActiveTab } from "@/layout/MainLayout";
+import { useActivePage } from "@/hooks/useActivePage";
 import { Plus } from "lucide-react";
  
 
@@ -48,6 +49,7 @@ function Trips() {
   const location = useLocation();
   const queryClient = useQueryClient();
   const { activeTab } = useActiveTab();
+  const { isActivePage } = useActivePage();
   const [dialog, setDialog] = useState(false);
   const [searchDialog, setSearchDialog] = useState(false);
   // Закомментировано: проверка telegram_chat_id после логина
@@ -90,8 +92,9 @@ function Trips() {
     ? `?from_city=${activeFilters.from}&to_city=${activeFilters.to}${activeFilters.date ? `&date=${activeFilters.date}` : ""}`
     : "?";
   const allTripsUrl = `/trips${baseQuery}${baseQuery.includes("?") && baseQuery !== "?" ? "&" : ""}page=${allPage}&per_page=${ALL_PER_PAGE}`;
+  // Автообновление только если страница активна (city или intercity)
   const { data, isLoading, error, refetch } = useGetData(allTripsUrl, {
-    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchInterval: isActivePage(["city", "intercity"]) ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
     refetchOnWindowFocus: true, // Обновление при фокусе на окне
   });
 
@@ -122,17 +125,17 @@ function Trips() {
     error: myTripsError,
     refetch: myTripsRefetch,
   } = useGetData(`/trips/my?page=${myPage}&per_page=${MY_PER_PAGE}`, {
-    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchInterval: isActivePage(["city", "intercity"]) ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
     refetchOnWindowFocus: true, // Обновление при фокусе на окне
   });
 
   // Автоматическое обновление данных при переходе на страницу и переключении табов
   useEffect(() => {
-    if (location.pathname === "/") {
+    if (isActivePage(["city", "intercity"])) {
       refetch();
       myTripsRefetch();
     }
-  }, [location.pathname, activeTab, refetch, myTripsRefetch]);
+  }, [location.pathname, activeTab, refetch, myTripsRefetch, isActivePage]);
 
 
 

@@ -14,16 +14,19 @@ import { useI18n } from "@/app/i18n.jsx";
 import RefreshFab from "@/components/RefreshFab.jsx";
 import { useQuery } from "@tanstack/react-query";
 import { useActiveTab } from "@/layout/MainLayout";
+import { useActivePage } from "@/hooks/useActivePage";
 
 
 function Booking() {
   const { t } = useI18n();
   const location = useLocation();
   const { activeTab } = useActiveTab();
+  const { isActivePage } = useActivePage();
 
   // API для моих подтвержденных броней (где я пассажир)
+  // Автообновление только если страница активна
   const { data: myConfirmedBookingsRes, isPending: myConfirmedBookingsLoading, error: myConfirmedBookingsError, refetch: refetchMyConfirmed } = useGetData("/bookings/my/confirmed", {
-    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchInterval: isActivePage("booking") ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
     refetchOnWindowFocus: true, // Обновление при фокусе на окне
   });
 
@@ -51,11 +54,11 @@ function Booking() {
 
   // Автоматическое обновление данных при переходе на страницу и переключении табов
   useEffect(() => {
-    if (location.pathname === "/booking") {
+    if (isActivePage("booking")) {
       refetchMyConfirmed();
       // API /bookings/to-my-trips/confirmed удален
     }
-  }, [location.pathname, activeTab, refetchMyConfirmed]);
+  }, [location.pathname, activeTab, refetchMyConfirmed, isActivePage]);
 
 
   const myConfirmedBookings = myConfirmedBookingsRes?.bookings || [];
