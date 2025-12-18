@@ -57,7 +57,7 @@ export const initializeEcho = () => {
   // Laravel Cloud использует wss (WebSocket Secure) на порту 443
   const echoConfig = {
     broadcaster: 'pusher', // 🔥 ВАЖНО
-
+    cluster: 'mt1',
     key: REVERB_APP_KEY,
 
     wsHost: cleanHost,
