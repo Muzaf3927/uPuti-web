@@ -31,14 +31,20 @@ export const initializeEcho = () => {
 
   const token = safeLocalStorage.getItem('token');
 
+  // Формируем правильный host для WebSocket
+  // Убираем протокол если он есть (ws:// или wss://)
+  const cleanHost = REVERB_HOST.replace(/^(wss?:\/\/)?/, '');
+  
   echoInstance = new Echo({
     broadcaster: 'reverb',
     key: REVERB_APP_KEY,
-    wsHost: REVERB_HOST,
+    wsHost: cleanHost,
     wsPort: REVERB_PORT,
     wssPort: REVERB_PORT,
     forceTLS: REVERB_SCHEME === 'https',
     enabledTransports: ['ws', 'wss'],
+    // Отключаем автоматическое определение хоста
+    disableStats: true,
     authEndpoint: `${BASE_URL}/broadcasting/auth`,
     auth: {
       headers: {
@@ -46,7 +52,6 @@ export const initializeEcho = () => {
       },
     },
     // Дополнительные опции для отладки
-    // disableStats: true,
     // enableLogging: true,
   });
 

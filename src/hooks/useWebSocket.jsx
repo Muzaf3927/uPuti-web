@@ -16,6 +16,11 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
   const listenersRef = useRef([]);
 
   useEffect(() => {
+    // Если канал null или undefined, не подписываемся
+    if (!channels) {
+      return;
+    }
+
     const token = safeLocalStorage.getItem('token');
     
     // Если нет токена и канал приватный, не подписываемся
@@ -31,11 +36,20 @@ export const useWebSocket = (channels, handlers = {}, isPrivate = false, options
     const echo = getEcho();
     echoRef.current = echo;
 
-    // Нормализуем каналы в массив
-    const channelsArray = Array.isArray(channels) ? channels : [channels];
+    // Нормализуем каналы в массив и фильтруем null/undefined
+    const channelsArray = Array.isArray(channels) 
+      ? channels.filter(ch => ch != null)
+      : [channels].filter(ch => ch != null);
+
+    // Если нет валидных каналов, не подписываемся
+    if (channelsArray.length === 0) {
+      return;
+    }
 
     // Подписываемся на каждый канал
     channelsArray.forEach((channelName) => {
+      if (!channelName) return; // Дополнительная проверка
+
       const channel = isPrivate 
         ? echo.private(channelName)
         : echo.channel(channelName);
@@ -151,10 +165,10 @@ export const useBookingsWebSocket = (onBookingCreated, onBookingUpdated, onBooki
  * Хук для подписки на приватный канал пользователя
  */
 export const useUserWebSocket = (userId, handlers = {}) => {
-  if (!userId) return null;
-
+  // Всегда вызываем хук, но передаем null канал если userId отсутствует
+  // Это важно для соблюдения правил хуков React
   return useWebSocket(
-    `user.${userId}`,
+    userId ? `user.${userId}` : null,
     handlers,
     true
   );
@@ -164,10 +178,9 @@ export const useUserWebSocket = (userId, handlers = {}) => {
  * Хук для подписки на приватный канал трипа
  */
 export const useTripWebSocket = (tripId, handlers = {}) => {
-  if (!tripId) return null;
-
+  // Всегда вызываем хук, но передаем null канал если tripId отсутствует
   return useWebSocket(
-    `trip.${tripId}`,
+    tripId ? `trip.${tripId}` : null,
     handlers,
     true
   );
@@ -177,8 +190,7 @@ export const useTripWebSocket = (tripId, handlers = {}) => {
  * Хук для подписки на обновление пользователя
  */
 export const useUserUpdateWebSocket = (userId, onUserUpdated) => {
-  if (!userId) return null;
-
+  // Всегда вызываем хук, даже если userId отсутствует
   return useUserWebSocket(userId, {
     '.user.updated': (data, queryClient) => {
       // Обновляем кэш пользователя
@@ -234,8 +246,7 @@ export const useDriversTripsWebSocket = (onTripCreated, onTripUpdated, onTripCan
  * Хук для подписки на события поездок через канал user.{id} (для пассажиров)
  */
 export const useUserTripsWebSocket = (userId, onTripCreated, onTripUpdated, onBookingCreated, onBookingUpdated, onBookingCancelled) => {
-  if (!userId) return null;
-
+  // Всегда вызываем хук, даже если userId отсутствует
   return useUserWebSocket(userId, {
     '.trip.created': (data, queryClient) => {
       // Инвалидируем кэш трипов для обновления списка
