@@ -70,20 +70,28 @@ function AddCarModal({ onCarAdded, userData }) {
       
       // После успешного добавления машины проверяем telegram_chat_id для водителей
       // Обновляем данные пользователя перед проверкой
-      const { data: freshUserData } = await refetchUser();
-      
-      // Проверяем наличие telegram_chat_id
-      const hasTelegram = freshUserData?.telegram_chat_id && freshUserData.telegram_chat_id.trim() !== "";
-      
-      if (!hasTelegram) {
-        // Если нет telegram_chat_id, открываем модальное окно Telegram
-        setTelegramModalOpen(true);
-        // Не закрываем модальное окно добавления машины, пока не закроется Telegram модальное окно
-        // Модальное окно добавления машины закроется в обработчике закрытия Telegram модального окна
-        return;
+      // Обрабатываем ошибку refetchUser отдельно, чтобы не показывать ошибку, если основная операция успешна
+      try {
+        const { data: freshUserData } = await refetchUser();
+        
+        // Проверяем наличие telegram_chat_id
+        const hasTelegram = freshUserData?.telegram_chat_id && freshUserData.telegram_chat_id.trim() !== "";
+        
+        if (!hasTelegram) {
+          // Если нет telegram_chat_id, открываем модальное окно Telegram
+          setTelegramModalOpen(true);
+          // Не закрываем модальное окно добавления машины, пока не закроется Telegram модальное окно
+          // Модальное окно добавления машины закроется в обработчике закрытия Telegram модального окна
+          return;
+        }
+      } catch (refetchError) {
+        // Ошибка при обновлении данных пользователя не критична, так как машина уже добавлена
+        // Просто логируем ошибку, но не показываем toast.error
+        console.warn("Не удалось обновить данные пользователя после добавления машины:", refetchError);
+        // Продолжаем выполнение - закрываем модальное окно
       }
       
-      // Если есть telegram_chat_id, закрываем модальное окно добавления машины
+      // Если есть telegram_chat_id или произошла ошибка при обновлении, закрываем модальное окно добавления машины
       if (onCarAdded) {
         onCarAdded(response);
       }
