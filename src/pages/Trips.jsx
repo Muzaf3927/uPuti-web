@@ -90,7 +90,10 @@ function Trips() {
     ? `?from_city=${activeFilters.from}&to_city=${activeFilters.to}${activeFilters.date ? `&date=${activeFilters.date}` : ""}`
     : "?";
   const allTripsUrl = `/trips${baseQuery}${baseQuery.includes("?") && baseQuery !== "?" ? "&" : ""}page=${allPage}&per_page=${ALL_PER_PAGE}`;
-  const { data, isLoading, error, refetch } = useGetData(allTripsUrl);
+  const { data, isLoading, error, refetch } = useGetData(allTripsUrl, {
+    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchOnWindowFocus: true, // Обновление при фокусе на окне
+  });
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -118,15 +121,18 @@ function Trips() {
     isLoading: myTripsLoading,
     error: myTripsError,
     refetch: myTripsRefetch,
-  } = useGetData(`/trips/my?page=${myPage}&per_page=${MY_PER_PAGE}`);
+  } = useGetData(`/trips/my?page=${myPage}&per_page=${MY_PER_PAGE}`, {
+    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchOnWindowFocus: true, // Обновление при фокусе на окне
+  });
 
-  // Автоматическое обновление данных при переходе на страницу
+  // Автоматическое обновление данных при переходе на страницу и переключении табов
   useEffect(() => {
     if (location.pathname === "/") {
       refetch();
       myTripsRefetch();
     }
-  }, [location.pathname, refetch, myTripsRefetch]);
+  }, [location.pathname, activeTab, refetch, myTripsRefetch]);
 
 
 

@@ -22,7 +22,10 @@ function Booking() {
   const { activeTab } = useActiveTab();
 
   // API для моих подтвержденных броней (где я пассажир)
-  const { data: myConfirmedBookingsRes, isPending: myConfirmedBookingsLoading, error: myConfirmedBookingsError, refetch: refetchMyConfirmed } = useGetData("/bookings/my/confirmed");
+  const { data: myConfirmedBookingsRes, isPending: myConfirmedBookingsLoading, error: myConfirmedBookingsError, refetch: refetchMyConfirmed } = useGetData("/bookings/my/confirmed", {
+    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchOnWindowFocus: true, // Обновление при фокусе на окне
+  });
 
   // API /bookings/to-my-trips/confirmed удален
   const confirmedBookingsToMyTripsRes = null;
@@ -46,13 +49,13 @@ function Booking() {
     return () => window.removeEventListener("app:refresh", handler);
   }, [refetchMyConfirmed, refetchConfirmedToMyTrips]);
 
-  // Автоматическое обновление данных при переходе на страницу
+  // Автоматическое обновление данных при переходе на страницу и переключении табов
   useEffect(() => {
     if (location.pathname === "/booking") {
       refetchMyConfirmed();
       // API /bookings/to-my-trips/confirmed удален
     }
-  }, [location.pathname, refetchMyConfirmed]);
+  }, [location.pathname, activeTab, refetchMyConfirmed]);
 
 
   const myConfirmedBookings = myConfirmedBookingsRes?.bookings || [];

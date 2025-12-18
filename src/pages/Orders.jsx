@@ -327,7 +327,10 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     isLoading: allActiveTripsLoading,
     error: allActiveTripsError,
     refetch: allActiveTripsRefetch
-  } = useGetData(isDriver && showAllOrders ? "/trips/active" : null);
+  } = useGetData(isDriver && showAllOrders ? "/trips/active" : null, {
+    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchOnWindowFocus: true, // Обновление при фокусе на окне
+  });
 
   // Получаем активные заказы пользователя для таба "Мои брони" (для водителей) или "Мои заказы" (для пассажиров)
   // Для водителей используем /bookings/my/in-progress, для пассажиров - /trips/for/passenger/my
@@ -340,7 +343,10 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     isLoading: myTripsLoading, 
     error: myTripsError, 
     refetch: myTripsRefetch 
-  } = useGetData(myOrdersApiUrl);
+  } = useGetData(myOrdersApiUrl, {
+    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchOnWindowFocus: true, // Обновление при фокусе на окне
+  });
 
   // Обрабатываем данные из API /trips/active (для водителей - все заказы)
   const allActiveOrdersRaw = (isDriver && showAllOrders) ? (allActiveTripsData?.data || allActiveTripsData || []) : [];
@@ -405,6 +411,14 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     ? (showAllOrders ? (allActiveTripsRefetch || (() => {})) : (myTripsRefetch || (() => {})))
     : (showCreateOrder ? (() => {}) : (myTripsRefetch || (() => {})));
 
+
+  // Автоматическое обновление при переключении табов
+  useEffect(() => {
+    if (location.pathname === "/orders") {
+      refetchUser();
+      ordersRefetch();
+    }
+  }, [activeRoleTab, location.pathname, refetchUser, ordersRefetch]);
 
   useEffect(() => {
     console.log("=== ORDERS DEBUG ===");

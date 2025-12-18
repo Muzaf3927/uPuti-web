@@ -173,11 +173,12 @@ export const putData = async (url, body) => {
 };
 
 // Example usage with TanStack Query
-export const useGetData = (url) => {
+export const useGetData = (url, options = {}) => {
   return useQuery({ 
     queryKey: ["data", url], 
     queryFn: () => getData(url),
     enabled: !!url, // Запрос выполняется только если url не null/undefined/пустая строка
+    ...options, // Позволяет передавать дополнительные опции, например refetchInterval
   });
 };
 
@@ -186,7 +187,10 @@ export const usePostData = (url) => {
   return useMutation({
     mutationFn: (body) => postData(url, body),
     onSuccess: () => {
+      // Инвалидируем конкретный запрос
       queryClient.invalidateQueries({ queryKey: ["data", url] });
+      // Инвалидируем все запросы, связанные с поездками и заказами
+      queryClient.invalidateQueries({ queryKey: ["data"] });
     },
   });
 };
@@ -196,7 +200,10 @@ export const useDeleteData = (url) => {
   return useMutation({
     mutationFn: () => deleteData(url),
     onSuccess: () => {
+      // Инвалидируем конкретный запрос
       queryClient.invalidateQueries({ queryKey: ["data", url] });
+      // Инвалидируем все запросы, связанные с поездками и заказами
+      queryClient.invalidateQueries({ queryKey: ["data"] });
     },
   });
 };

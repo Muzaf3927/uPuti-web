@@ -56,7 +56,10 @@ function TripsOrders({ type = "city" }) {
     isLoading: myTripsLoading,
     error: myTripsError,
     refetch: myTripsRefetch,
-  } = useGetData(type === "intercity" && isDriver ? "/trips/my?page=1&per_page=10" : null);
+  } = useGetData(type === "intercity" && isDriver ? "/trips/my?page=1&per_page=10" : null, {
+    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchOnWindowFocus: true,
+  });
 
   // Для пассажиров в межгороде: получаем забронированные поездки
   const {
@@ -64,7 +67,10 @@ function TripsOrders({ type = "city" }) {
     isLoading: myBookingsLoading,
     error: myBookingsError,
     refetch: myBookingsRefetch,
-  } = useGetData(type === "intercity" && !isDriver ? "/bookings/my/for/passenger/in-progress" : null);
+  } = useGetData(type === "intercity" && !isDriver ? "/bookings/my/for/passenger/in-progress" : null, {
+    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchOnWindowFocus: true,
+  });
 
   // Для пассажиров в межгороде: получаем все активные поездки водителей
   const {
@@ -72,7 +78,10 @@ function TripsOrders({ type = "city" }) {
     isLoading: allTripsLoading,
     error: allTripsError,
     refetch: allTripsRefetch,
-  } = useGetData(type === "intercity" && !isDriver ? "/trips/for/passenger/active" : null);
+  } = useGetData(type === "intercity" && !isDriver ? "/trips/for/passenger/active" : null, {
+    refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+    refetchOnWindowFocus: true,
+  });
 
   // Состояния для поиска поездок
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);

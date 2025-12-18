@@ -24,12 +24,20 @@ function Requests() {
   
   // API для моих pending запросов (где я пассажир)
   const { data: mineRes, isPending: mineLoading, error: mineError, refetch: refetchMine } = useGetData(
-    "/bookings/my/pending"
+    "/bookings/my/pending",
+    {
+      refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+      refetchOnWindowFocus: true, // Обновление при фокусе на окне
+    }
   );
   
   // API для pending запросов на мои поездки (где я водитель)
   const { data: toMeRes, isPending: toMeLoading, error: toMeError, refetch: refetchToMe } = useGetData(
-    "/bookings/to-my-trips/pending"
+    "/bookings/to-my-trips/pending",
+    {
+      refetchInterval: 5000, // Автоматическое обновление каждые 5 секунд
+      refetchOnWindowFocus: true, // Обновление при фокусе на окне
+    }
   );
   
   // Получаем количество непрочитанных сообщений (React Query автоматически дедуплицирует запрос с Navbar)
@@ -41,13 +49,13 @@ function Requests() {
     cacheTime: 300000
   });
 
-  // Автоматическое обновление данных при переходе на страницу
+  // Автоматическое обновление данных при переходе на страницу и переключении табов
   useEffect(() => {
     if (location.pathname === "/requests") {
       refetchMine();
       refetchToMe();
     }
-  }, [location.pathname, refetchMine, refetchToMe]);
+  }, [location.pathname, activeTab, refetchMine, refetchToMe]);
 
 
   const handleConfirm = async (bookingId) => {
