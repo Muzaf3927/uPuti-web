@@ -53,7 +53,6 @@ export const initializeEcho = () => {
 
   // Для Laravel Cloud Reverb конфигурация
   // Laravel Cloud использует wss (WebSocket Secure) на порту 443
-  // ВАЖНО: Для Laravel Cloud может не требоваться явное указание порта
   const echoConfig = {
     broadcaster: 'reverb',
     key: REVERB_APP_KEY,
@@ -69,6 +68,7 @@ export const initializeEcho = () => {
       headers: {
         Authorization: token ? `Bearer ${token}` : '',
         Accept: 'application/json',
+        'Content-Type': 'application/json',
       },
     },
     enableLogging: true,
@@ -140,17 +140,19 @@ export const initializeEcho = () => {
       fullError: JSON.stringify(error, null, 2)
     });
     
-    // Переподключение при ошибке
-    setTimeout(() => {
-      try {
-        if (echoInstance && echoInstance.connector.pusher.connection.state !== 'connected') {
-          console.log('🔌 [WebSocket] Попытка переподключения после ошибки...');
-          echoInstance.connector.pusher.connect();
-        }
-      } catch (e) {
-        console.error('🔌 [WebSocket] Ошибка переподключения:', e);
-      }
-    }, 2000);
+    // Детальный разбор ошибки
+    if (error?.error) {
+      console.error('🔌 [WebSocket] Детали ошибки:', {
+        errorType: error.error.type,
+        errorMessage: error.error.message,
+        errorData: error.error.data,
+        errorCode: error.error.code,
+        fullErrorObject: error.error
+      });
+    }
+    
+    // НЕ переподключаемся автоматически при ошибке - это может создать бесконечный цикл
+    // Вместо этого ждем, пока пользователь не обновит страницу или не исправит проблему
   });
 
   echoInstance.connector.pusher.connection.bind('state_change', (states) => {
@@ -210,18 +212,20 @@ export const initializeEcho = () => {
     console.error('  3. Проверьте маршрут авторизации:', `${BASE_URL}/broadcasting/auth`);
     console.error('  4. Проверьте CORS настройки на бэкенде');
     console.error('  5. Проверьте, что BROADCAST_CONNECTION=reverb в .env бэкенда');
+    console.error('  6. Проверьте логи Laravel на наличие ошибок авторизации');
     
-    // Переподключение при ошибке соединения
-    setTimeout(() => {
-      try {
-        if (echoInstance && echoInstance.connector.pusher.connection.state !== 'connected') {
-          console.log('🔌 [Pusher] Попытка переподключения после ошибки соединения...');
-          echoInstance.connector.pusher.connect();
-        }
-      } catch (e) {
-        console.error('🔌 [Pusher] Ошибка переподключения:', e);
-      }
-    }, 3000);
+    // Детальный разбор ошибки Pusher
+    if (error?.error) {
+      console.error('🔌 [Pusher] Детали ошибки:', {
+        errorType: error.error.type,
+        errorMessage: error.error.message,
+        errorData: error.error.data,
+        errorCode: error.error.code,
+        fullErrorObject: error.error
+      });
+    }
+    
+    // НЕ переподключаемся автоматически - это может создать бесконечный цикл
   });
 
   // Обновляем токен при изменении
