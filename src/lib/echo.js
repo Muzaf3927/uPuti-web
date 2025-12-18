@@ -53,7 +53,7 @@ export const initializeEcho = () => {
 
   // Для Laravel Cloud Reverb конфигурация
   // Laravel Cloud использует wss (WebSocket Secure) на порту 443
-  // В WebView добавляем дополнительные настройки для стабильности
+  // ВАЖНО: Для Laravel Cloud может не требоваться явное указание порта
   const echoConfig = {
     broadcaster: 'reverb',
     key: REVERB_APP_KEY,
@@ -61,7 +61,7 @@ export const initializeEcho = () => {
     wsPort: REVERB_PORT,
     wssPort: REVERB_PORT,
     forceTLS: true, // Всегда true для Laravel Cloud
-    enabledTransports: ['wss'], // Используем только wss для Laravel Cloud
+    enabledTransports: ['ws', 'wss'], // Пробуем оба транспорта для совместимости
     disableStats: true,
     cluster: null,
     authEndpoint: `${BASE_URL}/broadcasting/auth`,
@@ -72,20 +72,31 @@ export const initializeEcho = () => {
       },
     },
     enableLogging: true,
-    // Дополнительные настройки для WebView
-    ...(isWebView && {
-      // Увеличиваем таймауты для WebView
-      activityTimeout: 30000, // 30 секунд
-      pongTimeout: 6000, // 6 секунд
-      unavailableTimeout: 10000, // 10 секунд
-    }),
+    // Дополнительные настройки для стабильности
+    activityTimeout: 30000, // 30 секунд
+    pongTimeout: 6000, // 6 секунд
+    unavailableTimeout: 10000, // 10 секунд
   };
 
   console.log('🔌 [Echo] Полная конфигурация:', echoConfig);
   console.log('🔌 [Echo] Попытка подключения к:', `wss://${cleanHost}:${REVERB_PORT}`);
+  console.log('🔌 [Echo] Endpoint авторизации:', `${BASE_URL}/broadcasting/auth`);
   
   try {
     echoInstance = new Echo(echoConfig);
+    
+    // Принудительно подключаемся сразу после создания
+    setTimeout(() => {
+      const connection = echoInstance?.connector?.pusher?.connection;
+      if (connection && connection.state !== 'connected' && connection.state !== 'connecting') {
+        console.log('🔌 [Echo] Принудительное подключение...');
+        try {
+          connection.connect();
+        } catch (e) {
+          console.error('🔌 [Echo] Ошибка принудительного подключения:', e);
+        }
+      }
+    }, 100);
   } catch (error) {
     console.error('🔌 [Echo] Ошибка при создании экземпляра Echo:', error);
     throw error;
