@@ -11,13 +11,14 @@ import {
   ChevronDown,
   Phone,
   Users,
+  Star,
 } from "lucide-react";
 import { useI18n } from "@/app/i18n.jsx";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
-import { putData } from "@/api/api";
+import { putData, postData } from "@/api/api";
 import { useQueryClient } from "@tanstack/react-query";
-import { CircleCheck } from "lucide-react";
+import { CircleCheck, X } from "lucide-react";
 
 function MyTripsCardIntercity({ trip }) {
   const { t } = useI18n();
@@ -40,14 +41,57 @@ function MyTripsCardIntercity({ trip }) {
     }
   };
 
-  // Получаем список пассажиров из bookings
-  // API возвращает bookings с вложенным user
-  const passengers = trip.bookings 
-    ? trip.bookings
-        .filter(booking => booking.status === "confirmed" || booking.status === "in_progress")
-        .map(booking => booking.user)
-        .filter(user => user) // Убираем null/undefined
-    : [];
+  // Получаем все bookings (и requested, и in_progress)
+  const allBookings = Array.isArray(trip.bookings) ? trip.bookings : [];
+  
+  // Функции для принятия и отклонения запросов
+  const handleConfirm = async (bookingId) => {
+    try {
+      await postData(`/bookings/${bookingId}/accept`, {});
+      toast.success(t("myTripsCard.acceptedToast"));
+      // Инвалидируем и сразу обновляем все запросы связанные с поездками
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const url = query.queryKey[1];
+          return typeof url === "string" && url.includes("/trips/my");
+        }
+      });
+      // Принудительно обновляем данные
+      queryClient.refetchQueries({ 
+        predicate: (query) => {
+          const url = query.queryKey[1];
+          return typeof url === "string" && url.includes("/trips/my");
+        }
+      });
+      queryClient.invalidateQueries({ queryKey: ["bookings", "unread-count"] });
+    } catch (err) {
+      toast.error("Не удалось принять запрос");
+    }
+  };
+
+  const handleDecline = async (bookingId) => {
+    try {
+      await postData(`/bookings/${bookingId}/delete`, {});
+      toast.success(t("myTripsCard.declinedToast"));
+      // Инвалидируем и сразу обновляем все запросы связанные с поездками
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const url = query.queryKey[1];
+          return typeof url === "string" && url.includes("/trips/my");
+        }
+      });
+      // Принудительно обновляем данные
+      queryClient.refetchQueries({ 
+        predicate: (query) => {
+          const url = query.queryKey[1];
+          return typeof url === "string" && url.includes("/trips/my");
+        }
+      });
+      queryClient.invalidateQueries({ queryKey: ["bookings", "unread-count"] });
+    } catch (err) {
+      toast.error("Не удалось отклонить запрос");
+    }
+  };
 
   // Функция завершения поездки
   const handleComplete = async (e) => {
@@ -148,42 +192,110 @@ function MyTripsCardIntercity({ trip }) {
           <div className="mt-2 px-4 sm:px-5">
             <div className="flex items-center gap-2 mb-2">
               <Users className="h-3.5 w-3.5 text-primary" />
-              <h4 className="text-xs font-semibold text-gray-900">Пассажиры</h4>
+              <h4 className="text-xs font-semibold text-gray-900">{t("myTripsCard.passengers")} {allBookings.length > 0 && `(${allBookings.length})`}</h4>
             </div>
-            {passengers.length === 0 ? (
+            {allBookings.length === 0 ? (
               <div className="text-center text-xs text-gray-500 py-3 bg-white/50 rounded-xl border border-dashed">
-                Нет забронированных пассажиров
+                {t("myTripsCard.noBookings")}
               </div>
             ) : (
               <div className="space-y-2">
-                {passengers.map((passenger, index) => (
-                  <div
-                    key={passenger.id || index}
-                    className="flex items-center justify-between gap-2 bg-white rounded-xl p-2 border border-gray-200"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Avatar className="size-6 flex-shrink-0">
-                        <AvatarFallback className="text-[10px]">
-                          {getInitials(passenger.name || "П")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs font-medium text-gray-900 truncate">
-                        {passenger.name || "Пассажир"}
-                      </span>
-                    </div>
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCall(passenger.phone);
-                      }}
-                      size="sm"
-                      className="h-7 px-2 rounded-lg bg-green-500 hover:bg-green-600 text-white flex items-center gap-1 flex-shrink-0"
+                {allBookings.map((booking) => {
+                  const passenger = booking.user || {};
+                  const bookingStatus = String(booking.status || "").toLowerCase();
+                  const isRequested = bookingStatus === "requested" || bookingStatus === "pending";
+                  const isInProgress = bookingStatus === "in_progress" || bookingStatus === "confirmed";
+                  
+                  return (
+                    <div
+                      key={booking.id || `booking-${booking.user_id}`}
+                      className="flex flex-col gap-2 bg-white rounded-xl p-2 border border-gray-200"
                     >
-                      <Phone className="h-3 w-3" />
-                      <span className="text-[10px]">Позвонить</span>
-                    </Button>
-                  </div>
-                ))}
+                      {/* Первый ряд: имя, рейтинг, статус */}
+                      <div className="flex items-center gap-2">
+                        <Avatar className="size-7 flex-shrink-0">
+                          <AvatarFallback className="text-[10px]">
+                            {getInitials(passenger.name || "П")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          <span className="text-xs font-medium text-gray-900 truncate">
+                            {passenger.name || "Пассажир"}
+                          </span>
+                          {passenger?.rating && (
+                            <div className="flex items-center gap-0.5 bg-yellow-100 px-1 py-0.5 rounded-full">
+                              <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
+                              <span className="text-[9px] font-medium text-yellow-700">{passenger.rating}</span>
+                            </div>
+                          )}
+                          {isRequested && (
+                            <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium ml-auto">
+                              {t("booking.status.requested")}
+                            </span>
+                          )}
+                          {isInProgress && (
+                            <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium ml-auto">
+                              {t("booking.status.accepted")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Второй ряд: количество мест и предложенная сумма */}
+                      <div className="flex items-center gap-2 text-[10px] text-gray-600">
+                        <span>{booking.seats} {t("tripsCard.seats")}</span>
+                        {booking.offered_price && (
+                          <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-semibold">
+                            {Number(booking.offered_price).toLocaleString()} сум
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Кнопки снизу (только для requested) */}
+                      {isRequested && (
+                        <div className="flex gap-1.5 pt-1">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleConfirm(booking.id);
+                            }}
+                            className="h-7 px-2 text-[10px] bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-medium rounded-lg flex items-center gap-1 flex-1"
+                          >
+                            <CircleCheck className="h-3 w-3" />
+                            <span>{t("myTripsCard.accept")}</span>
+                          </Button>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDecline(booking.id);
+                            }}
+                            variant="outline"
+                            className="h-7 px-2 text-[10px] border-2 border-red-600 text-red-600 hover:bg-red-50 active:bg-red-100 font-medium rounded-lg flex items-center gap-1 flex-1"
+                          >
+                            <X className="h-3 w-3" />
+                            <span>{t("myTripsCard.decline")}</span>
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {/* Кнопка "Позвонить" для in_progress */}
+                      {isInProgress && (
+                        <div className="pt-1">
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCall(passenger.phone);
+                            }}
+                            className="h-7 px-2 text-[10px] bg-green-500 hover:bg-green-600 text-white flex items-center gap-1 w-full"
+                          >
+                            <Phone className="h-3 w-3" />
+                            <span>{t("myTripsCard.callPassenger")}</span>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

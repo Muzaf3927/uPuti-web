@@ -23,9 +23,9 @@ function Booking() {
   const { activeTab } = useActiveTab();
   const { isActivePage } = useActivePage();
 
-  // API для моих подтвержденных броней (где я пассажир)
+  // API для всех броней пассажира (requested и in_progress)
   // Автообновление только если страница активна
-  const { data: myConfirmedBookingsRes, isPending: myConfirmedBookingsLoading, error: myConfirmedBookingsError, refetch: refetchMyConfirmed } = useGetData("/bookings/my/confirmed", {
+  const { data: myBookingsRes, isPending: myBookingsLoading, error: myBookingsError, refetch: refetchMyBookings } = useGetData("/bookings/my/for/passenger/in-progress", {
     refetchInterval: isActivePage("booking") ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
     refetchOnWindowFocus: true, // Обновление при фокусе на окне
   });
@@ -47,21 +47,25 @@ function Booking() {
 
   // Listen global refresh
   useEffect(() => {
-    const handler = () => { Promise.allSettled([refetchMyConfirmed(), refetchConfirmedToMyTrips()]); };
+    const handler = () => { Promise.allSettled([refetchMyBookings(), refetchConfirmedToMyTrips()]); };
     window.addEventListener("app:refresh", handler);
     return () => window.removeEventListener("app:refresh", handler);
-  }, [refetchMyConfirmed, refetchConfirmedToMyTrips]);
+  }, [refetchMyBookings, refetchConfirmedToMyTrips]);
 
   // Автоматическое обновление данных при переходе на страницу и переключении табов
   useEffect(() => {
     if (isActivePage("booking")) {
-      refetchMyConfirmed();
+      refetchMyBookings();
       // API /bookings/to-my-trips/confirmed удален
     }
-  }, [location.pathname, activeTab, refetchMyConfirmed, isActivePage]);
+  }, [location.pathname, activeTab, refetchMyBookings, isActivePage]);
 
-
-  const myConfirmedBookings = myConfirmedBookingsRes?.bookings || [];
+  // Обрабатываем данные броней - API может возвращать массив или объект
+  const myBookingsList = Array.isArray(myBookingsRes) 
+    ? myBookingsRes 
+    : (myBookingsRes?.bookings || myBookingsRes?.data || []);
+  
+  const myBookings = myBookingsList;
   // API /bookings/to-my-trips/confirmed удален
   const confirmedBookingsToMyTrips = [];
 
@@ -80,14 +84,20 @@ function Booking() {
         {showPassengerContent && (
             <Card className="rounded-3xl shadow-lg border bg-card/90 backdrop-blur-sm">
               <CardContent className="flex flex-col gap-4 py-6 rounded-3xl">
-                {myConfirmedBookingsLoading ? (
+                {myBookingsLoading ? (
                     <div>{t("booking.loading")}</div>
-                ) : myConfirmedBookingsError ? (
-                    <div className="text-red-600">{t("booking.error")}: {myConfirmedBookingsError.message}</div>
-                ) : myConfirmedBookings.length === 0 ? (
+                ) : myBookingsError ? (
+                    <div className="text-red-600">{t("booking.error")}: {myBookingsError.message}</div>
+                ) : myBookings.length === 0 ? (
                     <div>{t("booking.none")}</div>
                 ) : (
-                    myConfirmedBookings.map((b) => (
+                    myBookings.map((b) => {
+                      // Определяем статус бронирования
+                      const bookingStatus = b.status || b.booking_status || "requested";
+                      const isRequested = bookingStatus === "requested" || bookingStatus === "pending";
+                      const isInProgress = bookingStatus === "in_progress" || bookingStatus === "confirmed";
+                      
+                      return (
                         <div
                           key={b.id}
                           className="border rounded-xl p-3 shadow-[0_6px_18px_rgba(59,130,246,0.12)] ring-1 ring-blue-200/60 hover:shadow-[0_8px_22px_rgba(59,130,246,0.16)] transition-shadow"
@@ -103,19 +113,32 @@ function Booking() {
                             <span className="font-semibold text-gray-900 text-sm sm:text-base">
                               {b.trip?.from_city} <ArrowRight size={14} className="inline" /> {b.trip?.to_city}
                             </span>
-                                  <span className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded-full w-fit">Подтверждено</span>
+                                  {/* Статус бронирования */}
+                                  {isRequested ? (
+                                    <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full w-fit font-medium">
+                                      {t("booking.status.requested")}
+                                    </span>
+                                  ) : isInProgress ? (
+                                    <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full w-fit font-medium">
+                                      {t("booking.status.accepted")}
+                                    </span>
+                                  ) : (
+                                    <span className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded-full w-fit">
+                                      {t("common.confirmed")}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="text-xs sm:text-sm text-gray-600">
                                   {b.trip?.date} • {b.trip?.time}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600">
-                                  <span>{b.seats} мест</span>
+                                  <span>{b.seats} {t("common.seats")}</span>
                                   {b.offered_price ? (
-                                      <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                                Предложение: {b.offered_price} сум
-                              </span>
+                                      <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                                        {t("booking.offeredPrice")}: {Number(b.offered_price).toLocaleString()} сум
+                                      </span>
                                   ) : (
-                                      <span>Цена: {b.trip?.price} сум</span>
+                                      <span>{t("common.price")}: {Number(b.trip?.price || 0).toLocaleString()} сум</span>
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
@@ -145,7 +168,8 @@ function Booking() {
                             </div>
                           </div>
                         </div>
-                    ))
+                      );
+                    })
                 )}
               </CardContent>
             </Card>

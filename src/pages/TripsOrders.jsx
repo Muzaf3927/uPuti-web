@@ -161,8 +161,12 @@ function TripsOrders({ type = "city" }) {
             
             return {
               ...trip,
-              // Добавляем информацию о бронировании
-              my_booking: booking,
+              // Добавляем информацию о бронировании с полной информацией о статусе и предложенной цене
+              my_booking: {
+                ...booking,
+                status: booking.status || booking.booking_status,
+                offered_price: booking.offered_price,
+              },
               booking_id: booking.id,
               booking_seats: booking.seats,
               // Преобразуем поля для совместимости с TripsCard

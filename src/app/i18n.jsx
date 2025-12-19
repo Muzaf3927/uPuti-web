@@ -32,7 +32,12 @@ const dict = {
       write: "Yozish",
       call: "Qo'ng'iroq qilish",
       error: "Xatolik",
-      phoneNotAvailable: "Raqam ko'rsatilmagan"
+      phoneNotAvailable: "Raqam ko'rsatilmagan",
+      offeredPrice: "Taklif qilingan narx",
+      status: {
+        requested: "Kutilmoqda",
+        accepted: "Qabul qilindi"
+      }
     },
     history: {
       empty: "Zakaxlar tarixi bo'sh",
@@ -53,10 +58,14 @@ const dict = {
       offerDescription: "Narxingizni va o'rinlar sonini taklif qiling",
       seatsLabel: "O'rindiqlar soni",
       priceLabel: "Taklif narxi (so'm)",
+      pricePerPassengerLabel: "1 yo'lovchi uchun narx (so'm)",
+      totalPriceLabel: "Jami summa",
       commentLabel: "Izoh",
       submitBooking: "Yuborish",
       submitOffer: "Yuborish",
       cancelButton: "Bekor qilish",
+      bookButton: "Bron qilish",
+      offerButton: "Narx taklif qilish",
       validation: {
         seatsRange: "Iltimos, 1-4 o'rin orasida kiriting",
         priceRequired: "Iltimos, taklif narxini kiriting"
@@ -183,6 +192,7 @@ const dict = {
     myTripsCard: {
       requests: "So'rovlar",
       bookings: "Bronlar",
+      passengers: "Yo'lovchilar",
       complete: "Yakunlash",
       edit: "Tahrirlash",
       delete: "O'chirish",
@@ -367,6 +377,11 @@ const dict = {
       write: "Написать",
       call: "Позвонить",
       error: "Ошибка",
+      offeredPrice: "Предложенная цена",
+      status: {
+        requested: "В ожидании",
+        accepted: "Принято"
+      }
     },
     history: {
       empty: "История поездок пуста",
@@ -387,11 +402,15 @@ const dict = {
       bookingDescription: "Выберите количество мест для бронирования",
       offerDescription: "Предложите свою цену и количество мест",
       seatsLabel: "Количество мест",
-      priceLabel: "Предложенная цена (сум)",
+      priceLabel: "Предложить цену (сум)",
+      pricePerPassengerLabel: "Цена за 1 пассажира (сум)",
+      totalPriceLabel: "Общая сумма",
       commentLabel: "Комментарий",
       submitBooking: "Отправить",
       submitOffer: "Отправить",
       cancelButton: "Отмена",
+      bookButton: "Забронировать",
+      offerButton: "Предложить цену",
       validation: {
         seatsRange: "Пожалуйста, введите от 1 до 4 мест",
         priceRequired: "Пожалуйста, введите предложенную цену"
@@ -518,6 +537,7 @@ const dict = {
     myTripsCard: {
       requests: "Заявки",
       bookings: "Брони",
+      passengers: "Пассажиры",
       complete: "Завершить",
       edit: "Редактировать",
       delete: "Удалить",

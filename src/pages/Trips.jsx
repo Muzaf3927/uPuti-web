@@ -182,7 +182,10 @@ function Trips() {
   //   refetch();
   // }, [filteredUrl]);
 
-  const myTripsList = (myTrips && myTrips.data) || [];
+  // API может возвращать массив напрямую или объект с data
+  const myTripsList = Array.isArray(myTrips) 
+    ? myTrips 
+    : (myTrips?.data || []);
 
   const tripPostMutation = usePostData("/trip");
 

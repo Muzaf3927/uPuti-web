@@ -40,8 +40,23 @@ function TripsCard({ trip }) {
   const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
   const [pendingRequest, setPendingRequest] = useState(null);
   const [seats, setSeats] = useState("1");
-  const [offeredPrice, setOfferedPrice] = useState("");
+  const [pricePerPassenger, setPricePerPassenger] = useState(0); // Храним как число
+  const [displayPrice, setDisplayPrice] = useState(""); // Для отображения в поле
   const [comment, setComment] = useState("");
+  
+  // Вычисляем общую цену на основе цены за одного пассажира и количества мест
+  const totalPrice = React.useMemo(() => {
+    const seatsCount = Number(seats) || 1;
+    return pricePerPassenger * seatsCount;
+  }, [pricePerPassenger, seats]);
+  
+  // Обновляем отображаемую цену при изменении общей суммы
+  React.useEffect(() => {
+    if (pricePerPassenger > 0) {
+      const formatted = totalPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+      setDisplayPrice(formatted);
+    }
+  }, [totalPrice, pricePerPassenger]);
 
   // Функция для обрезки текста до указанной длины
   const truncateText = (text, maxLength = 20) => {
@@ -101,7 +116,8 @@ function TripsCard({ trip }) {
   const openOfferDialog = async (e) => {
     e.stopPropagation();
     setSeats("1");
-    setOfferedPrice("");
+    setPricePerPassenger(0);
+    setDisplayPrice("");
     setComment("");
     setOfferDialogOpen(true);
     // Закомментировано: проверка telegram_chat_id после логина
@@ -140,17 +156,17 @@ function TripsCard({ trip }) {
       toast.error(errorMessage);
       return;
     }
-    const offeredDigits = String(offeredPrice).replace(/\s/g, "");
-    if (!offeredDigits || Number(offeredDigits) < 0) {
+    if (!pricePerPassenger || pricePerPassenger <= 0) {
       const errorMessage = t("tripsCard.validation.priceRequired");
       toast.error(errorMessage);
       return;
     }
+    // Используем общую цену (цена за одного * количество мест)
     setPendingRequest({ 
       type: 'offer', 
       data: {
         seats: Number(seats),
-        offered_price: Number(offeredDigits),
+        offered_price: totalPrice,
         comment: comment || null,
       }
     });
@@ -399,8 +415,38 @@ function TripsCard({ trip }) {
                 ) : null}
               </div>
 
-              {/* Кнопка "Забронировать" */}
-              <div className="px-3 sm:px-4">
+              {/* Информация о бронировании и статусе */}
+              {trip?.my_booking && (
+                <div className="px-3 sm:px-4 mb-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Статус бронирования */}
+                    {(() => {
+                      const bookingStatus = trip.my_booking.status || trip.my_booking.booking_status || "requested";
+                      const isRequested = bookingStatus === "requested" || bookingStatus === "pending";
+                      const isInProgress = bookingStatus === "in_progress" || bookingStatus === "confirmed";
+                      
+                      return isRequested ? (
+                        <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                          {t("booking.status.requested")}
+                        </span>
+                      ) : isInProgress ? (
+                        <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                          {t("booking.status.accepted")}
+                        </span>
+                      ) : null;
+                    })()}
+                    {/* Предложенная цена */}
+                    {trip.my_booking.offered_price && (
+                      <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                        {t("booking.offeredPrice")}: {Number(trip.my_booking.offered_price).toLocaleString()} сум
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Кнопки "Забронировать" и "Предложить цену" */}
+              <div className="px-3 sm:px-4 flex flex-row gap-2">
                 {trip?.my_booking ? (
                   <button
                     onClick={handleCancelBooking}
@@ -410,12 +456,20 @@ function TripsCard({ trip }) {
                     {t("tripsCard.cancel")}
                   </button>
                 ) : (
-                  <button
-                    onClick={openBookingDialog}
-                    className="bg-green-500 hover:bg-green-600 h-9 rounded-xl text-white w-full text-sm font-medium"
-                  >
-                    Забронировать
-                  </button>
+                  <>
+                    <button
+                      onClick={openBookingDialog}
+                      className="bg-green-500 hover:bg-green-600 h-9 rounded-xl text-white flex-1 text-sm font-medium"
+                    >
+                      {t("tripsCard.bookButton")}
+                    </button>
+                    <button
+                      onClick={openOfferDialog}
+                      className="bg-blue-500 hover:bg-blue-600 h-9 rounded-xl text-white flex-1 text-sm font-medium"
+                    >
+                      {t("tripsCard.offerButton")}
+                    </button>
+                  </>
                 )}
               </div>
             </>
@@ -484,22 +538,47 @@ function TripsCard({ trip }) {
           style={{ backgroundImage: 'linear-gradient(135deg, rgba(59,130,246,0.20), rgba(79,70,229,0.14))' }}
         >
           <div className="rounded-2xl p-6">
-            <DialogHeader>
-              <DialogTitle className="text-center text-lg font-semibold mb-4">{t("tripsCard.offerTitle")}</DialogTitle>
-              <DialogDescription className="text-center text-sm text-gray-600 mb-4">
-                {t("tripsCard.offerDescription")}
-              </DialogDescription>
-            </DialogHeader>
             <div className="max-h-[50vh] overflow-y-auto overflow-x-hidden pr-1 overscroll-contain touch-pan-y">
             <form id="offerForm" onSubmit={handleSubmitOffer} className="flex flex-col gap-4">
+            <div className="grid w-full items-center gap-2">
+              <Label htmlFor="price" className="text-sm font-medium">{t("tripsCard.priceLabel")}</Label>
+              <div className="relative">
+                <Input
+                  id="price"
+                  type="text"
+                  inputMode="numeric"
+                  value={displayPrice}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, "");
+                    const totalValue = Number(digits) || 0;
+                    const seatsCount = Number(seats) || 1;
+                    // Делим введенную сумму на количество мест, чтобы получить цену за одного
+                    const pricePerOne = seatsCount > 0 ? Math.floor(totalValue / seatsCount) : 0;
+                    setPricePerPassenger(pricePerOne);
+                    const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+                    setDisplayPrice(formatted);
+                  }}
+                  placeholder="100 000"
+                  className="pr-16 text-center bg-white"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">сум</span>
+              </div>
+              <p className="text-xs text-gray-500 text-center">
+                {pricePerPassenger > 0 && `${t("tripsCard.pricePerPassengerLabel")}: ${pricePerPassenger.toLocaleString()} сум`}
+              </p>
+            </div>
+            
             <div className="flex flex-col items-center gap-3">
               <Label className="text-sm font-medium">{t("tripsCard.seatsLabel")}</Label>
               <div className="flex items-center gap-3">
                 <Button
                   type="button"
-                  onClick={() => setSeats(Math.max(1, Number(seats) - 1))}
-                  className="h-8 w-8 rounded-full bg-gray-200 hover:bg-gray-300 border border-gray-300 flex items-center justify-center"
-                  disabled={Number(seats) <= 1}
+                  onClick={() => {
+                    const newSeats = Math.max(1, Number(seats) - 1);
+                    setSeats(String(newSeats));
+                  }}
+                  className="h-8 w-8 rounded-full bg-gray-200 hover:bg-gray-300 border border-gray-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={Number(seats) <= 1 || !pricePerPassenger || pricePerPassenger <= 0}
                 >
                   <span className="text-sm font-bold text-gray-700">-</span>
                 </Button>
@@ -508,32 +587,15 @@ function TripsCard({ trip }) {
                 </div>
                 <Button
                   type="button"
-                  onClick={() => setSeats(Math.min(4, Number(seats) + 1))}
-                  className="h-8 w-8 rounded-full bg-gray-200 hover:bg-gray-300 border border-gray-300 flex items-center justify-center"
-                  disabled={Number(seats) >= 4}
+                  onClick={() => {
+                    const newSeats = Math.min(4, Number(seats) + 1);
+                    setSeats(String(newSeats));
+                  }}
+                  className="h-8 w-8 rounded-full bg-gray-200 hover:bg-gray-300 border border-gray-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={Number(seats) >= 4 || !pricePerPassenger || pricePerPassenger <= 0}
                 >
                   <span className="text-sm font-bold text-gray-700">+</span>
                 </Button>
-              </div>
-            </div>
-            
-            <div className="grid w-full items-center gap-2">
-              <Label htmlFor="price" className="text-sm font-medium">{t("tripsCard.priceLabel")}</Label>
-              <div className="relative">
-                <Input
-                  id="price"
-                  type="text"
-                  inputMode="numeric"
-                  value={offeredPrice}
-                  onChange={(e) => {
-                    const digits = e.target.value.replace(/\D/g, "");
-                    const formatted = digits.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-                    setOfferedPrice(formatted);
-                  }}
-                  placeholder="100 000"
-                  className="pr-16 text-center bg-white"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">сум</span>
               </div>
             </div>
             

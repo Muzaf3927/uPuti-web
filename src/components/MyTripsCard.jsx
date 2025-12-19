@@ -236,7 +236,6 @@ function MyTripsCard({ trip, hideActions = false }) {
 
   const handleComplete = async () => {
     try {
-      console.log("Завершение поездки:", trip.id);
       await postData(`/trips/${trip.id}/complete`, {});
       toast.success(t("myTripsCard.completeToast"));
       // Обновляем все возможные запросы поездок (включая с фильтрами)
@@ -294,18 +293,61 @@ function MyTripsCard({ trip, hideActions = false }) {
   //   }
   // };
 
-  // Используем данные пассажиров из trip объекта (приходят с /trips/my API)
-  const pendingRequests = trip.pending_passengers || [];
-  const confirmedBookings = trip.confirmed_passengers || [];
+  // Используем данные пассажиров из trip.bookings (приходят с /trips/my API)
+  // Формат: trip.bookings - массив бронирований с полями id, user_id, seats, offered_price, status, user
+  const allBookings = React.useMemo(() => {
+    // Проверяем разные возможные форматы данных
+    if (Array.isArray(trip.bookings)) {
+      return trip.bookings;
+    }
+    
+    // Если bookings не массив, проверяем другие возможные поля
+    if (trip.pending_passengers || trip.confirmed_passengers) {
+      return [...(trip.pending_passengers || []), ...(trip.confirmed_passengers || [])];
+    }
+    
+    return [];
+  }, [trip.bookings, trip.pending_passengers, trip.confirmed_passengers]);
+  
+  // pendingRequests - запросы со статусом requested/pending
+  // Показываем все запросы, которые еще не приняты
+  const pendingRequests = allBookings.filter(
+    (booking) => {
+      const status = booking.status || booking.booking_status || "";
+      return status === "requested" || status === "pending";
+    }
+  );
+  
+  // confirmedBookings - только брони со статусом in_progress/confirmed
+  // Показываем принятые бронирования
+  const confirmedBookings = allBookings.filter(
+    (booking) => {
+      const status = booking.status || booking.booking_status || "";
+      return status === "in_progress" || status === "confirmed";
+    }
+  );
   
   const tripBookingsLoading = false; // Данные уже загружены с trip
   const tripBookingsError = null;
 
   const handleConfirm = async (bookingId) => {
     try {
-      await postData(`/bookings/${bookingId}`, { status: "confirmed" });
+      await postData(`/bookings/${bookingId}/accept`, {});
       toast.success(t("myTripsCard.acceptedToast"));
-      queryClient.invalidateQueries({ queryKey: ["data", "/trips/my"] });
+      // Инвалидируем и сразу обновляем все запросы связанные с поездками
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const url = query.queryKey[1];
+          return typeof url === "string" && url.includes("/trips/my");
+        }
+      });
+      // Принудительно обновляем данные
+      queryClient.refetchQueries({ 
+        predicate: (query) => {
+          const url = query.queryKey[1];
+          return typeof url === "string" && url.includes("/trips/my");
+        }
+      });
       queryClient.invalidateQueries({ queryKey: ["bookings", "unread-count"] });
     } catch (e) {
       toast.error(t("requests.acceptError"));
@@ -313,9 +355,22 @@ function MyTripsCard({ trip, hideActions = false }) {
   };
   const handleDecline = async (bookingId) => {
     try {
-      await postData(`/bookings/${bookingId}`, { status: "declined" });
+      await postData(`/bookings/${bookingId}/delete`, {});
       toast.success(t("myTripsCard.declinedToast"));
-      queryClient.invalidateQueries({ queryKey: ["data", "/trips/my"] });
+      // Инвалидируем и сразу обновляем все запросы связанные с поездками
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const url = query.queryKey[1];
+          return typeof url === "string" && url.includes("/trips/my");
+        }
+      });
+      // Принудительно обновляем данные
+      queryClient.refetchQueries({ 
+        predicate: (query) => {
+          const url = query.queryKey[1];
+          return typeof url === "string" && url.includes("/trips/my");
+        }
+      });
       queryClient.invalidateQueries({ queryKey: ["bookings", "unread-count"] });
     } catch (e) {
       toast.error(t("requests.declineError"));
@@ -390,6 +445,134 @@ function MyTripsCard({ trip, hideActions = false }) {
         {isExpanded && trip.note && (
           <div className="text-xs sm:text-sm text-gray-700 bg-white rounded-2xl p-3 border">
             {trip.note}
+          </div>
+        )}
+        
+        {/* Раздел "Пассажиры" - показываем всех пассажиров из bookings */}
+        {isExpanded && (
+          <div className="mt-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Users size={16} className="text-primary" />
+              <span className="font-semibold text-sm text-gray-900">
+                {t("myTripsCard.passengers")} 
+                {allBookings.length > 0 && ` (${allBookings.length})`}
+              </span>
+            </div>
+            {allBookings.length === 0 ? (
+              <div className="text-xs text-gray-500 text-center py-2">
+                {t("myTripsCard.noBookings")}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {allBookings.map((booking, index) => {
+                  // Используем index как key, если id отсутствует
+                  const bookingKey = booking?.id || `booking-${index}`;
+                  const passenger = booking?.user || {};
+                  const bookingStatus = String(booking?.status || booking?.booking_status || "").toLowerCase();
+                  const isRequested = bookingStatus === "requested" || bookingStatus === "pending";
+                  const isInProgress = bookingStatus === "in_progress" || bookingStatus === "confirmed";
+                  
+                  // Если booking отсутствует, все равно отображаем пустой блок для отладки
+                  if (!booking) {
+                    return (
+                      <div key={bookingKey} className="p-2 bg-red-100 rounded-lg border border-red-300">
+                        <span className="text-xs text-red-700">Ошибка: booking отсутствует (index {index})</span>
+                      </div>
+                    );
+                  }
+                
+                  return (
+                  <div
+                    key={bookingKey}
+                    className="flex flex-col gap-2 p-2 bg-white/70 rounded-lg border border-gray-200"
+                  >
+                    {/* Первый ряд: имя, рейтинг, статус */}
+                    <div className="flex items-center gap-2">
+                      <Avatar className="size-7 ring-1 ring-white shadow-sm">
+                        <AvatarFallback className="font-semibold text-[10px]">
+                          {getInitials(passenger?.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <span className="font-medium text-xs text-gray-900 truncate">
+                          {passenger?.name || "Foydalanuvchi"}
+                        </span>
+                        {passenger?.rating && (
+                          <div className="flex items-center gap-0.5 bg-yellow-100 px-1 py-0.5 rounded-full">
+                            <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
+                            <span className="text-[9px] font-medium text-yellow-700">{passenger.rating}</span>
+                          </div>
+                        )}
+                        {isRequested && (
+                          <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium ml-auto">
+                            {t("booking.status.requested")}
+                          </span>
+                        )}
+                        {isInProgress && (
+                          <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium ml-auto">
+                            {t("booking.status.accepted")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Второй ряд: количество мест и предложенная сумма */}
+                    <div className="flex items-center gap-2 text-[10px] text-gray-600">
+                      <span>{booking.seats} {t("tripsCard.seats")}</span>
+                      {booking.offered_price && (
+                        <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-semibold">
+                          {Number(booking.offered_price).toLocaleString()} сум
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Кнопки снизу (только для requested) */}
+                    {isRequested && (
+                      <div className="flex gap-1.5 pt-1">
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (booking.id) handleConfirm(booking.id);
+                          }}
+                          className="h-7 px-2 text-[10px] bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-medium rounded-lg flex items-center gap-1 flex-1"
+                        >
+                          <CircleCheck className="h-3 w-3" />
+                          <span>{t("myTripsCard.accept")}</span>
+                        </Button>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (booking.id) handleDecline(booking.id);
+                          }}
+                          variant="outline"
+                          className="h-7 px-2 text-[10px] border-2 border-red-600 text-red-600 hover:bg-red-50 active:bg-red-100 font-medium rounded-lg flex items-center gap-1 flex-1"
+                        >
+                          <X className="h-3 w-3" />
+                          <span>{t("myTripsCard.decline")}</span>
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {/* Кнопка "Позвонить" для in_progress */}
+                    {isInProgress && (
+                      <div className="pt-1">
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCall(passenger?.phone);
+                          }}
+                          className="h-7 px-2 text-[10px] bg-primary text-primary-foreground hover:brightness-110 flex items-center gap-1 w-full"
+                        >
+                          <Phone size={10} />
+                          <span>{t("myTripsCard.callPassenger")}</span>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              </div>
+            )}
           </div>
         )}
       </CardContent>
@@ -712,57 +895,63 @@ function MyTripsCard({ trip, hideActions = false }) {
                 <p className="text-sm">{t("myTripsCard.noRequests")}</p>
               </div>
             ) : (
-              pendingRequests.map((request) => (
+              pendingRequests.map((booking) => {
+                const passenger = booking.user || {};
+                
+                return (
                 <div
-                  key={request.id}
+                  key={booking.id}
                   className="border border-blue-200 rounded-xl p-2.5 sm:p-3 shadow-[0_6px_18px_rgba(59,130,246,0.12)] ring-1 ring-blue-200/60 hover:shadow-[0_8px_22px_rgba(59,130,246,0.16)] transition-shadow"
                   style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.14), rgba(79,70,229,0.1))" }}
                 >
                   <div className="flex items-center gap-2.5">
                     <Avatar className="size-8 sm:size-10 ring-1 ring-white shadow-sm">
                       <AvatarFallback className="font-semibold text-xs">
-                        {getInitials(request.user?.name)}
+                        {getInitials(passenger?.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       {/* Имя и статус */}
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <h3 className="font-semibold text-gray-900 text-sm truncate">
-                          {request.user?.name || "Foydalanuvchi"}
+                          {passenger?.name || "Foydalanuvchi"}
                         </h3>
-                        <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full">
-                          {request.status}
+                        <span className="text-xs bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-medium">
+                          {t("booking.status.requested")}
                         </span>
                       </div>
                       
-                      {/* Детали запроса */}
-                      <div className="text-xs text-gray-600 mb-1.5">
-                        <span className="font-medium">{request.seats} {t("tripsCard.seats")}</span>
-                        {request.offered_price && (
-                          <span className="ml-2 text-primary font-semibold">
-                            {Number(request.offered_price).toLocaleString()} сум
+                      {/* Детали запроса - места и предложенная цена */}
+                      <div className="flex items-center gap-2 text-xs mb-1.5 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="w-2.5 h-2.5 text-blue-600" />
+                          <span className="font-medium text-gray-700">{booking.seats} {t("tripsCard.seats")}</span>
+                        </div>
+                        {booking.offered_price && (
+                          <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">
+                            {t("booking.offeredPrice")}: {Number(booking.offered_price).toLocaleString()} сум
                           </span>
                         )}
                       </div>
                       
                       {/* Комментарий */}
-                      {request.comment && (
+                      {booking.comment && (
                         <div className="text-xs text-gray-500 mb-2 italic">
-                          "{request.comment}"
+                          "{booking.comment}"
                         </div>
                       )}
                       
-                      {/* Кнопки действий */}
+                      {/* Кнопки действий - Принять и Отказать */}
                       <div className="flex gap-1.5">
                         <Button
-                          onClick={() => handleConfirm(request.id)}
+                          onClick={() => handleConfirm(booking.id)}
                           className="flex items-center justify-center gap-1 bg-primary text-primary-foreground hover:brightness-110 text-xs px-2.5 py-1.5 rounded-lg font-medium shadow-sm hover:shadow-md transition-all flex-1"
                         >
                           <CircleCheck className="w-3.5 h-3.5" />
                           <span>{t("myTripsCard.accept")}</span>
                         </Button>
                         <Button
-                          onClick={() => handleDecline(request.id)}
+                          onClick={() => handleDecline(booking.id)}
                           variant="outline"
                           className="flex items-center justify-center gap-1 border-red-600 text-red-600 hover:bg-red-50 text-xs px-2.5 py-1.5 rounded-lg font-medium shadow-sm hover:shadow-md transition-all flex-1"
                         >
@@ -773,7 +962,8 @@ function MyTripsCard({ trip, hideActions = false }) {
                     </div>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </DialogContent>
@@ -811,64 +1001,73 @@ function MyTripsCard({ trip, hideActions = false }) {
                 <p className="text-sm">{t("myTripsCard.noBookings")}</p>
               </div>
             ) : (
-              confirmedBookings.map((passenger) => (
+              confirmedBookings.map((booking) => {
+                const passenger = booking.user || {};
+                
+                return (
                 <div
-                  key={passenger.id}
+                  key={booking.id}
                   className="border border-blue-200 rounded-xl p-2.5 sm:p-3 shadow-[0_6px_18px_rgba(59,130,246,0.12)] ring-1 ring-blue-200/60 hover:shadow-[0_8px_22px_rgba(59,130,246,0.16)] transition-shadow"
                   style={{ backgroundImage: "linear-gradient(135deg, rgba(59,130,246,0.14), rgba(79,70,229,0.1))" }}
                 >
                   <div className="flex items-start gap-2.5">
                     <Avatar className="size-8 sm:size-10 ring-1 ring-white shadow-sm mt-0.5">
                       <AvatarFallback className="font-semibold text-xs">
-                        {getInitials(passenger.name)}
+                        {getInitials(passenger?.name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       {/* Имя и рейтинг */}
                       <div className="flex items-center gap-1.5 mb-0.5">
                         <h3 className="font-semibold text-gray-900 text-sm truncate">
-                          {passenger.name || "Foydalanuvchi"}
+                          {passenger?.name || "Foydalanuvchi"}
                         </h3>
-                        {passenger.rating && (
+                        {passenger?.rating && (
                           <div className="flex items-center gap-0.5 bg-yellow-100 px-1.5 py-0.5 rounded-full">
                             <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" />
                             <span className="text-xs font-medium text-yellow-700">{passenger.rating}</span>
                           </div>
                         )}
+                        {/* Статус - принято */}
+                        <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium ml-auto">
+                          {t("booking.status.accepted")}
+                        </span>
                       </div>
                       
-                      {/* Номер телефона и места */}
+                      {/* Номер телефона */}
                       <div className="flex items-center gap-1.5 mb-1">
                         <Phone className="w-2.5 h-2.5 text-primary" />
-                        <span className="text-xs font-medium text-gray-700">{passenger.phone}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Users className="w-2.5 h-2.5 text-blue-600" />
-                        <span className="text-xs font-medium text-gray-700">{passenger.seats} {t("tripsCard.seats")}</span>
+                        <span className="text-xs font-medium text-gray-700">{passenger?.phone}</span>
                       </div>
                       
-                      {/* Кнопки действий */}
+                      {/* Места и предложенная цена */}
+                      <div className="flex items-center gap-2 text-xs mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Users className="w-2.5 h-2.5 text-blue-600" />
+                          <span className="font-medium text-gray-700">{booking.seats} {t("tripsCard.seats")}</span>
+                        </div>
+                        {booking.offered_price && (
+                          <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold">
+                            {t("booking.offeredPrice")}: {Number(booking.offered_price).toLocaleString()} сум
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Кнопки действий - только "Позвонить" для in_progress */}
                       <div className="flex gap-2 -ml-8">
                         <Button
-                          onClick={() => handleCall(passenger.phone)}
-                          className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground hover:brightness-110 text-xs px-2.5 py-1.5 rounded-lg font-medium shadow-sm hover:shadow-md transition-all flex-1"
+                          onClick={() => handleCall(passenger?.phone)}
+                          className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground hover:brightness-110 text-xs px-2.5 py-1.5 rounded-lg font-medium shadow-sm hover:shadow-md transition-all w-full"
                         >
                           <Phone className="w-3.5 h-3.5" />
                           <span>{t("myTripsCard.callPassenger")}</span>
-                        </Button>
-                        <Button
-                          onClick={() => handleChat(passenger.id, passenger.name)}
-                          variant="outline"
-                          className="flex items-center justify-center gap-1.5 border-primary text-primary hover:bg-accent/50 text-xs px-2.5 py-1.5 rounded-lg font-medium shadow-sm hover:shadow-md transition-all flex-1"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>{t("myTripsCard.writePassenger")}</span>
                         </Button>
                       </div>
                     </div>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
           </div>
         </DialogContent>

@@ -11,7 +11,7 @@ const PRODUCTION_API_BASE = "https://api.uputi.net/api";
 // Используем продакшн API
 const api = axios.create({
   baseURL: VITE_API_BASE || PRODUCTION_API_BASE, // Основной API
-  // baseURL: LOCAL_API_BASE, // Локальный API для теста (закомментирован)
+  // baseURL: LOCAL_API_BASE, // Локальный API для теста
   headers: {
     "Content-Type": "application/json",
   },
@@ -35,7 +35,7 @@ const refreshAccessToken = async () => {
 
   // Используем продакшн API
   const API_BASE = VITE_API_BASE || PRODUCTION_API_BASE; // Основной API
-  // const API_BASE = LOCAL_API_BASE; // Локальный API для теста (закомментирован)
+  // const API_BASE = LOCAL_API_BASE; // Локальный API для теста
   
   const { data } = await axios.post(
     `${API_BASE}/refresh-token`,
