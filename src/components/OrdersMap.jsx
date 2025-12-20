@@ -36,6 +36,7 @@ function OrdersMap({
   onFromLocationChange = null, // Callback для обновления координат "откуда"
   toCoords = null, // Координаты точки "куда"
   onToLocationChange = null, // Callback для обновления координат "куда"
+  onMapMove = null, // Callback для запроса данных при движении карты (lat, lng, radius)
 }) {
   const { t } = useI18n();
   const mapRef = useRef(null);
@@ -230,6 +231,47 @@ function OrdersMap({
 
     mapInstanceRef.current = map;
 
+    // Отключаем отслеживание Яндекс.Метрикой для всех элементов Leaflet карты
+    const mapContainer = map.getContainer();
+    if (mapContainer) {
+      // Добавляем класс ym-disable-clickmap для исключения из clickmap (поддерживается Яндекс.Метрикой)
+      mapContainer.classList.add('ym-disable-clickmap');
+      
+      // Отключаем отслеживание для всех дочерних элементов Leaflet через MutationObserver
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === 1) { // Element node
+              // Добавляем класс ко всем элементам внутри Leaflet
+              if (node.classList) {
+                node.classList.add('ym-disable-clickmap');
+              }
+              
+              // Для всех дочерних элементов также добавляем класс
+              if (node.querySelectorAll) {
+                const allChildren = node.querySelectorAll('*');
+                allChildren.forEach((child) => {
+                  child.classList.add('ym-disable-clickmap');
+                });
+              }
+            }
+          });
+        });
+      });
+      
+      // Наблюдаем за всеми изменениями в контейнере карты
+      observer.observe(mapContainer, {
+        childList: true,
+        subtree: true
+      });
+      
+      // Добавляем класс ко всем существующим элементам
+      const allElements = mapContainer.querySelectorAll('*');
+      allElements.forEach((el) => {
+        el.classList.add('ym-disable-clickmap');
+      });
+    }
+
     // Создаем кастомный контрол масштабирования в правом нижнем углу
     const zoomControl = L.control.zoom({
       position: 'bottomright'
@@ -246,6 +288,99 @@ function OrdersMap({
       }
     };
   }, []);
+
+  // Ref для debounce timeout
+  const debounceTimeoutRef = useRef(null);
+  // Ref для хранения последних параметров запроса (чтобы избежать повторных запросов с теми же данными)
+  const lastRequestParamsRef = useRef(null);
+  // Ref для флага программного изменения карты (чтобы не триггерить запросы во время обновления маркеров)
+  const isProgrammaticChangeRef = useRef(false);
+  
+  // Обработчик движения карты с debounce
+  useEffect(() => {
+    if (!mapInstanceRef.current || !onMapMove) return;
+
+    const map = mapInstanceRef.current;
+
+    // Функция для запроса данных
+    const fetchTripsData = () => {
+      // Пропускаем запрос, если карта изменяется программно
+      if (isProgrammaticChangeRef.current) {
+        return;
+      }
+
+      if (!mapInstanceRef.current || !onMapMove) return;
+      const currentMap = mapInstanceRef.current;
+
+      // Получаем центр карты
+      const center = currentMap.getCenter();
+      const lat = center.lat;
+      const lng = center.lng;
+
+      // Получаем bounds и вычисляем радиус
+      const bounds = currentMap.getBounds();
+      const ne = bounds.getNorthEast();
+      // Вычисляем радиус от центра до северо-восточного угла в километрах
+      const radius = center.distanceTo(ne) / 1000; // distanceTo возвращает метры, делим на 1000 для км
+      
+      // Ограничиваем радиус до 20 км на фронте
+      const finalRadius = Math.min(radius, 20);
+
+      // Проверяем, изменились ли параметры (с небольшой погрешностью для координат и радиуса)
+      const lastParams = lastRequestParamsRef.current;
+      if (lastParams) {
+        const latDiff = Math.abs(lastParams.lat - lat);
+        const lngDiff = Math.abs(lastParams.lng - lng);
+        const radiusDiff = Math.abs(lastParams.radius - finalRadius);
+        
+        // Если параметры не изменились значительно (менее 0.001 для координат, 0.1 км для радиуса), пропускаем запрос
+        if (latDiff < 0.001 && lngDiff < 0.001 && radiusDiff < 0.1) {
+          return;
+        }
+      }
+
+      // Сохраняем текущие параметры
+      lastRequestParamsRef.current = { lat, lng, radius: finalRadius };
+
+      // Вызываем callback для запроса данных
+      onMapMove(lat, lng, finalRadius);
+    };
+
+    // Debounced версия функции для событий moveend и zoomend
+    const handleMapMove = () => {
+      // Пропускаем, если карта изменяется программно
+      if (isProgrammaticChangeRef.current) {
+        return;
+      }
+
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      debounceTimeoutRef.current = setTimeout(() => {
+        fetchTripsData();
+      }, 400); // Debounce 400ms
+    };
+
+    // Подписываемся на события moveend и zoomend (НЕ onMove - только при окончании движения)
+    map.on("moveend", handleMapMove);
+    map.on("zoomend", handleMapMove);
+
+    // Запрашиваем данные при первом открытии карты (с небольшой задержкой, чтобы карта успела инициализироваться)
+    const timeoutId = setTimeout(() => {
+      fetchTripsData();
+    }, 300);
+
+    return () => {
+      if (map) {
+        map.off("moveend", handleMapMove);
+        map.off("zoomend", handleMapMove);
+      }
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      clearTimeout(timeoutId);
+    };
+  }, [onMapMove]); // Зависимость только от onMapMove
 
   // Обработчик клика на карту для установки точки "откуда" или "куда"
   useEffect(() => {
@@ -1362,18 +1497,28 @@ function OrdersMap({
       }
     }
 
-    // Подстраиваем карту под маркеры
-    if (markersRef.current.length > 0) {
-      try {
-        mapInstanceRef.current.fitBounds(bounds, { padding: [20, 20], maxZoom: 15 });
-      } catch (error) {
-        console.error("Error setting bounds:", error);
-      }
-    }
+    // НЕ подстраиваем карту под маркеры автоматически, чтобы не сбрасывать зум пользователя
+    // Подстройка карты должна происходить только при первом открытии или при явном запросе пользователя
+    // Если нужно подстроить карту, это должно делаться отдельно, с сохранением текущего зума/центра
+    
+    // Закомментировано: автоматическая подстройка карты
+    // if (markersRef.current.length > 0) {
+    //   try {
+    //     isProgrammaticChangeRef.current = true;
+    //     mapInstanceRef.current.fitBounds(bounds, { padding: [20, 20], maxZoom: 15 });
+    //     // Сбрасываем флаг через небольшую задержку после завершения анимации
+    //     setTimeout(() => {
+    //       isProgrammaticChangeRef.current = false;
+    //     }, 500);
+    //   } catch (error) {
+    //     console.error("Error setting bounds:", error);
+    //     isProgrammaticChangeRef.current = false;
+    //   }
+    // }
   };
 
   return (
-    <div className={`w-full ${mapHeight || "h-[calc(100vh-300px)]"} ${mapHeight ? "" : "min-h-[400px]"} rounded-2xl overflow-hidden border shadow-lg relative`}>
+    <div className={`w-full ${mapHeight || "h-[calc(100vh-300px)]"} ${mapHeight ? "" : "min-h-[400px]"} rounded-2xl overflow-hidden border shadow-lg relative ym-disable-clickmap`}>
       <style>{`
         @keyframes zzzPulse {
           0%, 100% {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 
 // components
 import OrdersMap from "@/components/OrdersMap";
@@ -36,7 +36,7 @@ import { toast } from "sonner";
 import EmptyState from "@/components/EmptyState.jsx";
 import { useActiveTab } from "@/layout/MainLayout";
 import { useActivePage } from "@/hooks/useActivePage";
-import { usePostData, useGetData, deleteData, postData, putData } from "@/api/api";
+import { usePostData, useGetData, deleteData, postData, putData, getData } from "@/api/api";
 
 function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated, onBookingSuccess }) {
   const { t } = useI18n();
@@ -323,17 +323,35 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     to_lng: null,
   });
 
-  // Для водителей в табе "Все заказы" используем API /trips/active
-  // Автообновление только если страница активна (city или intercity)
-  const {
-    data: allActiveTripsData,
-    isLoading: allActiveTripsLoading,
-    error: allActiveTripsError,
-    refetch: allActiveTripsRefetch
-  } = useGetData(isDriver && showAllOrders ? "/trips/active" : null, {
-    refetchInterval: isActivePage(["city", "intercity"]) ? 5000 : false, // Автоматическое обновление каждые 5 секунд только на активной странице
-    refetchOnWindowFocus: true, // Обновление при фокусе на окне
-  });
+  // Для водителей в табе "Все заказы" используем API /trips/active с POST запросом по радиусу
+  // Состояние для хранения заказов и загрузки
+  const [allActiveOrders, setAllActiveOrders] = useState([]);
+  const [allActiveTripsLoading, setAllActiveTripsLoading] = useState(false);
+  const [allActiveTripsError, setAllActiveTripsError] = useState(null);
+  
+  // Функция для запроса активных заказов по радиусу (мемоизирована для стабильности)
+  const fetchActiveTrips = useCallback(async (lat, lng, radius) => {
+    if (!isDriver || !showAllOrders) return;
+    
+    try {
+      setAllActiveTripsLoading(true);
+      setAllActiveTripsError(null);
+      
+      // Используем GET запрос с query параметрами
+      const finalRadius = Math.min(radius, 20); // Ограничиваем радиус до 20 км
+      const url = `/trips/active?lat=${lat}&lng=${lng}&radius=${finalRadius}`;
+      const data = await getData(url);
+      
+      const orders = data?.data || data || [];
+      setAllActiveOrders(Array.isArray(orders) ? orders : []);
+    } catch (error) {
+      console.error("Error fetching active trips:", error);
+      setAllActiveTripsError(error);
+      setAllActiveOrders([]);
+    } finally {
+      setAllActiveTripsLoading(false);
+    }
+  }, [isDriver, showAllOrders]);
 
   // Получаем активные заказы пользователя для таба "Мои брони" (для водителей) или "Мои заказы" (для пассажиров)
   // Для водителей используем /bookings/my/in-progress, для пассажиров - /trips/for/passenger/my
@@ -351,9 +369,7 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     refetchOnWindowFocus: true, // Обновление при фокусе на окне
   });
 
-  // Обрабатываем данные из API /trips/active (для водителей - все заказы)
-  const allActiveOrdersRaw = (isDriver && showAllOrders) ? (allActiveTripsData?.data || allActiveTripsData || []) : [];
-  const allActiveOrders = Array.isArray(allActiveOrdersRaw) ? allActiveOrdersRaw : [];
+  // allActiveOrders уже определен выше через useState
 
   // Обрабатываем данные из API (мои заказы)
   // Для водителей: /bookings/my/in-progress возвращает массив бронирований с вложенным trip
@@ -410,8 +426,14 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     ? (showAllOrders ? (allActiveTripsLoading || false) : (myTripsLoading || false))
     : (showCreateOrder ? (myTripsLoading || false) : (myTripsLoading || false));
     
+  // Для водителей в табе "Все заказы" используем fetchActiveTrips через onMapMove
+  // Для других случаев используем стандартный refetch
   const ordersRefetch = isDriver
-    ? (showAllOrders ? (allActiveTripsRefetch || (() => {})) : (myTripsRefetch || (() => {})))
+    ? (showAllOrders ? (() => {
+        // Если карта уже инициализирована, запрашиваем данные для текущей позиции
+        // Но это будет обработано через onMapMove, поэтому просто возвращаем пустую функцию
+        // или можно вызвать fetchActiveTrips если есть доступ к карте, но это сложно
+      }) : (myTripsRefetch || (() => {})))
     : (showCreateOrder ? (() => {}) : (myTripsRefetch || (() => {})));
 
 
@@ -423,18 +445,7 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
     }
   }, [activeRoleTab, location.pathname, refetchUser, ordersRefetch]);
 
-  useEffect(() => {
-    console.log("=== ORDERS DEBUG ===");
-    console.log("isDriver:", isDriver);
-    console.log("showCreateOrder:", showCreateOrder);
-    console.log("showAllOrders:", showAllOrders);
-    console.log("allActiveTripsData:", allActiveTripsData);
-    console.log("myTripsData:", myTripsData);
-    console.log("allActiveOrders:", allActiveOrders);
-    console.log("activeMyOrders:", activeMyOrders);
-    console.log("ordersToDisplay:", ordersToDisplay);
-    console.log("isLoadingOrders:", isLoadingOrders);
-  }, [isDriver, showCreateOrder, showAllOrders, allActiveTripsData, myTripsData, allActiveOrders, activeMyOrders, ordersToDisplay, isLoadingOrders]);
+  // Удален debug useEffect - больше не нужен
 
   // Функция валидации формы
   const validateForm = (formData) => {
@@ -997,6 +1008,7 @@ function Orders({ showCreateOrder = true, showAllOrders = false, onOrderCreated,
               onCompleteOrder={handleCompleteOrder}
                     onCancelBooking={handleCancelBooking}
                     onBookingSuccess={onBookingSuccess}
+                    onMapMove={isDriver && showAllOrders ? fetchActiveTrips : null}
                   />
                   {/* Кнопка "Дальше" - только для таба "Создать заказ" (пассажиры) */}
                   {showCreateOrder && !isDriver && (

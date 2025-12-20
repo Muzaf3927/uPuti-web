@@ -24,6 +24,43 @@
         })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=105604771', 'ym');
 
         ym(105604771, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", accurateTrackBounce:true, trackLinks:true});
+        
+        // Дополнительно отключаем отслеживание кликов на карте после загрузки DOM
+        if (typeof document !== 'undefined') {
+            // Функция для добавления класса ym-disable-clickmap ко всем элементам карты
+            const excludeMapFromClickmap = () => {
+                const mapContainers = document.querySelectorAll('.leaflet-container');
+                mapContainers.forEach(container => {
+                    container.classList.add('ym-disable-clickmap');
+                    const allChildren = container.querySelectorAll('*');
+                    allChildren.forEach(child => {
+                        child.classList.add('ym-disable-clickmap');
+                    });
+                });
+            };
+            
+            // Выполняем после загрузки DOM и периодически для динамически создаваемых элементов
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', excludeMapFromClickmap);
+            } else {
+                excludeMapFromClickmap();
+            }
+            
+            // Периодическое обновление для динамически создаваемых элементов Leaflet
+            setInterval(excludeMapFromClickmap, 500);
+            
+            // Также следим за добавлением новых элементов через MutationObserver на уровне document
+            const observer = new MutationObserver(() => {
+                excludeMapFromClickmap();
+            });
+            
+            if (document.body) {
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        }
     </script>
     <!-- /Yandex.Metrika counter -->
   </head>
