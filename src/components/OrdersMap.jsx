@@ -437,31 +437,31 @@ function OrdersMap({
         html: `
           <div style="
             position: relative;
-            width: 50px;
-            height: 70px;
+            width: 48px;
+            height: 67px;
             display: flex;
             flex-direction: column;
             align-items: center;
           ">
             <div style="
-              width: 50px;
-              height: 50px;
+              width: 48px;
+              height: 48px;
               border-radius: 50%;
               background-color: #fbbf24;
-              border: 4px solid white;
+              border: 3px solid white;
               box-shadow: 0 2px 8px rgba(0,0,0,0.3);
               display: flex;
               align-items: center;
               justify-content: center;
               overflow: hidden;
-              padding: 4px;
+              padding: 3px;
             ">
               <img 
                 src="/passenger.png" 
                 alt="Откуда" 
                 style="
-                  width: 100%;
-                  height: 100%;
+                  width: 70%;
+                  height: 70%;
                   object-fit: contain;
                 "
                 onerror="this.style.display='none'"
@@ -489,9 +489,9 @@ function OrdersMap({
             </div>
           </div>
         `,
-        iconSize: [50, 70],
-        iconAnchor: [25, 70],
-        popupAnchor: [0, -70],
+        iconSize: [48, 67],
+        iconAnchor: [24, 67],
+        popupAnchor: [0, -67],
       });
 
       // Создаем перемещаемый маркер
@@ -544,31 +544,31 @@ function OrdersMap({
         html: `
           <div style="
             position: relative;
-            width: 50px;
-            height: 70px;
+            width: 48px;
+            height: 67px;
             display: flex;
             flex-direction: column;
             align-items: center;
           ">
             <div style="
-              width: 50px;
-              height: 50px;
+              width: 48px;
+              height: 48px;
               border-radius: 50%;
               background-color: #fbbf24;
-              border: 4px solid white;
+              border: 3px solid white;
               box-shadow: 0 2px 8px rgba(0,0,0,0.3);
               display: flex;
               align-items: center;
               justify-content: center;
               overflow: hidden;
-              padding: 4px;
+              padding: 3px;
             ">
               <img 
                 src="/toAddress.png" 
                 alt="Куда" 
                 style="
-                  width: 100%;
-                  height: 100%;
+                  width: 70%;
+                  height: 70%;
                   object-fit: contain;
                 "
                 onerror="this.style.display='none'"
@@ -596,9 +596,9 @@ function OrdersMap({
             </div>
           </div>
         `,
-        iconSize: [50, 70],
-        iconAnchor: [25, 70],
-        popupAnchor: [0, -70],
+        iconSize: [48, 67],
+        iconAnchor: [24, 67],
+        popupAnchor: [0, -67],
       });
 
       // Создаем перемещаемый маркер
@@ -1127,7 +1127,7 @@ function OrdersMap({
           // Создаем иконку маркера в стиле указателя "откуда" (passenger.png)
           // Для статуса "active" добавляем пульсирующие волны
           const isActive = order.status === "active";
-          // Размер иконки уменьшен с 50px до 40px
+          // Размер иконки увеличен до 40px
           const iconSize = 40;
           const pulseWaves = isActive ? `
             <div class="pulse-ring" style="
@@ -1181,20 +1181,20 @@ function OrdersMap({
                   height: ${iconSize}px;
                   border-radius: 50%;
                   background-color: ${circleColor};
-                  border: 3px solid white;
+                  border: 2.5px solid white;
                   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
                   display: flex;
                   align-items: center;
                   justify-content: center;
                   overflow: hidden;
-                  padding: 3px;
+                  padding: 2.5px;
                 ">
                   <img 
                     src="/passenger.png" 
                     alt="Заказ" 
                     style="
-                      width: 100%;
-                      height: 100%;
+                      width: 70%;
+                      height: 70%;
                       object-fit: contain;
                     "
                     onerror="this.style.display='none'"
@@ -1223,23 +1223,23 @@ function OrdersMap({
                 ${pendingOffersCount > 0 ? `
                   <div style="
                     position: absolute;
-                    top: -10px;
-                    right: -10px;
-                    min-width: 24px;
-                    height: 24px;
+                    top: -8px;
+                    right: -8px;
+                    min-width: 20px;
+                    height: 20px;
                     background-color: #ef4444;
-                    border: 3px solid white;
-                    border-radius: 12px;
+                    border: 2.5px solid white;
+                    border-radius: 10px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
                     z-index: 1000;
-                    padding: 0 6px;
+                    padding: 0 5px;
                   ">
                     <span style="
                       color: white;
-                      font-size: 13px;
+                      font-size: 11px;
                       font-weight: bold;
                       line-height: 1;
                     ">+${pendingOffersCount}</span>
@@ -1258,7 +1258,7 @@ function OrdersMap({
                     pointer-events: none;
                   ">
                     <span style="
-                      font-size: 22px;
+                      font-size: 18px;
                       font-weight: 900;
                       color: #3b82f6;
                       text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
@@ -1267,7 +1267,7 @@ function OrdersMap({
                       line-height: 1;
                     ">z</span>
                     <span style="
-                      font-size: 22px;
+                      font-size: 18px;
                       font-weight: 900;
                       color: #3b82f6;
                       text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
@@ -1276,7 +1276,7 @@ function OrdersMap({
                       line-height: 1;
                     ">z</span>
                     <span style="
-                      font-size: 22px;
+                      font-size: 18px;
                       font-weight: 900;
                       color: #3b82f6;
                       text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
@@ -1288,13 +1288,13 @@ function OrdersMap({
                 ` : ''}
               </div>
             `,
-            iconSize: [40, 60],
-            iconAnchor: [20, 60],
-            popupAnchor: [0, -60],
+            iconSize: [40, 56],
+            iconAnchor: [20, 56],
+            popupAnchor: [0, -56],
           });
 
           // Создаем иконку для выбранного маркера (увеличенная версия с более ярким цветом)
-          const selectedIconSize = 48;
+          const selectedIconSize = 46;
           const selectedIcon = L.divIcon({
             className: "custom-order-marker selected",
             html: `
@@ -1311,20 +1311,20 @@ function OrdersMap({
                   height: ${selectedIconSize}px;
                   border-radius: 50%;
                   background-color: ${circleColor};
-                  border: 4px solid white;
+                  border: 3px solid white;
                   box-shadow: 0 3px 12px rgba(0,0,0,0.4);
                   display: flex;
                   align-items: center;
                   justify-content: center;
                   overflow: hidden;
-                  padding: 4px;
+                  padding: 3px;
                 ">
                   <img 
                     src="/passenger.png" 
                     alt="Заказ" 
                     style="
-                      width: 100%;
-                      height: 100%;
+                      width: 70%;
+                      height: 70%;
                       object-fit: contain;
                     "
                     onerror="this.style.display='none'"
@@ -1353,23 +1353,23 @@ function OrdersMap({
                 ${pendingOffersCount > 0 ? `
                   <div style="
                     position: absolute;
-                    top: -10px;
-                    right: -10px;
-                    min-width: 26px;
-                    height: 26px;
+                    top: -8px;
+                    right: -8px;
+                    min-width: 22px;
+                    height: 22px;
                     background-color: #ef4444;
-                    border: 3px solid white;
-                    border-radius: 13px;
+                    border: 2.5px solid white;
+                    border-radius: 11px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
                     z-index: 1000;
-                    padding: 0 6px;
+                    padding: 0 5px;
                   ">
                     <span style="
                       color: white;
-                      font-size: 14px;
+                      font-size: 12px;
                       font-weight: bold;
                       line-height: 1;
                     ">+${pendingOffersCount}</span>
@@ -1388,7 +1388,7 @@ function OrdersMap({
                     pointer-events: none;
                   ">
                     <span style="
-                      font-size: 24px;
+                      font-size: 20px;
                       font-weight: 900;
                       color: #3b82f6;
                       text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
@@ -1397,7 +1397,7 @@ function OrdersMap({
                       line-height: 1;
                     ">z</span>
                     <span style="
-                      font-size: 24px;
+                      font-size: 20px;
                       font-weight: 900;
                       color: #3b82f6;
                       text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
@@ -1406,7 +1406,7 @@ function OrdersMap({
                       line-height: 1;
                     ">z</span>
                     <span style="
-                      font-size: 24px;
+                      font-size: 20px;
                       font-weight: 900;
                       color: #3b82f6;
                       text-shadow: 0 2px 4px rgba(255,255,255,0.9), 0 0 8px rgba(59,130,246,0.5);
@@ -1418,9 +1418,9 @@ function OrdersMap({
                 ` : ''}
               </div>
             `,
-            iconSize: [48, 68],
-            iconAnchor: [24, 68],
-            popupAnchor: [0, -68],
+            iconSize: [46, 62],
+            iconAnchor: [23, 62],
+            popupAnchor: [0, -62],
           });
 
           // Создаем маркер БЕЗ popup

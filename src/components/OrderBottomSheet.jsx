@@ -99,24 +99,11 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
 
   // Функция для открытия навигатора с маршрутом
   const openNavigation = (address, lat, lng, isFrom = false) => {
-    // Определяем начальную и конечную точки маршрута
-    let startLat, startLng, endLat, endLng;
-    
-    if (isFrom) {
-      // Если кликнули на адрес "откуда", строим маршрут от этой точки до "куда"
-      startLat = fromLat;
-      startLng = fromLng;
-      endLat = toLat;
-      endLng = toLng;
-    } else {
-      // Если кликнули на адрес "куда", строим маршрут от "откуда" до этой точки
-      startLat = fromLat;
-      startLng = fromLng;
-      endLat = toLat;
-      endLng = toLng;
-    }
+    // Определяем конечную точку маршрута (адрес, на который кликнули)
+    const endLat = lat;
+    const endLng = lng;
 
-    // Если нет координат, открываем через адрес
+    // Если нет координат конечной точки, открываем через адрес
     if (!endLat || !endLng) {
       const encodedAddress = encodeURIComponent(address);
       const yandexUrl = `https://yandex.ru/maps/?text=${encodedAddress}`;
@@ -124,19 +111,56 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
       return;
     }
 
-    // Пробуем открыть Яндекс.Навигатор с маршрутом
-    if (startLat && startLng) {
-      // Маршрут от начальной точки до конечной
-      const yandexNaviUrl = `yandexnavi://build_route?lat_from=${startLat}&lon_from=${startLng}&lat_to=${endLat}&lon_to=${endLng}`;
-      
-      const yandexNaviLink = document.createElement('a');
-      yandexNaviLink.href = yandexNaviUrl;
-      yandexNaviLink.style.display = 'none';
-      document.body.appendChild(yandexNaviLink);
-      yandexNaviLink.click();
-      document.body.removeChild(yandexNaviLink);
+    // Получаем текущее местоположение пользователя
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const startLat = position.coords.latitude;
+          const startLng = position.coords.longitude;
+
+          // Пробуем открыть Яндекс.Навигатор с маршрутом от текущего местоположения до выбранного адреса
+          const yandexNaviUrl = `yandexnavi://build_route?lat_from=${startLat}&lon_from=${startLng}&lat_to=${endLat}&lon_to=${endLng}`;
+          
+          const yandexNaviLink = document.createElement('a');
+          yandexNaviLink.href = yandexNaviUrl;
+          yandexNaviLink.style.display = 'none';
+          document.body.appendChild(yandexNaviLink);
+          yandexNaviLink.click();
+          document.body.removeChild(yandexNaviLink);
+
+          // Если Яндекс.Навигатор не установлен, через 500ms открываем веб-версию
+          setTimeout(() => {
+            const mapsUrl = `https://yandex.ru/maps/?rtext=${startLat},${startLng}~${endLat},${endLng}&rtt=auto`;
+            window.open(mapsUrl, '_blank');
+          }, 500);
+        },
+        (error) => {
+          // Если не удалось получить местоположение, строим маршрут только до конечной точки
+          console.warn('Не удалось получить местоположение:', error);
+          
+          const yandexNaviUrl = `yandexnavi://build_route?lat_to=${endLat}&lon_to=${endLng}`;
+          
+          const yandexNaviLink = document.createElement('a');
+          yandexNaviLink.href = yandexNaviUrl;
+          yandexNaviLink.style.display = 'none';
+          document.body.appendChild(yandexNaviLink);
+          yandexNaviLink.click();
+          document.body.removeChild(yandexNaviLink);
+
+          // Если Яндекс.Навигатор не установлен, через 500ms открываем веб-версию
+          setTimeout(() => {
+            const mapsUrl = `https://yandex.ru/maps/?rtext=${endLat},${endLng}&rtt=auto`;
+            window.open(mapsUrl, '_blank');
+          }, 500);
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
     } else {
-      // Если нет начальной точки, строим маршрут только до конечной
+      // Если геолокация не поддерживается, строим маршрут только до конечной точки
       const yandexNaviUrl = `yandexnavi://build_route?lat_to=${endLat}&lon_to=${endLng}`;
       
       const yandexNaviLink = document.createElement('a');
@@ -145,22 +169,13 @@ function OrderBottomSheet({ order, onClose, onSubmit, onCancel, onAcceptOffer, o
       document.body.appendChild(yandexNaviLink);
       yandexNaviLink.click();
       document.body.removeChild(yandexNaviLink);
-    }
 
-    // Если Яндекс.Навигатор не установлен, через 500ms открываем веб-версию
-    setTimeout(() => {
-      let mapsUrl;
-      if (startLat && startLng) {
-        // Маршрут от начальной до конечной точки
-        mapsUrl = `https://yandex.ru/maps/?rtext=${startLat},${startLng}~${endLat},${endLng}&rtt=auto`;
-      } else {
-        // Только конечная точка
-        mapsUrl = `https://yandex.ru/maps/?rtext=${endLat},${endLng}&rtt=auto`;
-      }
-      
-      // Пробуем открыть Яндекс.Карты
-      window.open(mapsUrl, '_blank');
-    }, 500);
+      // Если Яндекс.Навигатор не установлен, через 500ms открываем веб-версию
+      setTimeout(() => {
+        const mapsUrl = `https://yandex.ru/maps/?rtext=${endLat},${endLng}&rtt=auto`;
+        window.open(mapsUrl, '_blank');
+      }, 500);
+    }
   };
 
   // Получаем координаты для адресов
