@@ -291,7 +291,7 @@ function MainLayout() {
           </div>
         </div>
       </header>
-      <div className="custom-container mb-2 sm:mb-3 sticky top-16 sm:top-20 z-40">
+      <div className="custom-container mb-2 sm:mb-3 sticky top-16 sm:top-20 z-[60]">
         <Navbar />
       </div>
       <main className="grow custom-container mb-6 sm:mb-10">
