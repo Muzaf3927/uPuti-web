@@ -247,7 +247,7 @@ function MainLayout() {
 
   return (
     <div className="flex flex-col min-h-screen ">
-      <header className="h-16 sm:h-20 sticky top-0 z-50 bg-gradient-to-tr from-blue-100/85 to-cyan-200/75 dark:from-white/5 dark:to-white/10 backdrop-blur-md border-b">
+      <header className="h-16 sm:h-20 sticky top-0 z-50 bg-gradient-to-tr from-blue-100/85 to-cyan-200/75 dark:from-white/5 dark:to-white/10 backdrop-blur-md border-b ios-sticky-header">
         <div className="flex justify-between items-center py-1 sm:py-2 custom-container overflow-hidden">
           <div className="flex gap-2 sm:gap-3 items-center">
             <Link className="rounded-2xl p-0" to="/">
@@ -291,7 +291,7 @@ function MainLayout() {
           </div>
         </div>
       </header>
-      <div className="custom-container mb-2 sm:mb-3 sticky top-16 sm:top-20 z-[60]">
+      <div className="custom-container mb-2 sm:mb-3 sticky top-16 sm:top-20 z-[60] ios-sticky-navbar">
         <Navbar />
       </div>
       <main className="grow custom-container mb-6 sm:mb-10">

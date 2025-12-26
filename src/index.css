@@ -254,4 +254,38 @@ body,
     pointer-events: none;
     z-index: 1;
   }
+
+  /* Дополнительные стили для надежной фиксации header и navbar на iOS */
+  .ios-sticky-header,
+  .ios-sticky-navbar {
+    position: -webkit-sticky; /* Для старых версий iOS Safari */
+    position: sticky;
+    will-change: transform; /* Оптимизация для iOS */
+    -webkit-transform: translateZ(0); /* Принудительное аппаратное ускорение */
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden; /* Предотвращение мерцания */
+    backface-visibility: hidden;
+  }
+
+  .ios-sticky-header {
+    /* Дополнительная фиксация для header */
+    top: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .ios-sticky-navbar {
+    /* Дополнительная фиксация для navbar */
+    position: -webkit-sticky;
+    position: sticky;
+  }
+
+  /* Улучшение для iOS Safari при прокрутке */
+  @supports (-webkit-touch-callout: none) {
+    .ios-sticky-header,
+    .ios-sticky-navbar {
+      position: -webkit-sticky;
+      position: sticky;
+    }
+  }
 }
