@@ -1,4 +1,17 @@
+import { trackDownload } from "../api/public";
+
 export default function Hero({ t }) {
+
+    const handleAndroidClick = () => {
+        trackDownload("android");
+        // здесь позже можно открыть Google Play
+    };
+
+    const handleIosClick = () => {
+        trackDownload("ios");
+        // здесь позже можно открыть App Store
+    };
+
     return (
         <section className="hero">
 
@@ -10,13 +23,13 @@ export default function Hero({ t }) {
 
             <div className="hero-store-buttons">
 
-                <a className="store">
+                <button type="button" className="store" onClick={handleAndroidClick}>
                     <img src="/google_play.svg" />
-                </a>
+                </button>
 
-                <a className="store">
+                <button type="button" className="store" onClick={handleIosClick}>
                     <img src="/app_store.svg" />
-                </a>
+                </button>
 
             </div>
 
