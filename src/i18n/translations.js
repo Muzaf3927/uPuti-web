@@ -48,6 +48,9 @@ export const translations = {
         statsUsers: "3 000+ пользователей по всему Узбекистану",
         statsTrips: "1 000+ поездок в каждом городе каждый день по всему Узбекистану",
         storeDownloads: "3 000+ скачиваний UPuti в Google Play и App Store",
+        socialFollow: "Мы в соцсетях",
+        telegramLabel: "Telegram канал UPuti",
+        instagramLabel: "Instagram UPuti",
     },
 
     uz: {
@@ -99,5 +102,8 @@ export const translations = {
         statsUsers: "3 000+ foydalanuvchi",
         statsTrips: "Har bir shaharda kuniga 1 000+ safar",
         storeDownloads: "3 000+ UPuti yuklab olishlar butun O'zbekistonda",
+        socialFollow: "Biz ijtimoiy tarmoqlarda",
+        telegramLabel: "UPuti Telegram kanali",
+        instagramLabel: "UPuti Instagram",
     },
 };

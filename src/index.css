@@ -416,6 +416,68 @@ body::before {
   margin-right: auto;
 }
 
+/* Соцсети в CTA — контрастные кнопки на зелёном фоне */
+.cta-social {
+  position: relative;
+  z-index: 1;
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.cta-social__label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: 18px;
+}
+
+.cta-social__links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.cta-social__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: #0f766e;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cta-social__link:hover {
+  background: #f0fdf4;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.cta-social__link svg {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.cta-social__link--telegram {
+  color: #229ed9;
+}
+
+.cta-social__link--instagram {
+  color: #e1306c;
+}
+
 .store-buttons {
   position: relative;
   z-index: 1;
@@ -973,36 +1035,6 @@ body::before {
   }
 }
 
-.cta-stats {
-  position: relative;
-  z-index: 1;
-  margin-top: 32px;
-  display: flex;
-  justify-content: center;
-  gap: 24px;
-  color: #ecfdf5;
-  font-size: 14px;
-}
-
-.cta-stat {
-  text-align: left;
-  transform-origin: center;
-  transition: transform var(--transition);
-}
-
-.cta-stat__value {
-  font-weight: 700;
-  font-size: 16px;
-}
-
-.cta-stat__label {
-  opacity: 0.9;
-}
-
-.cta-stat:hover {
-  transform: translateY(-3px) scale(1.02);
-}
-
 /* ===== Support scroll popup ===== */
 .support-popup {
   position: fixed;
@@ -1150,6 +1182,16 @@ body::before {
 
   .cta {
     padding: 60px 20px 80px;
+  }
+
+  .cta-social {
+    margin-top: 32px;
+    padding-top: 24px;
+  }
+
+  .cta-social__link {
+    padding: 10px 16px;
+    font-size: 14px;
   }
 
   .store-buttons {

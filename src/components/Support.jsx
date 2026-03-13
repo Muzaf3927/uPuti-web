@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Support({ t }) {
     const [visible, setVisible] = useState(false);
+    const hasShownOnScroll = useRef(false);
 
     useEffect(() => {
         const onScroll = () => {
-            if (window.scrollY > 400) {
+            if (window.scrollY > 400 && !hasShownOnScroll.current) {
+                hasShownOnScroll.current = true;
                 setVisible(true);
             }
         };
