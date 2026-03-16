@@ -6,6 +6,7 @@ import Hero from "./components/Hero";
 import TextContent from "./components/TextContent";
 import CTA from "./components/CTA";
 import Support from "./components/Support";
+import PrivacyPolicy from "./components/PrivacyPolicy";
 
 import AdminLogin from "./admin/AdminLogin";
 import AdminDashboard from "./admin/AdminDashboard";
@@ -31,6 +32,7 @@ export default function App() {
     return (
         <Routes>
             <Route path="/" element={<PublicLanding />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/panel" element={<AdminDashboard />} />
         </Routes>

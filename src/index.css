@@ -259,6 +259,52 @@ body::before {
   margin: 0 auto;
 }
 
+/* ===== Privacy policy page ===== */
+.privacy-page {
+  min-height: 100vh;
+  padding: 32px 16px 80px;
+  display: flex;
+  flex-direction: column;
+}
+
+.privacy-header {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.privacy-content {
+  max-width: 760px;
+  width: 100%;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  padding: 32px 28px 40px;
+  backdrop-filter: blur(10px);
+}
+
+.privacy-content h1 {
+  margin: 0 0 20px;
+  font-size: clamp(26px, 3vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: left;
+}
+
+.privacy-text {
+  font-size: 15px;
+  color: var(--color-text-soft);
+}
+
+.privacy-text p {
+  margin: 0 0 16px;
+}
+
+.privacy-text p:last-child {
+  margin-bottom: 0;
+}
+
 .text-content__intro {
   color: var(--color-text-muted);
   font-size: 17px;
