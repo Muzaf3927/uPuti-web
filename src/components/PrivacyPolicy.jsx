@@ -13,6 +13,7 @@ export default function PrivacyPolicy() {
                     <p>Developer Information</p>
                     <p>Developer: UMD GROUP</p>
                     <p>Google Play Developer ID: 5990176084226389760</p>
+                    <p>Official Website: https://www.uputi.net</p>
                     <p>Privacy Policy for UPuti</p>
                     <p>UPuti March 09, 2026</p>
                     <p>Effective Date: March 9, 2026</p>
