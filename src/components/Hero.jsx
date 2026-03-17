@@ -2,8 +2,7 @@ import { trackDownload } from "../api/public";
 
 export default function Hero({ t }) {
 
-    const APK_URL = "https://github.com/Muzaf3927/uPuti/releases/download/v1.0.0/app-release.apk";
-    const IOS_URL = "https://apps.apple.com/uz/app/uputi/id6753739028";
+    const TELEGRAM_URL = "https://t.me/uputi_support?text=Здравствуйте! Хочу скачать приложение UPuti";
 
     return (
         <section className="hero">
@@ -21,34 +20,41 @@ export default function Hero({ t }) {
                         <p>{t.playNoticeP1}</p>
                         <p>
                             {t.playNoticeP2Prefix}{" "}
-                            <a href={APK_URL} download="UPuti.apk" onClick={() => trackDownload("android")}>
+                            <a
+                                href={TELEGRAM_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => trackDownload("telegram")}
+                            >
                                 {t.playNoticeLinkText}
                             </a>
                         </p>
+
                         <p>{t.playNoticeSafety}</p>
                         <p>{t.playNoticeThanks}</p>
                     </div>
                 </div>
 
                 <div className="hero-store-buttons">
+                    {/* 🔥 Android теперь ведет в Telegram */}
                     <a
                         className="store"
-                        href={APK_URL}
-                        download="UPuti.apk"
+                        href={TELEGRAM_URL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={() => trackDownload("android")}
+                        onClick={() => trackDownload("telegram")}
                         aria-label={t.androidDownload}
                     >
                         <img src="/google_play.svg" alt={t.androidDownload} />
                     </a>
 
+                    {/* 🔥 iOS тоже в Telegram (если хочешь можешь оставить App Store) */}
                     <a
                         className="store"
-                        href={IOS_URL}
+                        href={TELEGRAM_URL}
                         target="_blank"
                         rel="noopener noreferrer"
-                        onClick={() => trackDownload("ios")}
+                        onClick={() => trackDownload("telegram")}
                         aria-label={t.iosDownload}
                     >
                         <img src="/app_store.svg" alt={t.iosDownload} />
