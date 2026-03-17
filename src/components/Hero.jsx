@@ -2,7 +2,7 @@ import { trackDownload } from "../api/public";
 
 export default function Hero({ t }) {
 
-    const APK_URL = "/apk/app-release.apk";
+    const APK_URL = "https://github.com/Muzaf3927/uPuti/releases/download/v1.0.0/app-release.apk";
     const IOS_URL = "https://apps.apple.com/uz/app/uputi/id6753739028";
 
     return (
