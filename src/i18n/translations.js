@@ -50,7 +50,7 @@ export const translations = {
         storeDownloads: "3 000+ скачиваний UPuti в Google Play и App Store",
         playNoticeTitle: "🚧 Приложение пока недоступно в Google Play",
         playNoticeP1: "Мы уже работаем над этим, и скоро приложение появится в магазине.",
-        playNoticeP2Prefix: "Но вы пока можете скачать и установить приложение напрямую через наш официальный телеграм @uputi_support, онр защищено от всяких вирусов ",
+        playNoticeP2Prefix: "Но вы пока можете скачать и установить приложение напрямую через наш официальный телеграм @uputi_support, оно защищено от всяких вирусов ",
         playNoticeLinkText: "👉 здесь",
         playNoticeSafety: "🔒Будьте бдительно, скачать только тот файл который скинул наш оператор из телеграма @uputi_support!.",
         playNoticeThanks: "Спасибо за доверие 🙌",
