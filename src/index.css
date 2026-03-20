@@ -617,6 +617,33 @@ body::before {
   height: 40px;
 }
 
+.store-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.store-card__logo {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.store-card__arrow {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--color-primary, #6c3ce1);
+  animation: bounceDown 1.2s ease-in-out infinite;
+}
+
+@keyframes bounceDown {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+
 /* ===== Admin panel ===== */
 .admin-shell {
   display: flex;
