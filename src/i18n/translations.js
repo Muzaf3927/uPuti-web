@@ -1,9 +1,9 @@
 export const translations = {
     ru: {
-        heroTitle: "UPuti — экономьте на поездках, зарабатывайте на дороге.",
+        heroTitle: "UPuti (Yulchi) — экономьте на поездках, зарабатывайте на дороге.",
 
         heroDesc:
-            "UPuti — сервис попутных поездок нового поколения.\n" +
+            "UPuti (Yulchi) — сервис попутных поездок нового поколения.\n" +
             "Путешествуйте как пассажир или зарабатывайте как водитель на дороге, по которой уже едете.",
 
         aboutText:
@@ -48,22 +48,16 @@ export const translations = {
         statsUsers: "3 000+ пользователей по всему Узбекистану",
         statsTrips: "1 000+ поездок в каждом городе каждый день по всему Узбекистану",
         storeDownloads: "3 000+ скачиваний UPuti в Google Play и App Store",
-        playNoticeTitle: "🚧 Приложение пока недоступно в Google Play",
-        playNoticeP1: "Мы уже работаем над этим, и скоро приложение появится в магазине.",
-        playNoticeP2Prefix: "Но вы пока можете скачать и установить приложение напрямую через наш официальный телеграм @uputi_support, оно защищено от всяких вирусов ",
-        playNoticeLinkText: "👉 здесь",
-        playNoticeSafety: "🔒Будьте бдительно, скачать только тот файл который скинул наш оператор из телеграма @uputi_support!.",
-        playNoticeThanks: "Спасибо за доверие 🙌",
         socialFollow: "Мы в соцсетях",
         telegramLabel: "Telegram канал UPuti",
         instagramLabel: "Instagram UPuti",
     },
 
     uz: {
-        heroTitle: "UPuti — yo'l kirani tejab qoling, yo'lda pul ishlang",
+        heroTitle: "UPuti (Yulchi) — yo'l kirani tejab qoling, yo'lda pul ishlang",
 
         heroDesc:
-            "UPuti —  taksi emas, aksincha: shahar ichida va shaharlar orasida safar qilish uchun poputchiklar servisi. Kimdir yo‘lovchi, kimdir esa o‘zi ketayotgan yo‘lida daromad qiladigan haydovchi.",
+            "UPuti (Yulchi) —  taksi emas, aksincha: shahar ichida va shaharlar orasida safar qilish uchun poputchiklar servisi. Kimdir yo‘lovchi, kimdir esa o‘zi ketayotgan yo‘lida daromad qiladigan haydovchi.",
 
         aboutText:
             "Bu haydovchi va yo‘lovchilarga bir-birini tez topishga, vaqtni tejashga va yo‘l xarajatlarini bo‘lishishga yordam beradi.",
@@ -108,12 +102,6 @@ export const translations = {
         statsUsers: "3 000+ foydalanuvchi",
         statsTrips: "Har bir shaharda kuniga 1 000+ safar",
         storeDownloads: "3 000+ UPuti yuklab olishlar butun O'zbekistonda",
-        playNoticeTitle: "🚧 Ilova hozircha Google Play’da mavjud emas",
-        playNoticeP1: "Biz bu ustida allaqachon ishlayapmiz va tez orada ilova Google Play’da paydo bo‘ladi.",
-        playNoticeP2Prefix: "Lekin siz ilovani to‘g‘ridan-to‘g‘ri rasmiy operator @uputi_support orqali yuklab olib o‘rnatishingiz mumkin",
-        playNoticeLinkText: "👉 bu yerda",
-        playNoticeSafety: "🔒 Ogoh bo'ling, faqat rasmiy operator @uputi_support orqali jo'natilgan faylni yuklang!.",
-        playNoticeThanks: "Ishonchingiz uchun rahmat 🙌",
         socialFollow: "Biz ijtimoiy tarmoqlarda",
         telegramLabel: "UPuti Telegram kanali",
         instagramLabel: "UPuti Instagram",

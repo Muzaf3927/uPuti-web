@@ -583,38 +583,6 @@ body::before {
   margin-top: 24px;
 }
 
-.hero-play-warning {
-  width: min(520px, 92vw);
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid #fecaca;
-  background: #fef2f2;
-  color: #991b1b;
-  box-shadow: 0 10px 30px rgba(185, 28, 28, 0.08);
-}
-
-.hero-play-warning__title {
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  margin-bottom: 6px;
-}
-
-.hero-play-warning__text {
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.hero-play-warning__text p {
-  margin: 6px 0;
-}
-
-.hero-play-warning a {
-  color: inherit;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 @media (max-width: 420px) {
   .hero-store-buttons {
     flex-wrap: wrap;
