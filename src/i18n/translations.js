@@ -57,7 +57,8 @@ export const translations = {
         heroTitle: "UPuti (Yulchi) — yo'l kirani tejab qoling, yo'lda pul ishlang",
 
         heroDesc:
-            "UPuti (Yulchi) —  taksi emas, aksincha: shahar ichida va shaharlar orasida safar qilish uchun poputchiklar servisi. Kimdir yo‘lovchi, kimdir esa o‘zi ketayotgan yo‘lida daromad qiladigan haydovchi.",
+            "UPuti (Yulchi) —  Bu — siz bilan bir tomonga o‘z mashinasida yo‘l olgan insonlar.\n" +
+            "Kimdir yo‘lovchi, kimdir ketayotgan yo‘lidan daromad oladigan haydovchi.",
 
         aboutText:
             "Bu haydovchi va yo‘lovchilarga bir-birini tez topishga, vaqtni tejashga va yo‘l xarajatlarini bo‘lishishga yordam beradi.",

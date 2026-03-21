@@ -598,6 +598,160 @@ body::before {
   color: var(--color-text-soft);
 }
 
+/* Instagram кнопка — вращающаяся градиентная рамка + glass */
+.hero-instagram {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  margin-top: 24px;
+  padding: 2px;
+  border-radius: 16px;
+  background: conic-gradient(from var(--ig-angle, 0deg), #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #f09433);
+  text-decoration: none;
+  transition: transform 0.4s cubic-bezier(.22,1,.36,1), box-shadow 0.4s cubic-bezier(.22,1,.36,1);
+  animation: ig-spin 3s linear infinite;
+}
+
+.hero-instagram:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 12px 40px rgba(225, 48, 108, 0.35);
+}
+
+/* Анимация вращения градиента рамки */
+@property --ig-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes ig-spin {
+  to { --ig-angle: 360deg; }
+}
+
+/* Свечение за кнопкой */
+.hero-instagram__glow {
+  position: absolute;
+  inset: -8px;
+  border-radius: 22px;
+  background: conic-gradient(from var(--ig-angle, 0deg), #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #f09433);
+  filter: blur(18px);
+  opacity: 0.4;
+  z-index: -1;
+  animation: ig-spin 3s linear infinite;
+  transition: opacity 0.4s ease;
+}
+
+.hero-instagram:hover .hero-instagram__glow {
+  opacity: 0.65;
+}
+
+/* Внутренняя glass-карточка */
+.hero-instagram__inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 24px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+/* Иконка Instagram */
+.hero-instagram__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+  flex-shrink: 0;
+}
+
+.hero-instagram__icon svg {
+  width: 22px;
+  height: 22px;
+  fill: #ffffff;
+}
+
+/* Разделитель */
+.hero-instagram__divider {
+  width: 1px;
+  height: 32px;
+  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.1), transparent);
+  flex-shrink: 0;
+}
+
+/* Текстовый блок */
+.hero-instagram__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hero-instagram__handle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a2e;
+  letter-spacing: -0.01em;
+}
+
+.hero-instagram__subscribe {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e1306c;
+  letter-spacing: 0.01em;
+}
+
+/* Стрелка */
+.hero-instagram__arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f09433, #dc2743, #bc1888);
+  flex-shrink: 0;
+  color: #ffffff;
+  transition: transform 0.3s cubic-bezier(.22,1,.36,1);
+}
+
+.hero-instagram__arrow svg {
+  width: 16px;
+  height: 16px;
+}
+
+.hero-instagram:hover .hero-instagram__arrow {
+  transform: translateX(3px);
+}
+
+/* Shimmer — бегущий блик по карточке */
+.hero-instagram__shimmer {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.6) 50%,
+    transparent 60%
+  );
+  animation: ig-shimmer 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes ig-shimmer {
+  0%   { left: -100%; }
+  40%  { left: -100%; }
+  60%  { left: 100%; }
+  100% { left: 100%; }
+}
+
 .hero-store-buttons .store {
   border-radius: var(--radius-md);
   border: 1px solid var(--color-border-soft);
