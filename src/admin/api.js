@@ -1,4 +1,5 @@
 const API_BASE = "https://api.uputi.net/api";
+//const API_BASE = "http://127.0.1:8000/api";
 
 async function request(path, options = {}) {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -96,6 +97,13 @@ export async function fetchAdminCommissions({ page = 1, from, to, token }) {
     const qs = params.toString();
     return request(`/admin/commissions${qs ? `?${qs}` : ""}`, {
         method: "GET",
+        token,
+    });
+}
+
+export async function adminAutoCompleteTrips({ token }) {
+    return request("/admin/trips/auto-complete", {
+        method: "POST",
         token,
     });
 }

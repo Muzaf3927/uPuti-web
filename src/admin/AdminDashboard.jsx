@@ -11,6 +11,7 @@ import {
     adminUpdateUserRole,
     adminSendToAll,
     adminSendToUser,
+    adminAutoCompleteTrips,
 } from "./api";
 
 function formatCurrency(value) {
@@ -82,6 +83,11 @@ export default function AdminDashboard() {
     const [singleLoading, setSingleLoading] = useState(false);
     const [singleResult, setSingleResult] = useState("");
     const [singleError, setSingleError] = useState("");
+
+    // auto-complete trips
+    const [autoCompleteLoading, setAutoCompleteLoading] = useState(false);
+    const [autoCompleteResult, setAutoCompleteResult] = useState("");
+    const [autoCompleteError, setAutoCompleteError] = useState("");
 
     useEffect(() => {
         const token = getAdminToken();
@@ -221,6 +227,27 @@ export default function AdminDashboard() {
             setBroadcastError(err.message);
         } finally {
             setBroadcastLoading(false);
+        }
+    };
+
+    const handleAutoComplete = async () => {
+        const token = ensureTokenOrRedirect();
+        if (!token) return;
+        setAutoCompleteError("");
+        setAutoCompleteResult("");
+        setAutoCompleteLoading(true);
+        try {
+            const resp = await adminAutoCompleteTrips({ token });
+            setAutoCompleteResult(resp);
+        } catch (err) {
+            if (err.status === 401) {
+                clearAdminToken();
+                navigate("/admin", { replace: true });
+                return;
+            }
+            setAutoCompleteError(err.message);
+        } finally {
+            setAutoCompleteLoading(false);
         }
     };
 
@@ -562,6 +589,45 @@ export default function AdminDashboard() {
                                         {singleResult && <div className="admin-auth__success">{singleResult}</div>}
                                     </form>
                                 </div>
+                            </div>
+                        </section>
+                        )}
+
+                        {activeSection === "trips" && (
+                        <section id="trips" className="admin-section">
+                            <h2>{t.tripsTitle}</h2>
+                            <p className="admin-section__hint">
+                                {t.tripsHint}
+                            </p>
+
+                            <div className="admin-card admin-card--form" style={{ maxWidth: 480 }}>
+                                <button
+                                    type="button"
+                                    className="admin-form"
+                                    style={{
+                                        width: "100%",
+                                        padding: "12px 24px",
+                                        fontSize: "1rem",
+                                        cursor: autoCompleteLoading ? "wait" : "pointer",
+                                    }}
+                                    disabled={autoCompleteLoading}
+                                    onClick={handleAutoComplete}
+                                >
+                                    {autoCompleteLoading ? t.autoCompleteRunning : t.autoCompleteButton}
+                                </button>
+                                {autoCompleteError && (
+                                    <div className="admin-auth__error" style={{ marginTop: 12 }}>
+                                        {autoCompleteError}
+                                    </div>
+                                )}
+                                {autoCompleteResult && (
+                                    <div className="admin-auth__success" style={{ marginTop: 12 }}>
+                                        {t.autoCompleteResult(
+                                            autoCompleteResult.trips_completed ?? 0,
+                                            autoCompleteResult.commissions_charged ?? 0,
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </section>
                         )}

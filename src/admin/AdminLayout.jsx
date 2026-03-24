@@ -60,6 +60,13 @@ export default function AdminLayout({ children }) {
                     >
                         {t.navMessages}
                     </button>
+                    <button
+                        type="button"
+                        className={`admin-nav__item ${activeSection === "trips" ? "admin-nav__item--active" : ""}`}
+                        onClick={() => setActiveSection("trips")}
+                    >
+                        {t.navTrips}
+                    </button>
                     <div className="admin-lang">
                         <button
                             type="button"

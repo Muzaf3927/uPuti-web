@@ -83,6 +83,15 @@ export const adminTranslations = {
     singleMessageLabel: "Сообщение",
     singleSubmit: "Отправить",
     singleSubmitting: "Отправка...",
+
+    // trips
+    navTrips: "Поездки",
+    tripsTitle: "Управление поездками",
+    tripsHint: "Автоматическое завершение поездок, которые начались более 10 минут назад.",
+    autoCompleteButton: "Завершить поездки",
+    autoCompleteRunning: "Завершение...",
+    autoCompleteResult: (completed, commissions) =>
+      `Завершено поездок: ${completed}, комиссий списано: ${commissions}`,
   },
 
   uz: {
@@ -169,6 +178,15 @@ export const adminTranslations = {
     singleMessageLabel: "Xabar matni",
     singleSubmit: "Yuborish",
     singleSubmitting: "Yuborilmoqda...",
+
+    // trips
+    navTrips: "Safarlar",
+    tripsTitle: "Safarlarni boshqarish",
+    tripsHint: "10 daqiqadan oldin boshlangan safarlarni avtomatik yakunlash.",
+    autoCompleteButton: "Safarlarni yakunlash",
+    autoCompleteRunning: "Yakunlanmoqda...",
+    autoCompleteResult: (completed, commissions) =>
+      `Yakunlangan safarlar: ${completed}, yechilgan komissiyalar: ${commissions}`,
   },
 };
 
