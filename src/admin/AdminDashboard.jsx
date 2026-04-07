@@ -641,15 +641,15 @@ export default function AdminDashboard() {
                         )}
 
                         {activeSection === "usersList" && (
-                            <UsersListSection t={t} token={token} onAuthError={onAuthError} />
+                            <UsersListSection t={t} getToken={getAdminToken} onAuthError={() => { clearAdminToken(); navigate("/admin", { replace: true }); }} />
                         )}
 
                         {activeSection === "tripsList" && (
-                            <TripsListSection t={t} token={token} onAuthError={onAuthError} />
+                            <TripsListSection t={t} getToken={getAdminToken} onAuthError={() => { clearAdminToken(); navigate("/admin", { replace: true }); }} />
                         )}
 
                         {activeSection === "bookingsList" && (
-                            <BookingsListSection t={t} token={token} onAuthError={onAuthError} />
+                            <BookingsListSection t={t} getToken={getAdminToken} onAuthError={() => { clearAdminToken(); navigate("/admin", { replace: true }); }} />
                         )}
                     </>
                 );
@@ -662,7 +662,7 @@ export default function AdminDashboard() {
    USERS LIST SECTION
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function UsersListSection({ t, token, onAuthError }) {
+function UsersListSection({ t, getToken, onAuthError }) {
     const [users, setUsers] = useState([]);
     const [search, setSearch] = useState("");
     const [roleFilter, setRoleFilter] = useState("");
@@ -673,6 +673,8 @@ function UsersListSection({ t, token, onAuthError }) {
     const [editUser, setEditUser] = useState(null);
 
     const load = async (p = page) => {
+        const token = getToken();
+        if (!token) return onAuthError();
         setLoading(true);
         try {
             const res = await fetchAdminUsers({ page: p, search, role: roleFilter, token });
@@ -690,6 +692,8 @@ function UsersListSection({ t, token, onAuthError }) {
     useEffect(() => { load(1); }, [search, roleFilter]);
 
     const handleSaveUser = async (id, data) => {
+        const token = getToken();
+        if (!token) return onAuthError();
         try {
             await adminUpdateUser({ id, data, token });
             setEditUser(null);
@@ -701,6 +705,8 @@ function UsersListSection({ t, token, onAuthError }) {
     };
 
     const handleSaveCar = async (userId, data) => {
+        const token = getToken();
+        if (!token) return onAuthError();
         try {
             await adminUpdateUserCar({ userId, data, token });
             load();
@@ -712,6 +718,8 @@ function UsersListSection({ t, token, onAuthError }) {
 
     const handleDeleteCar = async (userId) => {
         if (!confirm(t.confirmDelete)) return;
+        const token = getToken();
+        if (!token) return onAuthError();
         try {
             await adminDeleteUserCar({ userId, token });
             load();
@@ -875,7 +883,7 @@ function UserEditModal({ t, user, onClose, onSaveUser, onSaveCar, onDeleteCar })
    TRIPS LIST SECTION
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function TripsListSection({ t, token, onAuthError }) {
+function TripsListSection({ t, getToken, onAuthError }) {
     const [trips, setTrips] = useState([]);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
@@ -888,6 +896,8 @@ function TripsListSection({ t, token, onAuthError }) {
     const [loading, setLoading] = useState(false);
 
     const load = async (p = page) => {
+        const token = getToken();
+        if (!token) return onAuthError();
         setLoading(true);
         try {
             const res = await fetchAdminTrips({ page: p, search, status: statusFilter, role: roleFilter, from, to, token });
@@ -906,6 +916,8 @@ function TripsListSection({ t, token, onAuthError }) {
 
     const handleDelete = async (id) => {
         if (!confirm(t.confirmDelete)) return;
+        const token = getToken();
+        if (!token) return onAuthError();
         try {
             await adminDeleteTrip({ id, token });
             load();
@@ -1006,7 +1018,7 @@ function TripsListSection({ t, token, onAuthError }) {
    BOOKINGS LIST SECTION
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function BookingsListSection({ t, token, onAuthError }) {
+function BookingsListSection({ t, getToken, onAuthError }) {
     const [bookings, setBookings] = useState([]);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
@@ -1016,6 +1028,8 @@ function BookingsListSection({ t, token, onAuthError }) {
     const [loading, setLoading] = useState(false);
 
     const load = async (p = page) => {
+        const token = getToken();
+        if (!token) return onAuthError();
         setLoading(true);
         try {
             const res = await fetchAdminBookings({ page: p, search, status: statusFilter, token });
@@ -1034,6 +1048,8 @@ function BookingsListSection({ t, token, onAuthError }) {
 
     const handleDelete = async (id) => {
         if (!confirm(t.confirmDelete)) return;
+        const token = getToken();
+        if (!token) return onAuthError();
         try {
             await adminDeleteBooking({ id, token });
             load();
