@@ -2,7 +2,7 @@ import { trackDownload } from "../api/public";
 
 export default function Hero({ t }) {
 
-    const TELEGRAM_URL = "https://t.me/uputi_support?text=Здравствуйте! Хочу скачать приложение UPuti";
+    const TELEGRAM_URL = "https://t.me/uputi_support?text=Здравствуйте! Хочу скачать приложение Yulchi";
 
     return (
         <section className="hero">
@@ -31,7 +31,7 @@ export default function Hero({ t }) {
                     </div>
 
                     <div className="store-card">
-                        <img className="store-card__logo" src="/logo.png" alt="UPuti" />
+                        <img className="store-card__logo" src="/yulchi.png" alt="Yulchi" />
                         <span className="store-card__arrow">↓</span>
                         <a
                             className="store"

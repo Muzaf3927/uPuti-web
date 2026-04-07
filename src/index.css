@@ -124,7 +124,7 @@ body::before {
   transform: scale(1.04) rotate(-3deg);
 }
 
-/* Текст Uputi — синий + белый, как свет логотипа */
+/* Текст Yulchi — синий + белый, как свет логотипа */
 .logo__text {
   background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 50%, #e0f2fe 100%);
   -webkit-background-clip: text;

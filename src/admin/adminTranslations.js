@@ -1,6 +1,6 @@
 export const adminTranslations = {
   ru: {
-    appTitle: "UPuti Admin",
+    appTitle: "Yulchi Admin",
 
     // auth
     authSubtitleLogin: "Вход в панель администратора",
@@ -16,7 +16,7 @@ export const adminTranslations = {
     authHasAccount: "Уже есть аккаунт? Войти",
 
     // layout
-    sidebarTitle: "UPuti Admin",
+    sidebarTitle: "Yulchi Admin",
     navCommissions: "Комиссии",
     navUsers: "Пользователи",
     navMessages: "Сообщения",
@@ -152,7 +152,7 @@ export const adminTranslations = {
   },
 
   uz: {
-    appTitle: "UPuti Admin",
+    appTitle: "Yulchi Admin",
 
     // auth
     authSubtitleLogin: "Administrator paneliga kirish",
@@ -168,7 +168,7 @@ export const adminTranslations = {
     authHasAccount: "Akkaunt bormi? Kirish",
 
     // layout
-    sidebarTitle: "UPuti Admin",
+    sidebarTitle: "Yulchi Admin",
     navCommissions: "Komissiyalar",
     navUsers: "Foydalanuvchilar",
     navMessages: "Xabarlar",

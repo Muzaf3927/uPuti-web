@@ -43,7 +43,7 @@ export default function Support({ t }) {
                 ×
             </button>
             <div className="support-popup__header">
-                <img src="/logo.png" alt="UPuti" className="support-popup__logo" />
+                <img src="/yulchi.png" alt="Yulchi" className="support-popup__logo" />
                 <div>
                     <div className="support-popup__title">
                         {t.support}

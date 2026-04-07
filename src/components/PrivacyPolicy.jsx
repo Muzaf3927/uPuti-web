@@ -3,8 +3,8 @@ export default function PrivacyPolicy() {
         <div className="privacy-page">
             <header className="privacy-header">
                 <div className="logo">
-                    <img src="/logo.png" alt="UPuti" />
-                    <span className="logo__text">UPuti</span>
+                    <img src="/yulchi.png" alt="Yulchi" />
+                    <span className="logo__text">Yulchi</span>
                 </div>
             </header>
 
@@ -14,11 +14,11 @@ export default function PrivacyPolicy() {
                     <p>Developer: UMD GROUP</p>
                     <p>Google Play Developer ID: 5990176084226389760</p>
                     <p>Official Website: https://www.uputi.net</p>
-                    <p>Privacy Policy for UPuti</p>
-                    <p>UPuti March 09, 2026</p>
+                    <p>Privacy Policy for Yulchi</p>
+                    <p>Yulchi March 09, 2026</p>
                     <p>Effective Date: March 9, 2026</p>
                     <p>
-                        UPuti is committed to protecting your privacy. This Privacy Policy explains how we collect, use,
+                        Yulchi is committed to protecting your privacy. This Privacy Policy explains how we collect, use,
                         disclose, and safeguard your information when you use our mobile application. By using the App,
                         you agree to the collection and use of information in accordance with this policy.
                     </p>

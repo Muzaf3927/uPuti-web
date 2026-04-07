@@ -13,8 +13,8 @@ export default function Navbar({ lang, setLang, t }) {
         <nav className={`navbar ${scrolled ? "scrolled" : ""}`}>
 
             <div className="logo">
-                <img src="/logo.png" alt="UPuti" />
-                <span className="logo__text">UPuti</span>
+                <img src="/yulchi.png" alt="Yulchi" />
+                <span className="logo__text">Yulchi</span>
             </div>
 
             <div className="lang">

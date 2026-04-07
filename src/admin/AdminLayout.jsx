@@ -26,7 +26,7 @@ export default function AdminLayout({ children }) {
             <aside className={`admin-sidebar ${collapsed ? "admin-sidebar--collapsed" : ""}`}>
                 <div className="admin-sidebar__top">
                     <div className="admin-logo">
-                        <img src="/logo.png" alt="UPuti" />
+                        <img src="/yulchi.png" alt="Yulchi" />
                         {!collapsed && <span>{t.sidebarTitle}</span>}
                     </div>
                     <button

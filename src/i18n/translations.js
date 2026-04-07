@@ -1,13 +1,13 @@
 export const translations = {
     ru: {
-        heroTitle: "UPuti (Yulchi) — экономьте на поездках, зарабатывайте на дороге.",
+        heroTitle: "Yulchi — экономьте на поездках, зарабатывайте на дороге.",
 
         heroDesc:
-            "UPuti (Yulchi) — сервис попутных поездок нового поколения.\n" +
+            "Yulchi — сервис попутных поездок нового поколения.\n" +
             "Путешествуйте как пассажир или зарабатывайте как водитель на дороге, по которой уже едете.",
 
         aboutText:
-            "UPuti помогает водителям и пассажирам быстро находить друг друга, экономить время и делить расходы на дорогу.",
+            "Yulchi помогает водителям и пассажирам быстро находить друг друга, экономить время и делить расходы на дорогу.",
 
         driverTitle: "Для водителей",
         driverDesc:
@@ -18,13 +18,13 @@ export const translations = {
             "Находите поездки по городу и между городами, бронируйте место и путешествуйте дешевле и удобнее.",
 
         tripsTitle: "Поездки по городу и между городами",
-        tripsIntro: "Uputi подходит для любых поездок:",
+        tripsIntro: "Yulchi подходит для любых поездок:",
         tripsList: [
             "ежедневные поездки по городу",
             "междугородние поездки",
             "поиск попутчиков на удобное время",
         ],
-        benefitsTitle: "Почему UPuti",
+        benefitsTitle: "Почему Yulchi",
         benefitsList: [
             "безопасные поездки",
             "удобный поиск поездок",
@@ -33,7 +33,7 @@ export const translations = {
             "экономия времени и денег",
         ],
 
-        ctaTitle: "Скачайте приложение UPuti и находите попутчиков за секунды.\n" +
+        ctaTitle: "Скачайте приложение Yulchi и находите попутчиков за секунды.\n" +
             "Начните экономить на поездках уже сегодня.",
 
         download: "Скачать приложение",
@@ -47,17 +47,17 @@ export const translations = {
         supportSend: "Написать в Telegram",
         statsUsers: "3 000+ пользователей по всему Узбекистану",
         statsTrips: "1 000+ поездок в каждом городе каждый день по всему Узбекистану",
-        storeDownloads: "3 000+ скачиваний UPuti в Google Play и App Store",
+        storeDownloads: "3 000+ скачиваний Yulchi в Google Play и App Store",
         socialFollow: "Мы в соцсетях",
-        telegramLabel: "Telegram канал UPuti",
-        instagramLabel: "Instagram UPuti",
+        telegramLabel: "Telegram канал Yulchi",
+        instagramLabel: "Instagram Yulchi",
     },
 
     uz: {
-        heroTitle: "UPuti (Yulchi) — yo'l kirani tejab qoling, yo'lda pul ishlang",
+        heroTitle: "Yulchi — yo’l kirani tejab qoling, yo’lda pul ishlang",
 
         heroDesc:
-            "UPuti (Yulchi) —  Bu — siz bilan bir tomonga o‘z mashinasida yo‘l olgan insonlar.\n" +
+            "Yulchi —  Bu — siz bilan bir tomonga o’z mashinasida yo’l olgan insonlar.\n" +
             "Kimdir yo‘lovchi, kimdir ketayotgan yo‘lidan daromad oladigan haydovchi.",
 
         aboutText:
@@ -72,13 +72,13 @@ export const translations = {
             "Shahar ichida va shaharlar orasida safarlarni toping, joy bron qiling va arzonroq sayohat qiling.",
 
         tripsTitle: "Shahar va shaharlararo safarlar",
-        tripsIntro: "Uputi har qanday safar uchun mos:",
+        tripsIntro: "Yulchi har qanday safar uchun mos:",
         tripsList: [
             "kundalik shahar safarlari",
             "shaharlararo safarlar",
             "qulay vaqtda yo‘lovchi qidirish",
         ],
-        benefitsTitle: "Nega UPuti",
+        benefitsTitle: "Nega Yulchi",
         benefitsList: [
             "qulay safar qidiruv",
             "bir necha marta bosishda bron qilish",
@@ -89,7 +89,7 @@ export const translations = {
 
         ctaTitle: "Bugunoq foydalanishni boshlang",
         ctaDesc:
-            "UPuti ilovasini yuklab oling va bir necha soniyada yo‘lovchi toping.",
+            "Yulchi ilovasini yuklab oling va bir necha soniyada yo’lovchi toping.",
 
         download: "Ilovani yuklab olish",
 
@@ -102,9 +102,9 @@ export const translations = {
         supportSend: "Telegram orqali yuborish",
         statsUsers: "3 000+ foydalanuvchi",
         statsTrips: "Har bir shaharda kuniga 1 000+ safar",
-        storeDownloads: "3 000+ UPuti yuklab olishlar butun O'zbekistonda",
+        storeDownloads: "3 000+ Yulchi yuklab olishlar butun O'zbekistonda",
         socialFollow: "Biz ijtimoiy tarmoqlarda",
-        telegramLabel: "UPuti Telegram kanali",
-        instagramLabel: "UPuti Instagram",
+        telegramLabel: "Yulchi Telegram kanali",
+        instagramLabel: "Yulchi Instagram",
     },
 };
