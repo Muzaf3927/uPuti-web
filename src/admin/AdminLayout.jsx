@@ -67,6 +67,31 @@ export default function AdminLayout({ children }) {
                     >
                         {t.navTrips}
                     </button>
+
+                    <hr style={{border:"none",borderTop:"1px solid rgba(255,255,255,.12)",margin:"8px 0"}} />
+
+                    <button
+                        type="button"
+                        className={`admin-nav__item ${activeSection === "usersList" ? "admin-nav__item--active" : ""}`}
+                        onClick={() => setActiveSection("usersList")}
+                    >
+                        {t.navUsersList}
+                    </button>
+                    <button
+                        type="button"
+                        className={`admin-nav__item ${activeSection === "tripsList" ? "admin-nav__item--active" : ""}`}
+                        onClick={() => setActiveSection("tripsList")}
+                    >
+                        {t.navTripsList}
+                    </button>
+                    <button
+                        type="button"
+                        className={`admin-nav__item ${activeSection === "bookingsList" ? "admin-nav__item--active" : ""}`}
+                        onClick={() => setActiveSection("bookingsList")}
+                    >
+                        {t.navBookings}
+                    </button>
+
                     <div className="admin-lang">
                         <button
                             type="button"

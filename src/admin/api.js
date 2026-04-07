@@ -108,6 +108,78 @@ export async function adminAutoCompleteTrips({ token }) {
     });
 }
 
+// ── Users ────────────────────────────────────────────────────────────────────
+
+export async function fetchAdminUsers({ page = 1, search, role, token }) {
+    const params = new URLSearchParams();
+    params.append("page", String(page));
+    if (search) params.append("search", search);
+    if (role) params.append("role", role);
+    return request(`/admin/users?${params}`, { method: "GET", token });
+}
+
+export async function fetchAdminUser({ id, token }) {
+    return request(`/admin/users/${id}`, { method: "GET", token });
+}
+
+export async function adminUpdateUser({ id, data, token }) {
+    return request(`/admin/users/${id}`, {
+        method: "PUT",
+        token,
+        body: JSON.stringify(data),
+    });
+}
+
+export async function adminUpdateUserCar({ userId, data, token }) {
+    return request(`/admin/users/${userId}/car`, {
+        method: "PUT",
+        token,
+        body: JSON.stringify(data),
+    });
+}
+
+export async function adminDeleteUserCar({ userId, token }) {
+    return request(`/admin/users/${userId}/car`, {
+        method: "DELETE",
+        token,
+    });
+}
+
+// ── Trips ────────────────────────────────────────────────────────────────────
+
+export async function fetchAdminTrips({ page = 1, search, status, role, from, to, token }) {
+    const params = new URLSearchParams();
+    params.append("page", String(page));
+    if (search) params.append("search", search);
+    if (status) params.append("status", status);
+    if (role) params.append("role", role);
+    if (from) params.append("from", from);
+    if (to) params.append("to", to);
+    return request(`/admin/trips?${params}`, { method: "GET", token });
+}
+
+export async function fetchAdminTrip({ id, token }) {
+    return request(`/admin/trips/${id}`, { method: "GET", token });
+}
+
+export async function adminDeleteTrip({ id, token }) {
+    return request(`/admin/trips/${id}`, { method: "DELETE", token });
+}
+
+// ── Bookings ─────────────────────────────────────────────────────────────────
+
+export async function fetchAdminBookings({ page = 1, search, status, token }) {
+    const params = new URLSearchParams();
+    params.append("page", String(page));
+    if (search) params.append("search", search);
+    if (status) params.append("status", status);
+    return request(`/admin/bookings?${params}`, { method: "GET", token });
+}
+
+export async function adminDeleteBooking({ id, token }) {
+    return request(`/admin/bookings/${id}`, { method: "DELETE", token });
+}
+
 export function saveAdminToken(token) {
     localStorage.setItem("uputi_admin_token", token);
 }

@@ -12,6 +12,14 @@ import {
     adminSendToAll,
     adminSendToUser,
     adminAutoCompleteTrips,
+    fetchAdminUsers,
+    adminUpdateUser,
+    adminUpdateUserCar,
+    adminDeleteUserCar,
+    fetchAdminTrips,
+    adminDeleteTrip,
+    fetchAdminBookings,
+    adminDeleteBooking,
 } from "./api";
 
 function formatCurrency(value) {
@@ -631,10 +639,480 @@ export default function AdminDashboard() {
                             </div>
                         </section>
                         )}
+
+                        {activeSection === "usersList" && (
+                            <UsersListSection t={t} token={token} onAuthError={onAuthError} />
+                        )}
+
+                        {activeSection === "tripsList" && (
+                            <TripsListSection t={t} token={token} onAuthError={onAuthError} />
+                        )}
+
+                        {activeSection === "bookingsList" && (
+                            <BookingsListSection t={t} token={token} onAuthError={onAuthError} />
+                        )}
                     </>
                 );
             }}
         </AdminLayout>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   USERS LIST SECTION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function UsersListSection({ t, token, onAuthError }) {
+    const [users, setUsers] = useState([]);
+    const [search, setSearch] = useState("");
+    const [roleFilter, setRoleFilter] = useState("");
+    const [page, setPage] = useState(1);
+    const [lastPage, setLastPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(false);
+    const [editUser, setEditUser] = useState(null);
+
+    const load = async (p = page) => {
+        setLoading(true);
+        try {
+            const res = await fetchAdminUsers({ page: p, search, role: roleFilter, token });
+            setUsers(res.data || []);
+            setPage(res.current_page || 1);
+            setLastPage(res.last_page || 1);
+            setTotal(res.total || 0);
+        } catch (e) {
+            if (e.status === 401) onAuthError();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { load(1); }, [search, roleFilter]);
+
+    const handleSaveUser = async (id, data) => {
+        try {
+            await adminUpdateUser({ id, data, token });
+            setEditUser(null);
+            load();
+        } catch (e) {
+            if (e.status === 401) onAuthError();
+            else alert(e.message);
+        }
+    };
+
+    const handleSaveCar = async (userId, data) => {
+        try {
+            await adminUpdateUserCar({ userId, data, token });
+            load();
+        } catch (e) {
+            if (e.status === 401) onAuthError();
+            else alert(e.message);
+        }
+    };
+
+    const handleDeleteCar = async (userId) => {
+        if (!confirm(t.confirmDelete)) return;
+        try {
+            await adminDeleteUserCar({ userId, token });
+            load();
+        } catch (e) {
+            if (e.status === 401) onAuthError();
+            else alert(e.message);
+        }
+    };
+
+    return (
+        <section>
+            <h2 className="admin-section-title">{t.usersListTitle}</h2>
+            <p className="admin-section-hint">{t.usersListHint}</p>
+
+            <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+                <input
+                    className="admin-input"
+                    placeholder={t.searchPlaceholder}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{ flex: 1, minWidth: 200 }}
+                />
+                <select className="admin-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+                    <option value="">{t.allRoles}</option>
+                    <option value="driver">{t.driver}</option>
+                    <option value="passenger">{t.passenger}</option>
+                </select>
+            </div>
+
+            {loading ? (
+                <p>{t.loading}</p>
+            ) : users.length === 0 ? (
+                <p>{t.noData}</p>
+            ) : (
+                <>
+                    <div className="admin-table-wrap">
+                        <table className="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>{t.colId}</th>
+                                    <th>{t.colName}</th>
+                                    <th>{t.colPhone}</th>
+                                    <th>{t.colRole}</th>
+                                    <th>{t.colBalance}</th>
+                                    <th>{t.colCar}</th>
+                                    <th>{t.colActions}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {users.map((u) => (
+                                    <tr key={u.id}>
+                                        <td>{u.id}</td>
+                                        <td>{u.name || "—"}</td>
+                                        <td>{u.phone}</td>
+                                        <td>{u.role || "—"}</td>
+                                        <td>{formatCurrency(u.balance)}</td>
+                                        <td>{u.car ? `${u.car.model} ${u.car.color} ${u.car.number}` : t.noCar}</td>
+                                        <td>
+                                            <button className="admin-btn admin-btn--sm" onClick={() => setEditUser(u)}>
+                                                {t.btnEdit}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="admin-pagination">
+                        <button disabled={page <= 1} onClick={() => load(page - 1)}>←</button>
+                        <span>{page} / {lastPage} ({total})</span>
+                        <button disabled={page >= lastPage} onClick={() => load(page + 1)}>→</button>
+                    </div>
+                </>
+            )}
+
+            {editUser && (
+                <UserEditModal
+                    t={t}
+                    user={editUser}
+                    onClose={() => setEditUser(null)}
+                    onSaveUser={handleSaveUser}
+                    onSaveCar={handleSaveCar}
+                    onDeleteCar={handleDeleteCar}
+                />
+            )}
+        </section>
+    );
+}
+
+function UserEditModal({ t, user, onClose, onSaveUser, onSaveCar, onDeleteCar }) {
+    const [name, setName] = useState(user.name || "");
+    const [phone, setPhone] = useState(user.phone || "");
+    const [role, setRole] = useState(user.role || "passenger");
+    const [balance, setBalance] = useState(user.balance ?? 0);
+
+    const [carModel, setCarModel] = useState(user.car?.model || "");
+    const [carColor, setCarColor] = useState(user.car?.color || "");
+    const [carNumber, setCarNumber] = useState(user.car?.number || "");
+
+    return (
+        <div className="admin-modal-overlay" onClick={onClose}>
+            <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+                <h3>{t.editUser} #{user.id}</h3>
+
+                <div className="admin-modal__grid">
+                    <label>{t.colName}
+                        <input className="admin-input" value={name} onChange={(e) => setName(e.target.value)} />
+                    </label>
+                    <label>{t.colPhone}
+                        <input className="admin-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                    </label>
+                    <label>{t.colRole}
+                        <select className="admin-select" value={role} onChange={(e) => setRole(e.target.value)}>
+                            <option value="driver">{t.driver}</option>
+                            <option value="passenger">{t.passenger}</option>
+                        </select>
+                    </label>
+                    <label>{t.colBalance}
+                        <input className="admin-input" type="number" value={balance} onChange={(e) => setBalance(Number(e.target.value))} />
+                    </label>
+                </div>
+
+                <button className="admin-btn" onClick={() => onSaveUser(user.id, { name, phone, role, balance })} style={{ marginTop: 12 }}>
+                    {t.btnSave}
+                </button>
+
+                <hr style={{ margin: "16px 0" }} />
+
+                <h4>{t.editCar}</h4>
+                <div className="admin-modal__grid">
+                    <label>{t.carModel}
+                        <input className="admin-input" value={carModel} onChange={(e) => setCarModel(e.target.value)} />
+                    </label>
+                    <label>{t.carColor}
+                        <input className="admin-input" value={carColor} onChange={(e) => setCarColor(e.target.value)} />
+                    </label>
+                    <label>{t.carNumber}
+                        <input className="admin-input" value={carNumber} onChange={(e) => setCarNumber(e.target.value)} />
+                    </label>
+                </div>
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                    <button className="admin-btn" onClick={() => onSaveCar(user.id, { model: carModel, color: carColor, number: carNumber })}>
+                        {user.car ? t.saveCar : t.addCar}
+                    </button>
+                    {user.car && (
+                        <button className="admin-btn admin-btn--danger" onClick={() => onDeleteCar(user.id)}>
+                            {t.deleteCar}
+                        </button>
+                    )}
+                </div>
+
+                <button className="admin-btn admin-btn--secondary" onClick={onClose} style={{ marginTop: 16, width: "100%" }}>
+                    {t.btnCancel}
+                </button>
+            </div>
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TRIPS LIST SECTION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function TripsListSection({ t, token, onAuthError }) {
+    const [trips, setTrips] = useState([]);
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [roleFilter, setRoleFilter] = useState("");
+    const [from, setFrom] = useState("");
+    const [to, setTo] = useState("");
+    const [page, setPage] = useState(1);
+    const [lastPage, setLastPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(false);
+
+    const load = async (p = page) => {
+        setLoading(true);
+        try {
+            const res = await fetchAdminTrips({ page: p, search, status: statusFilter, role: roleFilter, from, to, token });
+            setTrips(res.data || []);
+            setPage(res.current_page || 1);
+            setLastPage(res.last_page || 1);
+            setTotal(res.total || 0);
+        } catch (e) {
+            if (e.status === 401) onAuthError();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { load(1); }, [search, statusFilter, roleFilter, from, to]);
+
+    const handleDelete = async (id) => {
+        if (!confirm(t.confirmDelete)) return;
+        try {
+            await adminDeleteTrip({ id, token });
+            load();
+        } catch (e) {
+            if (e.status === 401) onAuthError();
+            else alert(e.message);
+        }
+    };
+
+    return (
+        <section>
+            <h2 className="admin-section-title">{t.tripsListTitle}</h2>
+            <p className="admin-section-hint">{t.tripsListHint}</p>
+
+            <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+                <input
+                    className="admin-input"
+                    placeholder={t.searchPlaceholder}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{ flex: 1, minWidth: 200 }}
+                />
+                <select className="admin-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                    <option value="">{t.allStatuses}</option>
+                    <option value="active">{t.statusActive}</option>
+                    <option value="in_progress">{t.statusInProgress}</option>
+                    <option value="completed">{t.statusCompleted}</option>
+                </select>
+                <select className="admin-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+                    <option value="">{t.allRoles}</option>
+                    <option value="driver">{t.driver}</option>
+                    <option value="passenger">{t.passenger}</option>
+                </select>
+                <input type="date" className="admin-input" value={from} onChange={(e) => setFrom(e.target.value)} />
+                <input type="date" className="admin-input" value={to} onChange={(e) => setTo(e.target.value)} />
+            </div>
+
+            {loading ? (
+                <p>{t.loading}</p>
+            ) : trips.length === 0 ? (
+                <p>{t.noData}</p>
+            ) : (
+                <>
+                    <div className="admin-table-wrap">
+                        <table className="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>{t.colId}</th>
+                                    <th>{t.colFrom}</th>
+                                    <th>{t.colTo}</th>
+                                    <th>{t.colDate}</th>
+                                    <th>{t.colTime}</th>
+                                    <th>{t.colSeats}</th>
+                                    <th>{t.colAmount}</th>
+                                    <th>{t.colRole}</th>
+                                    <th>{t.colStatus}</th>
+                                    <th>{t.colUser}</th>
+                                    <th>{t.colBookings}</th>
+                                    <th>{t.colActions}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {trips.map((tr) => (
+                                    <tr key={tr.id}>
+                                        <td>{tr.id}</td>
+                                        <td title={tr.from_address}>{(tr.from_address || "—").slice(0, 25)}</td>
+                                        <td title={tr.to_address}>{(tr.to_address || "—").slice(0, 25)}</td>
+                                        <td>{tr.date}</td>
+                                        <td>{tr.time}</td>
+                                        <td>{tr.seats}</td>
+                                        <td>{formatCurrency(tr.amount)}</td>
+                                        <td>{tr.role || "—"}</td>
+                                        <td><span className={`status-badge status-badge--${tr.status}`}>{tr.status}</span></td>
+                                        <td>{tr.user ? `${tr.user.name || ""} ${tr.user.phone}` : "—"}</td>
+                                        <td>{tr.bookings?.length || 0}</td>
+                                        <td>
+                                            <button className="admin-btn admin-btn--sm admin-btn--danger" onClick={() => handleDelete(tr.id)}>
+                                                {t.btnDelete}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="admin-pagination">
+                        <button disabled={page <= 1} onClick={() => load(page - 1)}>←</button>
+                        <span>{page} / {lastPage} ({total})</span>
+                        <button disabled={page >= lastPage} onClick={() => load(page + 1)}>→</button>
+                    </div>
+                </>
+            )}
+        </section>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BOOKINGS LIST SECTION
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function BookingsListSection({ t, token, onAuthError }) {
+    const [bookings, setBookings] = useState([]);
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("");
+    const [page, setPage] = useState(1);
+    const [lastPage, setLastPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [loading, setLoading] = useState(false);
+
+    const load = async (p = page) => {
+        setLoading(true);
+        try {
+            const res = await fetchAdminBookings({ page: p, search, status: statusFilter, token });
+            setBookings(res.data || []);
+            setPage(res.current_page || 1);
+            setLastPage(res.last_page || 1);
+            setTotal(res.total || 0);
+        } catch (e) {
+            if (e.status === 401) onAuthError();
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { load(1); }, [search, statusFilter]);
+
+    const handleDelete = async (id) => {
+        if (!confirm(t.confirmDelete)) return;
+        try {
+            await adminDeleteBooking({ id, token });
+            load();
+        } catch (e) {
+            if (e.status === 401) onAuthError();
+            else alert(e.message);
+        }
+    };
+
+    return (
+        <section>
+            <h2 className="admin-section-title">{t.bookingsTitle}</h2>
+            <p className="admin-section-hint">{t.bookingsHint}</p>
+
+            <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+                <input
+                    className="admin-input"
+                    placeholder={t.searchPlaceholder}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{ flex: 1, minWidth: 200 }}
+                />
+                <select className="admin-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                    <option value="">{t.allStatuses}</option>
+                    <option value="requested">Requested</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+
+            {loading ? (
+                <p>{t.loading}</p>
+            ) : bookings.length === 0 ? (
+                <p>{t.noData}</p>
+            ) : (
+                <>
+                    <div className="admin-table-wrap">
+                        <table className="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>{t.colId}</th>
+                                    <th>{t.colTrip}</th>
+                                    <th>{t.colUser}</th>
+                                    <th>{t.colRole}</th>
+                                    <th>{t.colSeats}</th>
+                                    <th>{t.colOfferedPrice}</th>
+                                    <th>{t.colStatus}</th>
+                                    <th>{t.colActions}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {bookings.map((b) => (
+                                    <tr key={b.id}>
+                                        <td>{b.id}</td>
+                                        <td>{b.trip ? `#${b.trip.id} ${(b.trip.from_address || "").slice(0, 15)}→${(b.trip.to_address || "").slice(0, 15)}` : "—"}</td>
+                                        <td>{b.user ? `${b.user.name || ""} ${b.user.phone}` : "—"}</td>
+                                        <td>{b.role || "—"}</td>
+                                        <td>{b.seats}</td>
+                                        <td>{formatCurrency(b.offered_price)}</td>
+                                        <td><span className={`status-badge status-badge--${b.status}`}>{b.status}</span></td>
+                                        <td>
+                                            <button className="admin-btn admin-btn--sm admin-btn--danger" onClick={() => handleDelete(b.id)}>
+                                                {t.btnDelete}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="admin-pagination">
+                        <button disabled={page <= 1} onClick={() => load(page - 1)}>←</button>
+                        <span>{page} / {lastPage} ({total})</span>
+                        <button disabled={page >= lastPage} onClick={() => load(page + 1)}>→</button>
+                    </div>
+                </>
+            )}
+        </section>
     );
 }
 
