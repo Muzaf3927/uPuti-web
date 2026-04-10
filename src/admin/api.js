@@ -158,6 +158,14 @@ export async function fetchAdminTrips({ page = 1, search, status, role, from, to
     return request(`/admin/trips?${params}`, { method: "GET", token });
 }
 
+export async function adminCreatePassengerTrip({ data, token }) {
+    return request("/admin/trips", {
+        method: "POST",
+        token,
+        body: JSON.stringify(data),
+    });
+}
+
 export async function fetchAdminTrip({ id, token }) {
     return request(`/admin/trips/${id}`, { method: "GET", token });
 }

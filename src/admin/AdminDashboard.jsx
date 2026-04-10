@@ -18,6 +18,7 @@ import {
     adminDeleteUserCar,
     fetchAdminTrips,
     adminDeleteTrip,
+    adminCreatePassengerTrip,
     fetchAdminBookings,
     adminDeleteBooking,
 } from "./api";
@@ -895,6 +896,38 @@ function TripsListSection({ t, getToken, onAuthError }) {
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(false);
 
+    // Create trip modal
+    const [showCreate, setShowCreate] = useState(false);
+    const [createLoading, setCreateLoading] = useState(false);
+    const [createForm, setCreateForm] = useState({
+        phone: "", name: "", from_address: "", to_address: "",
+        date: "", time: "", seats: "1", amount: "", comment: "",
+    });
+
+    const handleCreate = async (e) => {
+        e.preventDefault();
+        const token = getToken();
+        if (!token) return onAuthError();
+        setCreateLoading(true);
+        try {
+            await adminCreatePassengerTrip({
+                data: {
+                    ...createForm,
+                    seats: Number(createForm.seats),
+                    amount: Number(createForm.amount) || 0,
+                },
+                token,
+            });
+            setShowCreate(false);
+            setCreateForm({ phone: "", name: "", from_address: "", to_address: "", date: "", time: "", seats: "1", amount: "", comment: "" });
+            load(1);
+        } catch (err) {
+            alert(err.message || "Ошибка при создании заказа");
+        } finally {
+            setCreateLoading(false);
+        }
+    };
+
     const load = async (p = page) => {
         const token = getToken();
         if (!token) return onAuthError();
@@ -929,8 +962,15 @@ function TripsListSection({ t, getToken, onAuthError }) {
 
     return (
         <section>
-            <h2 className="admin-section-title">{t.tripsListTitle}</h2>
-            <p className="admin-section-hint">{t.tripsListHint}</p>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div>
+                    <h2 className="admin-section-title" style={{ margin: 0 }}>{t.tripsListTitle}</h2>
+                    <p className="admin-section-hint" style={{ margin: "4px 0 0" }}>{t.tripsListHint}</p>
+                </div>
+                <button className="admin-btn admin-btn--primary" onClick={() => setShowCreate(true)}>
+                    + Создать заказ
+                </button>
+            </div>
 
             <div style={{ display: "flex", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
                 <input
@@ -1009,6 +1049,69 @@ function TripsListSection({ t, getToken, onAuthError }) {
                         <button disabled={page >= lastPage} onClick={() => load(page + 1)}>→</button>
                     </div>
                 </>
+            )}
+
+            {showCreate && (
+                <div className="admin-modal-overlay" onClick={() => setShowCreate(false)}>
+                    <form className="admin-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleCreate}>
+                        <h3>Создать заказ от имени пассажира</h3>
+                        <div style={{ display: "flex", gap: 12 }}>
+                            <div style={{ flex: 1 }}>
+                                <label className="admin-label">Телефон</label>
+                                <div style={{ display: "flex" }}>
+                                    <span style={{ padding: "8px 10px", background: "#e5e7eb", borderRadius: "6px 0 0 6px", fontSize: 14, display: "flex", alignItems: "center" }}>+998</span>
+                                    <input className="admin-input" style={{ borderRadius: "0 6px 6px 0", flex: 1 }} placeholder="901234567" maxLength={9} value={createForm.phone} onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value.replace(/\D/g, "").slice(0, 9) })} required />
+                                </div>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="admin-label">Имя</label>
+                                <input className="admin-input" placeholder="Имя пассажира" value={createForm.name} onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })} required />
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 12 }}>
+                            <div style={{ flex: 1 }}>
+                                <label className="admin-label">Откуда</label>
+                                <input className="admin-input" placeholder="Адрес отправления" value={createForm.from_address} onChange={(e) => setCreateForm({ ...createForm, from_address: e.target.value })} required />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="admin-label">Куда</label>
+                                <input className="admin-input" placeholder="Адрес прибытия" value={createForm.to_address} onChange={(e) => setCreateForm({ ...createForm, to_address: e.target.value })} required />
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 12 }}>
+                            <div style={{ flex: 1 }}>
+                                <label className="admin-label">Дата</label>
+                                <input className="admin-input" type="date" value={createForm.date} onChange={(e) => setCreateForm({ ...createForm, date: e.target.value })} required />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="admin-label">Время</label>
+                                <input className="admin-input" type="time" value={createForm.time} onChange={(e) => setCreateForm({ ...createForm, time: e.target.value })} required />
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 12 }}>
+                            <div style={{ flex: 1 }}>
+                                <label className="admin-label">Мест</label>
+                                <select className="admin-select" value={createForm.seats} onChange={(e) => setCreateForm({ ...createForm, seats: e.target.value })}>
+                                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                                </select>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label className="admin-label">Цена (сум)</label>
+                                <input className="admin-input" type="number" placeholder="50000" value={createForm.amount} onChange={(e) => setCreateForm({ ...createForm, amount: e.target.value })} />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="admin-label">Комментарий</label>
+                            <input className="admin-input" placeholder="Доп. информация" value={createForm.comment} onChange={(e) => setCreateForm({ ...createForm, comment: e.target.value })} />
+                        </div>
+                        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
+                            <button type="button" className="admin-btn" onClick={() => setShowCreate(false)}>Отмена</button>
+                            <button type="submit" className="admin-btn admin-btn--primary" disabled={createLoading}>
+                                {createLoading ? "Создание..." : "Создать"}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             )}
         </section>
     );
