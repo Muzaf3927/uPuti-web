@@ -65,6 +65,15 @@ export const adminTranslations = {
     roleSubmit: "Обновить роль",
     roleSubmitting: "Обновление...",
 
+    createUserTitle: "Создать пользователя",
+    createUserPhoneLabel: "Телефон (9 цифр без +998)",
+    createUserNameLabel: "Имя",
+    createUserRoleLabel: "Роль",
+    createUserPasswordLabel: "Пароль (мин. 6 символов)",
+    createUserSubmit: "Создать",
+    createUserSubmitting: "Создание...",
+    createUserSuccess: "Пользователь создан:",
+
     // messages
     messagesTitle: "Сообщения",
     messagesHint: "Массовые рассылки и точечные уведомления пользователям.",
@@ -216,6 +225,15 @@ export const adminTranslations = {
     rolePassenger: "Yo‘lovchi",
     roleSubmit: "Rolni yangilash",
     roleSubmitting: "Yangilanmoqda...",
+
+    createUserTitle: "Foydalanuvchi yaratish",
+    createUserPhoneLabel: "Telefon (9 raqam, +998 siz)",
+    createUserNameLabel: "Ism",
+    createUserRoleLabel: "Rol",
+    createUserPasswordLabel: "Parol (kamida 6 belgi)",
+    createUserSubmit: "Yaratish",
+    createUserSubmitting: "Yaratilmoqda...",
+    createUserSuccess: "Foydalanuvchi yaratildi:",
 
     // messages
     messagesTitle: "Xabarlar",

@@ -122,6 +122,14 @@ export async function fetchAdminUser({ id, token }) {
     return request(`/admin/users/${id}`, { method: "GET", token });
 }
 
+export async function adminCreateUser({ phone, name, role, password, token }) {
+    return request("/admin/users", {
+        method: "POST",
+        token,
+        body: JSON.stringify({ phone, name, role, password }),
+    });
+}
+
 export async function adminUpdateUser({ id, data, token }) {
     return request(`/admin/users/${id}`, {
         method: "PUT",

@@ -13,6 +13,7 @@ import {
     adminSendToUser,
     adminAutoCompleteTrips,
     fetchAdminUsers,
+    adminCreateUser,
     adminUpdateUser,
     adminUpdateUserCar,
     adminDeleteUserCar,
@@ -78,6 +79,15 @@ export default function AdminDashboard() {
     const [roleLoading, setRoleLoading] = useState(false);
     const [roleMessage, setRoleMessage] = useState("");
     const [roleError, setRoleError] = useState("");
+
+    // create user form
+    const [createPhone, setCreatePhone] = useState("");
+    const [createName, setCreateName] = useState("");
+    const [createRole, setCreateRole] = useState("passenger");
+    const [createPassword, setCreatePassword] = useState("");
+    const [createLoading, setCreateLoading] = useState(false);
+    const [createMessage, setCreateMessage] = useState("");
+    const [createError, setCreateError] = useState("");
 
     // messages: broadcast
     const [broadcastMessage, setBroadcastMessage] = useState("");
@@ -208,6 +218,38 @@ export default function AdminDashboard() {
             setRoleError(err.message);
         } finally {
             setRoleLoading(false);
+        }
+    };
+
+    const handleCreateUserSubmit = async (e) => {
+        e.preventDefault();
+        const token = ensureTokenOrRedirect();
+        if (!token) return;
+        setCreateError("");
+        setCreateMessage("");
+        setCreateLoading(true);
+        try {
+            const cleanPhone = createPhone.replace(/\D/g, "");
+            const user = await adminCreateUser({
+                phone: cleanPhone,
+                name: createName.trim(),
+                role: createRole,
+                password: createPassword,
+                token,
+            });
+            setCreateMessage(`${t.createUserSuccess} ${user.name} (${user.phone})`);
+            setCreatePhone("");
+            setCreateName("");
+            setCreatePassword("");
+        } catch (err) {
+            if (err.status === 401) {
+                clearAdminToken();
+                navigate("/admin", { replace: true });
+                return;
+            }
+            setCreateError(err.message);
+        } finally {
+            setCreateLoading(false);
         }
     };
 
@@ -522,6 +564,63 @@ export default function AdminDashboard() {
                                         </button>
                                         {roleError && <div className="admin-auth__error">{roleError}</div>}
                                         {roleMessage && <div className="admin-auth__success">{roleMessage}</div>}
+                                    </form>
+                                </div>
+
+                                <div className="admin-card admin-card--form">
+                                    <h3>{t.createUserTitle}</h3>
+                                    <form className="admin-form" onSubmit={handleCreateUserSubmit}>
+                                        <label>
+                                            {t.createUserPhoneLabel}
+                                            <input
+                                                type="tel"
+                                                placeholder="901234567"
+                                                value={createPhone}
+                                                onChange={(e) => setCreatePhone(e.target.value)}
+                                                pattern="[0-9]{9}"
+                                                title="9 цифр без кода страны"
+                                                required
+                                            />
+                                        </label>
+                                        <label>
+                                            {t.createUserNameLabel}
+                                            <input
+                                                type="text"
+                                                placeholder="Ali Valiev"
+                                                value={createName}
+                                                onChange={(e) => setCreateName(e.target.value)}
+                                                minLength={2}
+                                                maxLength={255}
+                                                required
+                                            />
+                                        </label>
+                                        <label>
+                                            {t.createUserRoleLabel}
+                                            <select
+                                                value={createRole}
+                                                onChange={(e) => setCreateRole(e.target.value)}
+                                            >
+                                                <option value="passenger">{t.rolePassenger}</option>
+                                                <option value="driver">{t.roleDriver}</option>
+                                            </select>
+                                        </label>
+                                        <label>
+                                            {t.createUserPasswordLabel}
+                                            <input
+                                                type="text"
+                                                placeholder="••••••"
+                                                value={createPassword}
+                                                onChange={(e) => setCreatePassword(e.target.value)}
+                                                minLength={6}
+                                                maxLength={255}
+                                                required
+                                            />
+                                        </label>
+                                        <button type="submit" disabled={createLoading}>
+                                            {createLoading ? t.createUserSubmitting : t.createUserSubmit}
+                                        </button>
+                                        {createError && <div className="admin-auth__error">{createError}</div>}
+                                        {createMessage && <div className="admin-auth__success">{createMessage}</div>}
                                     </form>
                                 </div>
                             </div>
